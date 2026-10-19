@@ -22,7 +22,7 @@
     "express-session": "^1.19.0",
     "multer": "^2.4.0",
     "nodemailer": "^10.1.0",
-    "sqlite3": "^6.0.1",
+    "sqlite3": "^5.1.7",
     "svg-captcha": "^1.4.0"
   }
 }
