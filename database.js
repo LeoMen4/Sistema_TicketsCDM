@@ -2,7 +2,24 @@ const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const path = require('path');
-const db = new sqlite3.Database('./tickets.db');
+
+let dbPath = path.join(__dirname, 'tickets.db');
+
+// En entornos serverless como Vercel donde el sistema de archivos raíz es de solo lectura,
+// clonamos la base de datos a /tmp para permitir lectura y escritura.
+if (process.env.VERCEL) {
+    const tmpDb = path.join('/tmp', 'tickets.db');
+    try {
+        if (!fs.existsSync(tmpDb) && fs.existsSync(dbPath)) {
+            fs.copyFileSync(dbPath, tmpDb);
+        }
+        dbPath = tmpDb;
+    } catch (e) {
+        console.error('Error al inicializar sqlite en /tmp:', e.message);
+    }
+}
+
+const db = new sqlite3.Database(dbPath);
 
 // Asegurar que el logo corporativo CDM esté disponible en public/img/logo-cdm.jpg
 try {
@@ -15,9 +32,7 @@ try {
     if (!fs.existsSync(targetLogo) && fs.existsSync(uploadedLogo)) {
         fs.copyFileSync(uploadedLogo, targetLogo);
     }
-} catch (e) {
-    console.error('Aviso al verificar logo corporativo:', e.message);
-}
+} catch (e) {}
 
 db.serialize(() => {
     db.run(`

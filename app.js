@@ -18,9 +18,11 @@ app.use(express.json({ limit: '50mb' }));
 
 // Configurar carpeta pública e imágenes cargadas por los usuarios
 const publicDir = path.join(__dirname, 'public');
-if (!fs.existsSync(publicDir)) {
-    fs.mkdirSync(publicDir, { recursive: true });
-}
+try {
+    if (!fs.existsSync(publicDir)) {
+        fs.mkdirSync(publicDir, { recursive: true });
+    }
+} catch (e) {}
 app.use(express.static(publicDir));
 
 // Ruta garantizada para el logo corporativo CDM
@@ -53,16 +55,18 @@ app.get('/img/logo-cdm.jpg', (req, res) => {
     </svg>`);
 });
 
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)){
-    fs.mkdirSync(uploadsDir);
-}
+const uploadsDir = process.env.VERCEL ? path.join('/tmp', 'uploads') : path.join(__dirname, 'uploads');
+try {
+    if (!fs.existsSync(uploadsDir)){
+        fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+} catch (e) {}
 app.use('/uploads', express.static(uploadsDir));
 
 // Configuración de Multer para la subida de imágenes
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, 'uploads/');
+        cb(null, uploadsDir);
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -2571,6 +2575,11 @@ app.get('/logout', (req, res) => {
     }
 });
 
-app.listen(3000, () => {
-    console.log('Servidor corriendo en http://localhost:3000');
-});
+module.exports = app;
+
+if (!process.env.VERCEL) {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+        console.log(`Servidor corriendo en http://localhost:${PORT}`);
+    });
+}
