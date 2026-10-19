@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - Sistema de Tickets</title>
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#fef2f2',
+                            100: '#fee2e2',
+                            200: '#fecaca',
+                            300: '#fca5a5',
+                            400: '#f87171',
+                            500: '#ef4444',
+                            600: '#dc2626',
+                            700: '#b91c1c',
+                            800: '#991b1b',
+                            900: '#7f1d1d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes spinCaptcha {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .spinning {
+            animation: spinCaptcha 0.5s linear infinite;
+        }
+        /* Estilos funcionales del Captcha interactivo */
+        .captcha-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        .captcha-tile {
+            position: relative;
+            aspect-ratio: 1 / 1;
+            background: #ffffff;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            cursor: pointer;
+            overflow: hidden;
+            transition: all 0.15s ease;
+            user-select: none;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .captcha-tile:hover {
+            border-color: #fca5a5;
+            transform: translateY(-1px);
+        }
+        .captcha-tile:active {
+            transform: scale(0.96);
+        }
+        .captcha-tile.selected {
+            border-color: #dc2626;
+            background-color: #fef2f2;
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
+        }
+        .tile-check {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 18px;
+            height: 18px;
+            background: #dc2626;
+            color: #ffffff;
+            border-radius: 50%;
+            font-size: 11px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: scale(0.4);
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+        .captcha-tile.selected .tile-check {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .tile-svg-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .tile-svg-container svg {
+            max-width: 100%;
+            max-height: 100%;
+        }
+    </style>
+</head>
+<body class="min-h-full bg-slate-50 font-sans text-slate-800 antialiased flex flex-col">
+
+    <!-- Barra Superior Corporativa con Logo CDM arriba a la izquierda -->
+    <header class="w-full bg-white border-b-2 border-brand-600 shadow-2xs">
+        <div class="w-full px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <img 
+                    src="/img/logo-cdm.jpg" 
+                    alt="Grupo CDM" 
+                    class="h-8 sm:h-9 w-auto object-contain select-none"
+                    style="mix-blend-mode: multiply;"
+                >
+                <div class="h-6 w-px bg-slate-200"></div>
+                <div>
+                    <span class="text-sm font-extrabold text-slate-900 tracking-tight block leading-tight">Sistema de Tickets</span>
+                    <span class="text-[11px] font-semibold text-slate-500 block leading-tight">Mesa de Ayuda y Soporte TI</span>
+                </div>
+            </div>
+            <span class="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded border border-slate-200">
+                🔒 Portal Corporativo Privado
+            </span>
+        </div>
+    </header>
+
+    <div class="flex-1 flex flex-col justify-center py-8 sm:px-6 lg:px-8">
+        <div class="sm:mx-auto sm:w-full sm:max-w-md">
+            <!-- Logo / Identidad Corporativa -->
+            <div class="flex justify-center">
+                <div class="bg-white px-4 py-2 rounded-md shadow-xs border border-slate-200 flex items-center justify-center">
+                    <img 
+                        src="/img/logo-cdm.jpg" 
+                        alt="Grupo CDM" 
+                        class="h-10 w-auto object-contain select-none"
+                        style="mix-blend-mode: multiply;"
+                    >
+                </div>
+            </div>
+            <h2 class="mt-3 text-center text-2xl font-extrabold tracking-tight text-slate-900">
+                Sistema de Tickets
+            </h2>
+            <p class="mt-1 text-center text-sm font-semibold text-slate-500">
+                Mesa de Ayuda y Servicio Técnico TI
+            </p>
+        </div>
+
+        <div class="mt-5 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
+        <div class="bg-white py-8 px-6 sm:px-8 shadow-xs rounded-md border-t-4 border-brand-600 border-x border-b border-slate-200">
+            
+            <!-- Mensaje por inactividad de sesión -->
+            <% if (typeof mensajeInactividad !== 'undefined' && mensajeInactividad) { %>
+                <div class="mb-5 rounded-md bg-amber-50 border border-amber-200 p-3.5 text-xs text-amber-800 flex items-start gap-2.5">
+                    <span class="text-base leading-none">⏱️</span>
+                    <div>
+                        <strong class="font-semibold text-amber-900">Sesión cerrada por inactividad:</strong>
+                        <p class="mt-0.5 text-amber-700 leading-relaxed"><%= mensajeInactividad %></p>
+                    </div>
+                </div>
+            <% } %>
+
+            <!-- Mensaje de error general -->
+            <% if (error) { %>
+                <div class="mb-5 rounded-md bg-brand-50 border border-brand-200 p-3.5 text-xs text-brand-700 flex items-start gap-2.5">
+                    <span class="text-base leading-none text-brand-600">⚠️</span>
+                    <div class="font-medium leading-relaxed">
+                        <%= error %>
+                    </div>
+                </div>
+            <% } %>
+
+            <form action="/login" method="POST" id="loginForm" name="loginForm" autocomplete="on" class="space-y-4">
+                
+                <!-- Correo Electrónico -->
+                <div>
+                    <label for="username" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                        Correo Electrónico Corporativo
+                    </label>
+                    <div class="relative rounded-md shadow-xs">
+                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                            </svg>
+                        </div>
+                        <input 
+                            type="email" 
+                            id="username"
+                            name="email" 
+                            <% if (typeof email !== 'undefined' && email) { %>value="<%= email %>"<% } %>
+                            required 
+                            autocomplete="username"
+                            placeholder="usuario@grupocdm.mx"
+                            class="block w-full rounded-md border border-slate-300 pl-9 pr-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-colors shadow-xs"
+                        >
+                    </div>
+                </div>
+
+                <!-- Contraseña -->
+                <div>
+                    <label for="passwordInput" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                        Contraseña
+                    </label>
+                    <div class="relative rounded-md shadow-xs">
+                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                        </div>
+                        <input 
+                            type="password" 
+                            id="passwordInput" 
+                            name="password" 
+                            <% if (typeof password !== 'undefined' && password) { %>value="<%= password %>"<% } %>
+                            required 
+                            autocomplete="current-password"
+                            placeholder="••••••••"
+                            class="block w-full rounded-md border border-slate-300 pl-9 pr-10 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-colors shadow-xs"
+                        >
+                        <button 
+                            type="button" 
+                            id="togglePasswordBtn" 
+                            title="Mostrar/Ocultar contraseña"
+                            class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 focus:outline-none text-base cursor-pointer"
+                        >
+                            👁️
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Opción para recordar contraseña y autocompletar siempre -->
+                <div class="flex items-center justify-between pt-0.5">
+                    <label for="recordarAccesoCheck" class="inline-flex items-center gap-2 cursor-pointer select-none">
+                        <input 
+                            type="checkbox" 
+                            id="recordarAccesoCheck" 
+                            checked 
+                            class="w-3.5 h-3.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                        >
+                        <span class="text-xs font-medium text-slate-600">Guardar contraseña en este navegador</span>
+                    </label>
+                    <button 
+                        type="button" 
+                        id="btnOlvidarGuardado" 
+                        style="display: none;" 
+                        class="text-[11px] font-semibold text-slate-400 hover:text-brand-600 underline cursor-pointer"
+                        title="Borrar datos guardados en este navegador"
+                    >
+                        Cambiar cuenta
+                    </button>
+                </div>
+
+                <!-- Aviso cuando las credenciales ya están listas y solo falta el Captcha -->
+                <div id="avisoCredencialesListas" style="display: none;" class="rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 text-[11px] text-emerald-800 flex items-center gap-2">
+                    <span>🔐</span>
+                    <span><strong>Acceso guardado:</strong> Tus datos están listos, solo confirma el <strong>Captcha</strong> para entrar.</span>
+                </div>
+
+                <!-- CAPTCHA INTERACTIVO DE SEGURIDAD -->
+                <div class="rounded-md border border-slate-200 bg-slate-50/80 p-3.5 space-y-3">
+                    <div class="flex items-center justify-between pb-2.5 border-b border-slate-200/80 gap-2">
+                        <div class="flex-1">
+                            <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                Verificación de seguridad
+                            </span>
+                            <div class="text-xs text-slate-700 mt-0.5">
+                                Selecciona todas las imágenes de:
+                            </div>
+                            <span class="inline-flex items-center gap-1.5 bg-brand-50 text-brand-700 border border-brand-200 px-2.5 py-0.5 rounded-md text-xs font-bold mt-1.5 shadow-xs" id="captchaTargetBadge">
+                                <span id="captchaTargetIcon"><%= typeof captcha !== 'undefined' && captcha ? captcha.targetIcon : '🔍' %></span>
+                                <span id="captchaTargetName"><%= typeof captcha !== 'undefined' && captcha ? captcha.targetName : 'Cargando...' %></span>
+                            </span>
+                        </div>
+                        <button 
+                            type="button" 
+                            id="reloadCaptchaBtn" 
+                            title="Cambiar imágenes de verificación"
+                            class="w-8 h-8 rounded-md bg-white border border-slate-300 hover:border-slate-400 hover:bg-slate-100 text-slate-600 flex items-center justify-center transition-all shadow-xs flex-shrink-0 cursor-pointer"
+                        >
+                            🔄
+                        </button>
+                    </div>
+
+                    <!-- Cuadrícula de Captcha -->
+                    <div class="captcha-grid" id="captchaGrid">
+                        <% if (typeof captcha !== 'undefined' && captcha && captcha.tiles) { %>
+                            <% captcha.tiles.forEach(tile => { %>
+                                <div class="captcha-tile" data-id="<%= tile.id %>" tabindex="0" role="checkbox" aria-checked="false">
+                                    <div class="tile-check">✓</div>
+                                    <div class="tile-svg-container">
+                                        <%- tile.svg %>
+                                    </div>
+                                </div>
+                            <% }) %>
+                        <% } %>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-1 text-[11px] text-slate-500">
+                        <span id="captchaHint">Haz clic en las imágenes correspondientes</span>
+                        <button type="button" class="text-brand-600 hover:text-brand-700 font-medium underline cursor-pointer" id="clearSelectionBtn" style="display: none;">
+                            Deseleccionar
+                        </button>
+                    </div>
+
+                    <input type="hidden" name="captcha_solution" id="captchaSolution" value="">
+                </div>
+
+                <!-- Botón de Envío -->
+                <div class="pt-1">
+                    <button 
+                        type="submit" 
+                        class="w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-md shadow-xs text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transition-all duration-150 cursor-pointer"
+                    >
+                        <span>Ingresar al Sistema</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                    </button>
+                </div>
+
+            </form>
+        </div>
+
+            <p class="mt-6 text-center text-xs text-slate-400">
+                &copy; <%= new Date().getFullYear() %> Grupo CDM — Sistema Corporativo de Tickets. Acceso restringido.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Funcionalidad del ojito para alternar visibilidad de la contraseña
+        const usernameInput = document.getElementById('username');
+        const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+        const passwordInput = document.getElementById('passwordInput');
+        const recordarAccesoCheck = document.getElementById('recordarAccesoCheck');
+        const btnOlvidarGuardado = document.getElementById('btnOlvidarGuardado');
+        const avisoCredencialesListas = document.getElementById('avisoCredencialesListas');
+
+        const STORAGE_KEY_ULTIMO = 'ndesk_saved_last_user';
+        const STORAGE_KEY_CUENTAS = 'ndesk_saved_accounts_v1';
+
+        togglePasswordBtn.addEventListener('click', function () {
+            const isPassword = passwordInput.getAttribute('type') === 'password';
+            passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+            this.textContent = isPassword ? '🙈' : '👁️';
+        });
+
+        function obtenerCuentasGuardadas() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY_CUENTAS);
+                return raw ? JSON.parse(raw) : {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function actualizarEstadoVisualCredenciales() {
+            const tieneDatos = Boolean((usernameInput.value || '').trim() && (passwordInput.value || ''));
+            if (avisoCredencialesListas) {
+                avisoCredencialesListas.style.display = tieneDatos ? 'flex' : 'none';
+            }
+            if (btnOlvidarGuardado) {
+                const cuentas = obtenerCuentasGuardadas();
+                const hayGuardadas = Object.keys(cuentas).length > 0 || Boolean(localStorage.getItem(STORAGE_KEY_ULTIMO));
+                btnOlvidarGuardado.style.display = (tieneDatos || hayGuardadas) ? 'inline-block' : 'none';
+            }
+        }
+
+        // Autocompletar al cargar la página (desde Google Credential API o desde almacenamiento del navegador)
+        async function restaurarCredencialesGuardadas() {
+            // 1. Intentar primero recuperar la última cuenta guardada en este navegador
+            try {
+                const ultimoRaw = localStorage.getItem(STORAGE_KEY_ULTIMO);
+                if (ultimoRaw) {
+                    const ultimo = JSON.parse(ultimoRaw);
+                    if (ultimo && ultimo.email && ultimo.password) {
+                        if (!usernameInput.value) usernameInput.value = ultimo.email;
+                        if (!passwordInput.value && usernameInput.value.toLowerCase() === ultimo.email.toLowerCase()) {
+                            passwordInput.value = ultimo.password;
+                        }
+                    }
+                }
+            } catch (e) {}
+
+            // 2. Consultar Google Chrome Credential Management API si está disponible
+            if (!passwordInput.value && window.navigator && navigator.credentials && window.PasswordCredential) {
+                try {
+                    const cred = await navigator.credentials.get({ password: true, mediation: 'optional' });
+                    if (cred && cred.type === 'password') {
+                        if (!usernameInput.value) usernameInput.value = cred.id || '';
+                        if (!passwordInput.value) passwordInput.value = cred.password || '';
+                    }
+                } catch (e) {}
+            }
+
+            actualizarEstadoVisualCredenciales();
+            // Verificar nuevamente tras un breve instante por si el autocompletado nativo de Chrome inyecta los valores
+            setTimeout(actualizarEstadoVisualCredenciales, 350);
+        }
+
+        // Si el usuario escribe un correo que ya fue guardado antes en este navegador, rellenar su contraseña automáticamente
+        usernameInput.addEventListener('input', function () {
+            const correo = (usernameInput.value || '').trim().toLowerCase();
+            const cuentas = obtenerCuentasGuardadas();
+            if (correo && cuentas[correo]) {
+                passwordInput.value = cuentas[correo];
+            }
+            actualizarEstadoVisualCredenciales();
+        });
+
+        passwordInput.addEventListener('input', actualizarEstadoVisualCredenciales);
+
+        // Botón para limpiar/cambiar cuenta guardada
+        if (btnOlvidarGuardado) {
+            btnOlvidarGuardado.addEventListener('click', function () {
+                const correoActual = (usernameInput.value || '').trim().toLowerCase();
+                try {
+                    localStorage.removeItem(STORAGE_KEY_ULTIMO);
+                    if (correoActual) {
+                        const cuentas = obtenerCuentasGuardadas();
+                        delete cuentas[correoActual];
+                        localStorage.setItem(STORAGE_KEY_CUENTAS, JSON.stringify(cuentas));
+                    }
+                } catch (e) {}
+                usernameInput.value = '';
+                passwordInput.value = '';
+                actualizarEstadoVisualCredenciales();
+                usernameInput.focus();
+            });
+        }
+
+        restaurarCredencialesGuardadas();
+
+        // Funcionalidad interactiva del CAPTCHA de imágenes
+        const captchaGrid = document.getElementById('captchaGrid');
+        const captchaSolutionInput = document.getElementById('captchaSolution');
+        const reloadCaptchaBtn = document.getElementById('reloadCaptchaBtn');
+        const captchaTargetIcon = document.getElementById('captchaTargetIcon');
+        const captchaTargetName = document.getElementById('captchaTargetName');
+        const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+        const captchaHint = document.getElementById('captchaHint');
+
+        const selectedTileIds = new Set();
+
+        function actualizarSeleccion() {
+            captchaSolutionInput.value = Array.from(selectedTileIds).join(',');
+            if (selectedTileIds.size > 0) {
+                clearSelectionBtn.style.display = 'inline-block';
+                captchaHint.textContent = `${selectedTileIds.size} seleccionada(s)`;
+            } else {
+                clearSelectionBtn.style.display = 'none';
+                captchaHint.textContent = 'Haz clic en las imágenes correspondientes';
+            }
+        }
+
+        // Selección y deselección de casillas
+        captchaGrid.addEventListener('click', function (e) {
+            const tile = e.target.closest('.captcha-tile');
+            if (!tile) return;
+
+            const tileId = tile.dataset.id;
+            if (selectedTileIds.has(tileId)) {
+                selectedTileIds.delete(tileId);
+                tile.classList.remove('selected');
+                tile.setAttribute('aria-checked', 'false');
+            } else {
+                selectedTileIds.add(tileId);
+                tile.classList.add('selected');
+                tile.setAttribute('aria-checked', 'true');
+            }
+            actualizarSeleccion();
+        });
+
+        // Soporte de accesibilidad por teclado (Enter / Espacio)
+        captchaGrid.addEventListener('keydown', function (e) {
+            if (e.key === ' ' || e.key === 'Enter') {
+                const tile = e.target.closest('.captcha-tile');
+                if (tile) {
+                    e.preventDefault();
+                    tile.click();
+                }
+            }
+        });
+
+        // Botón para limpiar selección
+        clearSelectionBtn.addEventListener('click', function () {
+            selectedTileIds.clear();
+            captchaGrid.querySelectorAll('.captcha-tile').forEach(t => {
+                t.classList.remove('selected');
+                t.setAttribute('aria-checked', 'false');
+            });
+            actualizarSeleccion();
+        });
+
+        // Recargar reto de forma dinámica
+        reloadCaptchaBtn.addEventListener('click', async function () {
+            reloadCaptchaBtn.classList.add('spinning');
+            try {
+                const res = await fetch('/captcha/refresh');
+                const data = await res.json();
+                if (data && data.tiles) {
+                    captchaTargetIcon.textContent = data.targetIcon;
+                    captchaTargetName.textContent = data.targetName;
+
+                    // Reconstruir la cuadrícula
+                    captchaGrid.innerHTML = '';
+                    selectedTileIds.clear();
+                    actualizarSeleccion();
+
+                    data.tiles.forEach(tile => {
+                        const tileDiv = document.createElement('div');
+                        tileDiv.className = 'captcha-tile';
+                        tileDiv.dataset.id = tile.id;
+                        tileDiv.setAttribute('tabindex', '0');
+                        tileDiv.setAttribute('role', 'checkbox');
+                        tileDiv.setAttribute('aria-checked', 'false');
+                        tileDiv.innerHTML = `
+                            <div class="tile-check">✓</div>
+                            <div class="tile-svg-container">${tile.svg}</div>
+                        `;
+                        captchaGrid.appendChild(tileDiv);
+                    });
+                }
+            } catch (err) {
+                console.error('Error al recargar el captcha:', err);
+            } finally {
+                setTimeout(() => reloadCaptchaBtn.classList.remove('spinning'), 400);
+            }
+        });
+
+        // Si no vinieron casillas pre-renderizadas, cargar automáticamente
+        if (captchaGrid.children.length === 0) {
+            reloadCaptchaBtn.click();
+        }
+
+        // Validar captcha y guardar credenciales en Google Chrome / Navegador antes de enviar
+        document.getElementById('loginForm').addEventListener('submit', function (e) {
+            if (selectedTileIds.size === 0) {
+                e.preventDefault();
+                alert('Por favor selecciona las imágenes que correspondan al reto de seguridad antes de continuar.');
+                return;
+            }
+
+            // Crítico para Google Chrome Password Manager: asegurar que el input sea type="password" al enviar el formulario
+            if (passwordInput.getAttribute('type') !== 'password') {
+                passwordInput.setAttribute('type', 'password');
+            }
+
+            const emailVal = (usernameInput.value || '').trim();
+            const passVal = passwordInput.value || '';
+
+            if (recordarAccesoCheck && recordarAccesoCheck.checked && emailVal && passVal) {
+                try {
+                    localStorage.setItem(STORAGE_KEY_ULTIMO, JSON.stringify({ email: emailVal, password: passVal }));
+                    const cuentas = obtenerCuentasGuardadas();
+                    cuentas[emailVal.toLowerCase()] = passVal;
+                    localStorage.setItem(STORAGE_KEY_CUENTAS, JSON.stringify(cuentas));
+                } catch (err) {}
+
+                // Notificar explícitamente al Gestor de Contraseñas de Google Chrome
+                if (window.navigator && navigator.credentials && window.PasswordCredential) {
+                    try {
+                        const cred = new PasswordCredential({
+                            id: emailVal,
+                            password: passVal,
+                            name: emailVal
+                        });
+                        navigator.credentials.store(cred).catch(() => {});
+                    } catch (err) {}
+                }
+            } else if (recordarAccesoCheck && !recordarAccesoCheck.checked) {
+                try {
+                    localStorage.removeItem(STORAGE_KEY_ULTIMO);
+                } catch (err) {}
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1825 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboards y Métricas - Sistema de Tickets</title>
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js y Plugin de Etiquetas de Datos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#fef2f2',
+                            100: '#fee2e2',
+                            200: '#fecaca',
+                            300: '#fca5a5',
+                            400: '#f87171',
+                            500: '#ef4444',
+                            600: '#dc2626',
+                            700: '#b91c1c',
+                            800: '#991b1b',
+                            900: '#7f1d1d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .chart-wrapper {
+            position: relative;
+            height: 290px;
+            width: 100%;
+        }
+
+        /* Botones de alternancia */
+        .btn-toggle-view {
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #64748b;
+            border-radius: 4px;
+            transition: all 0.15s ease;
+            cursor: pointer;
+        }
+        .btn-toggle-view:hover {
+            color: #0f172a;
+        }
+        .btn-toggle-view.active {
+            background-color: #ffffff;
+            color: #dc2626;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        /* Badges de velocidad / SLA */
+        .badge-perf {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .badge-perf-fast { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+        .badge-perf-med { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
+        .badge-perf-slow { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+        .badge-perf-na { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+
+        /* Elementos del menú lateral */
+        .dash-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 6px;
+            transition: all 0.15s ease;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+            border-left: 3px solid transparent;
+        }
+        .dash-menu-item:hover {
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+        .dash-menu-item.active {
+            background-color: #fef2f2;
+            color: #b91c1c;
+            border-left-color: #dc2626;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body class="min-h-full bg-slate-50 font-sans text-slate-800 antialiased flex flex-col">
+
+    <!-- BARRA SUPERIOR DE NAVEGACIÓN CORPORATIVA -->
+    <header class="bg-white border-b border-slate-200 border-t-4 border-brand-600 sticky top-0 z-30 shadow-xs">
+        <div class="w-full px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+            
+            <div class="flex items-center gap-3.5">
+                <!-- Logo Corporativo CDM -->
+                <a href="/admin" class="flex items-center pr-3 border-r border-slate-200" title="Panel Central de Tickets CDM">
+                    <img 
+                        src="/img/logo-cdm.jpg" 
+                        alt="CDM" 
+                        class="h-8 sm:h-9 w-auto object-contain select-none"
+                        style="mix-blend-mode: multiply;"
+                    >
+                </a>
+                <div class="w-8 h-8 rounded-md bg-brand-600 text-white hidden sm:flex items-center justify-center font-bold shadow-xs">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight leading-tight">
+                        Panel de Dashboards y Métricas TI
+                    </h1>
+                    <span class="text-[11px] font-semibold text-slate-500">
+                        Análisis en Tiempo Real de Tiempos de Resolución, SLAs y Distribución
+                    </span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
+                <div class="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200 text-xs text-slate-700">
+                    <span class="w-2 h-2 rounded-full bg-brand-600"></span>
+                    <span>Admin: <strong><%= adminNombre %></strong></span>
+                </div>
+
+                <!-- Botón de Descarga Reporte General Completo -->
+                <button 
+                    type="button" 
+                    id="btn-exportar-general" 
+                    onclick="exportarReporteGeneralExcel(this)" 
+                    class="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-3.5 py-2 rounded-md text-xs shadow-xs transition-all cursor-pointer whitespace-nowrap"
+                    title="Descargar reporte general consolidado con todas las categorías y subcategorías"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span>📥 Descargar Reporte General Completo (Excel)</span>
+                </button>
+
+                <!-- Volver a panel de tickets -->
+                <a 
+                    href="/admin" 
+                    class="inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    <span>Volver a Tickets</span>
+                </a>
+
+                <a 
+                    href="/logout" 
+                    class="text-xs font-bold text-slate-600 hover:text-brand-600 px-2 py-2 rounded-md hover:bg-slate-100 transition-colors"
+                >
+                    Salir
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- ESTRUCTURA PRINCIPAL: MENÚ LATERAL IZQUIERDO DE DASHBOARDS + CONTENIDO A PANTALLA COMPLETA -->
+    <div class="flex flex-col md:flex-row w-full min-h-[calc(100vh-4rem)] flex-1">
+        
+        <!-- MENÚ LATERAL IZQUIERDO -->
+        <aside class="w-full md:w-72 flex-shrink-0 bg-white border-r border-slate-200 p-4 space-y-1.5 shadow-2xs">
+            <div class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 px-3 py-1.5 border-b border-slate-100 mb-2">
+                Vistas de Métricas
+            </div>
+
+            <!-- Dashboards Generales -->
+            <button 
+                type="button" 
+                onclick="cambiarVistaDashboard('general')" 
+                id="btn-dash-general" 
+                class="dash-menu-item active"
+            >
+                <span class="text-base">📊</span>
+                <span class="flex-1">Dashboards Principales</span>
+            </button>
+
+            <!-- Ver Todas las Categorías -->
+            <button 
+                type="button" 
+                onclick="cambiarVistaDashboard('todas')" 
+                id="btn-dash-todas" 
+                class="dash-menu-item text-slate-700"
+            >
+                <span class="text-base">📁</span>
+                <span class="flex-1">Todas las Categorías</span>
+                <span class="text-xs bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded">
+                    <%= (categoriasStats || []).length %>
+                </span>
+            </button>
+
+            <div class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 px-3 pt-3 pb-1 border-t border-slate-100 mt-2">
+                Por Categoría Individual
+            </div>
+
+            <!-- Buscador rápido de categoría en el menú lateral -->
+            <div class="px-1 pb-1">
+                <div class="relative">
+                    <input 
+                        type="text" 
+                        id="buscarMenuCategoriaDash" 
+                        oninput="filtrarMenuCategoriasDash()" 
+                        placeholder="Buscar categoría..." 
+                        class="w-full rounded-md border border-slate-200 pl-7 pr-6 py-1 text-xs text-slate-900 placeholder-slate-400 bg-slate-50 focus:bg-white focus:border-brand-600 focus:outline-none"
+                    >
+                    <span class="absolute left-2 top-1.5 text-slate-400 text-[11px]">🔍</span>
+                    <button 
+                        type="button" 
+                        id="btnClearMenuCatDash" 
+                        onclick="document.getElementById('buscarMenuCategoriaDash').value=''; filtrarMenuCategoriasDash();" 
+                        style="display: none;" 
+                        class="absolute right-1.5 top-1 text-slate-400 hover:text-slate-600 text-[11px] font-bold cursor-pointer"
+                    >✕</button>
+                </div>
+            </div>
+
+            <div class="space-y-1 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
+                <% (categoriasStats || []).forEach(cat => { %>
+                    <button 
+                        type="button" 
+                        onclick="cambiarVistaDashboard('cat-<%= cat.id %>')" 
+                        id="btn-dash-cat-<%= cat.id %>" 
+                        data-search="<%= (cat.nombre || '').toLowerCase() %>"
+                        class="dash-menu-item item-menu-cat-dash text-slate-700"
+                    >
+                        <span class="text-sm">🏷️</span>
+                        <span class="flex-1 truncate" title="<%= cat.nombre %>"><%= cat.nombre %></span>
+                        <span class="text-[10px] bg-slate-100 text-slate-600 font-bold px-1.5 py-0.2 rounded">
+                            <%= cat.total %>
+                        </span>
+                    </button>
+                <% }) %>
+                <div id="sinCategoriasMenuDash" style="display: none;" class="text-[11px] text-slate-400 italic text-center py-2">
+                    Sin categorías coincidentes
+                </div>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100">
+                <a 
+                    href="/admin" 
+                    class="dash-menu-item text-slate-600 hover:text-slate-900"
+                >
+                    <span class="text-sm">📋</span>
+                    <span>Ir a Sistema de Tickets</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- CONTENIDO PRINCIPAL A TODA LA PANTALLA -->
+        <main class="flex-1 w-full p-4 sm:p-6 lg:p-8 bg-slate-50 space-y-6 overflow-x-hidden">
+
+            <!-- VISTA 1: DASHBOARDS GENERALES Y MÉTRICAS PRINCIPALES -->
+            <div id="vista-dash-general" class="vista-dashboard space-y-6">
+
+                <!-- KPI SUMMARY CARDS (Aprovecha todo el ancho) -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
+                    
+                    <div class="bg-white rounded-md shadow-2xs border border-slate-200 p-4 border-t-3 border-t-slate-800 flex flex-col justify-between">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Tickets</span>
+                        <span class="text-2xl font-extrabold text-slate-900 mt-1"><%= totalTickets %></span>
+                        <span class="text-[11px] text-slate-400 mt-1">Registrados</span>
+                    </div>
+
+                    <div class="bg-white rounded-md shadow-2xs border border-slate-200 p-4 border-t-3 border-t-sky-500 flex flex-col justify-between">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-sky-700">Nuevos</span>
+                        <span class="text-2xl font-extrabold text-sky-900 mt-1"><%= estatusStats.nuevos %></span>
+                        <span class="text-[11px] text-sky-600 mt-1"><%= totalTickets > 0 ? ((estatusStats.nuevos / totalTickets) * 100).toFixed(1) : 0 %>%</span>
+                    </div>
+
+                    <div class="bg-white rounded-md shadow-2xs border border-slate-200 p-4 border-t-3 border-t-amber-500 flex flex-col justify-between">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-amber-700">En Proceso</span>
+                        <span class="text-2xl font-extrabold text-amber-900 mt-1"><%= estatusStats.enProceso %></span>
+                        <span class="text-[11px] text-amber-600 mt-1"><%= totalTickets > 0 ? ((estatusStats.enProceso / totalTickets) * 100).toFixed(1) : 0 %>%</span>
+                    </div>
+
+                    <div class="bg-white rounded-md shadow-2xs border border-slate-200 p-4 border-t-3 border-t-rose-500 flex flex-col justify-between">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-rose-700">Pendientes</span>
+                        <span class="text-2xl font-extrabold text-rose-900 mt-1"><%= estatusStats.pendientes %></span>
+                        <span class="text-[11px] text-rose-600 mt-1"><%= totalTickets > 0 ? ((estatusStats.pendientes / totalTickets) * 100).toFixed(1) : 0 %>%</span>
+                    </div>
+
+                    <div class="bg-white rounded-md shadow-2xs border border-slate-200 p-4 border-t-3 border-t-emerald-500 flex flex-col justify-between">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Resueltos</span>
+                        <span class="text-2xl font-extrabold text-emerald-900 mt-1"><%= estatusStats.resueltos %></span>
+                        <span class="text-[11px] text-emerald-600 mt-1"><%= totalTickets > 0 ? ((estatusStats.resueltos / totalTickets) * 100).toFixed(1) : 0 %>%</span>
+                    </div>
+
+                    <div class="bg-white rounded-md shadow-2xs border border-slate-200 p-4 border-t-3 border-t-brand-600 flex flex-col justify-between">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-brand-700">⏱️ Prom. Resolución</span>
+                        <span class="text-lg font-extrabold text-brand-900 mt-1 truncate" title="<%= tiemposGlobalesStats.promGlobalResTexto %>"><%= tiemposGlobalesStats.promGlobalResTexto %></span>
+                        <span class="text-[11px] text-slate-400 mt-1"><%= tiemposGlobalesStats.totalResueltos %> resueltos</span>
+                    </div>
+
+                    <div class="bg-white rounded-md shadow-2xs border border-slate-200 p-4 border-t-3 border-t-emerald-600 flex flex-col justify-between">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-700">⚡ 1ra Atención</span>
+                        <span class="text-lg font-extrabold text-emerald-900 mt-1 truncate" title="<%= tiemposGlobalesStats.promGlobalAtenTexto %>"><%= tiemposGlobalesStats.promGlobalAtenTexto %></span>
+                        <span class="text-[11px] text-slate-400 mt-1">Inicio atención</span>
+                    </div>
+
+                </div>
+
+                <!-- BANNER DE CONFIGURACIÓN DE SLAS Y EXCLUSIÓN DE DOMINGOS -->
+                <section class="bg-white rounded-md shadow-2xs border border-slate-200 p-4 border-l-4 border-l-brand-600 flex flex-wrap items-center justify-between gap-4">
+                    <div class="space-y-1 max-w-2xl">
+                        <div class="flex items-center gap-2">
+                            <span class="text-base">🎯</span>
+                            <strong class="text-sm font-bold text-slate-900">
+                                Metas de Tiempo de Atención y Velocidad (SLA)
+                            </strong>
+                        </div>
+                        <p class="text-xs text-slate-600">
+                            Configura el margen porcentual de tolerancia para considerar las atenciones dentro del tiempo meta.
+                        </p>
+                        <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold bg-brand-50 text-brand-700 border border-brand-200">
+                            <span>🚫 Días Domingo no laborables:</span>
+                            <span class="font-normal text-brand-800">Totalmente excluidos (0 hrs) de todos los cálculos y métricas.</span>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:items-end gap-2">
+                        <div class="flex items-center gap-2 bg-slate-50 border border-slate-300 rounded-md p-1.5 flex-wrap">
+                            <label for="input-tolerancia-pct" class="text-xs font-bold text-slate-700 pl-1">
+                                Margen de Alerta:
+                            </label>
+                            <div class="inline-flex items-center gap-1">
+                                <input 
+                                    type="number" 
+                                    id="input-tolerancia-pct" 
+                                    value="<%= toleranciaPct %>" 
+                                    min="1" 
+                                    max="500" 
+                                    step="1"
+                                    class="w-14 rounded border border-slate-300 py-0.5 px-1.5 text-xs text-center font-bold text-slate-900 bg-white"
+                                >
+                                <span class="text-xs font-bold text-slate-500">%</span>
+                            </div>
+
+                            <button 
+                                type="button" 
+                                id="btn-save-tolerancia" 
+                                onclick="guardarToleranciaGlobal()" 
+                                class="px-2.5 py-1 rounded text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 transition-colors cursor-pointer"
+                            >
+                                💾 Guardar %
+                            </button>
+
+                            <button 
+                                type="button" 
+                                id="btn-exportar-principales" 
+                                onclick="exportarDashboardsPrincipalesExcel(this)" 
+                                class="px-3 py-1 rounded text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 transition-colors cursor-pointer ml-1 inline-flex items-center gap-1"
+                                title="Descargar en Excel únicamente los 3 dashboards principales y tabla de categorías"
+                            >
+                                <span>📊 Descargar Dashboards Principales (Excel)</span>
+                            </button>
+                        </div>
+
+                        <div class="flex items-center gap-1.5 text-[10px] flex-wrap">
+                            <span class="badge-perf badge-perf-fast">⚡ Rápido: ≤ Meta</span>
+                            <span class="badge-perf badge-perf-med">🟡 En límite: ≤ +<span id="label-tolerancia-med"><%= toleranciaPct %></span>%</span>
+                            <span class="badge-perf badge-perf-slow">🔴 A mejorar: &gt; +<span id="label-tolerancia-slow"><%= toleranciaPct %></span>%</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- DASHBOARDS PRINCIPALES (GRID 3 COLUMNAS QUE OCUPA TODO EL ANCHO) -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                    <!-- DASHBOARD 1: ESTATUS -->
+                    <div class="bg-white rounded-md shadow-2xs border border-slate-200 p-5 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100 gap-2">
+                                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                                    <span>📋</span>
+                                    <span>Tickets por Estatus</span>
+                                </h3>
+                                <div class="bg-slate-100 p-0.5 rounded border border-slate-200 inline-flex" id="toggle-group-estatus">
+                                    <button type="button" class="btn-toggle-view active" onclick="cambiarTipoGrafica('estatus', 'pie', this)">🥧 Pastel</button>
+                                    <button type="button" class="btn-toggle-view" onclick="cambiarTipoGrafica('estatus', 'bar', this)">📊 Barras</button>
+                                </div>
+                            </div>
+
+                            <div class="chart-wrapper">
+                                <canvas id="chart-estatus"></canvas>
+                            </div>
+
+                            <div class="mt-4 mb-2">
+                                <span class="text-xs font-bold uppercase text-slate-600 block">📊 Desglose de Datos:</span>
+                            </div>
+
+                            <div class="overflow-x-auto rounded border border-slate-200 text-xs">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-slate-50 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                            <th class="py-2 px-3">Estatus</th>
+                                            <th class="py-2 px-3 text-right">Cantidad</th>
+                                            <th class="py-2 px-3 text-right">%</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        <% 
+                                            const estatusItems = [
+                                                { label: 'Nuevos', count: estatusStats.nuevos, color: '#0284c7' },
+                                                { label: 'En proceso', count: estatusStats.enProceso, color: '#d97706' },
+                                                { label: 'Pendientes', count: estatusStats.pendientes, color: '#dc2626' },
+                                                { label: 'Resueltos', count: estatusStats.resueltos, color: '#16a34a' }
+                                            ];
+                                        %>
+                                        <% estatusItems.forEach(item => { %>
+                                            <% const pct = totalTickets > 0 ? ((item.count / totalTickets) * 100).toFixed(1) : '0.0'; %>
+                                            <tr class="hover:bg-slate-50">
+                                                <td class="py-2 px-3 font-semibold text-slate-800 flex items-center gap-2">
+                                                    <span class="w-2.5 h-2.5 rounded-full" style="background-color: <%= item.color %>;"></span>
+                                                    <%= item.label %>
+                                                </td>
+                                                <td class="py-2 px-3 text-right font-bold text-slate-900 whitespace-nowrap">
+                                                    <%= item.count %> ticket<%= item.count === 1 ? '' : 's' %>
+                                                </td>
+                                                <td class="py-2 px-3 text-right font-bold text-slate-600">
+                                                    <%= pct %>%
+                                                </td>
+                                            </tr>
+                                        <% }) %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DASHBOARD 2: PRIORIDAD -->
+                    <div class="bg-white rounded-md shadow-2xs border border-slate-200 p-5 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100 gap-2">
+                                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                                    <span>⚡</span>
+                                    <span>Tickets por Prioridad</span>
+                                </h3>
+                                <div class="bg-slate-100 p-0.5 rounded border border-slate-200 inline-flex" id="toggle-group-prioridad">
+                                    <button type="button" class="btn-toggle-view active" onclick="cambiarTipoGrafica('prioridad', 'pie', this)">🥧 Pastel</button>
+                                    <button type="button" class="btn-toggle-view" onclick="cambiarTipoGrafica('prioridad', 'bar', this)">📊 Barras</button>
+                                </div>
+                            </div>
+
+                            <div class="chart-wrapper">
+                                <canvas id="chart-prioridad"></canvas>
+                            </div>
+
+                            <div class="mt-4 mb-2">
+                                <span class="text-xs font-bold uppercase text-slate-600 block">⚡ Desglose por Nivel:</span>
+                            </div>
+
+                            <div class="overflow-x-auto rounded border border-slate-200 text-xs">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-slate-50 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                            <th class="py-2 px-3">Prioridad</th>
+                                            <th class="py-2 px-3 text-right">Cantidad</th>
+                                            <th class="py-2 px-3 text-right">%</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        <% 
+                                            const prioridadItems = [
+                                                { label: 'Baja', count: prioridadStats.baja, color: '#16a34a' },
+                                                { label: 'Media', count: prioridadStats.media, color: '#d97706' },
+                                                { label: 'Alta', count: prioridadStats.alta, color: '#dc2626' }
+                                            ];
+                                        %>
+                                        <% prioridadItems.forEach(item => { %>
+                                            <% const pct = totalTickets > 0 ? ((item.count / totalTickets) * 100).toFixed(1) : '0.0'; %>
+                                            <tr class="hover:bg-slate-50">
+                                                <td class="py-2 px-3 font-semibold text-slate-800 flex items-center gap-2">
+                                                    <span class="w-2.5 h-2.5 rounded-full" style="background-color: <%= item.color %>;"></span>
+                                                    <%= item.label %>
+                                                </td>
+                                                <td class="py-2 px-3 text-right font-bold text-slate-900 whitespace-nowrap">
+                                                    <%= item.count %> ticket<%= item.count === 1 ? '' : 's' %>
+                                                </td>
+                                                <td class="py-2 px-3 text-right font-bold text-slate-600">
+                                                    <%= pct %>%
+                                                </td>
+                                            </tr>
+                                        <% }) %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DASHBOARD 3: TIEMPOS DE RESOLUCIÓN POR CATEGORÍA -->
+                    <div class="bg-white rounded-md shadow-2xs border border-slate-200 p-5 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100 gap-2">
+                                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                                    <span>⏱️</span>
+                                    <span>Tiempos por Categoría</span>
+                                </h3>
+                                <div class="bg-slate-100 p-0.5 rounded border border-slate-200 inline-flex" id="toggle-group-tiempos-resolucion">
+                                    <button type="button" class="btn-toggle-view active" onclick="cambiarTipoGrafica('tiempos-resolucion', 'bar', this)">📊 Barras</button>
+                                    <button type="button" class="btn-toggle-view" onclick="cambiarTipoGrafica('tiempos-resolucion', 'pie', this)">🥧 Pastel</button>
+                                </div>
+                            </div>
+
+                            <!-- Highlight banners -->
+                            <div class="grid grid-cols-1 gap-2 mb-3">
+                                <div class="rounded bg-emerald-50 border border-emerald-200 p-2 text-xs text-emerald-900">
+                                    <span class="font-extrabold text-[10px] uppercase tracking-wider block text-emerald-700">🚀 Categoría Más Rápida:</span>
+                                    <% if (tiemposGlobalesStats.categoriaMasRapida) { %>
+                                        <div class="font-bold text-emerald-950 mt-0.5"><%= tiemposGlobalesStats.categoriaMasRapida.nombre %></div>
+                                        <div class="text-[11px] text-emerald-800"><%= tiemposGlobalesStats.categoriaMasRapida.tiempoTexto %> prom. (Meta: <%= tiemposGlobalesStats.categoriaMasRapida.tiempoBaseHoras %>h)</div>
+                                    <% } else { %>
+                                        <span class="text-slate-400 italic">Sin tickets resueltos aún</span>
+                                    <% } %>
+                                </div>
+
+                                <div class="rounded bg-rose-50 border border-rose-200 p-2 text-xs text-rose-900">
+                                    <span class="font-extrabold text-[10px] uppercase tracking-wider block text-rose-700">⚠️ A Mejorar Tiempos:</span>
+                                    <% if (tiemposGlobalesStats.categoriaAMejorar) { %>
+                                        <div class="font-bold text-rose-950 mt-0.5"><%= tiemposGlobalesStats.categoriaAMejorar.nombre %></div>
+                                        <div class="text-[11px] text-rose-800">
+                                            <%= tiemposGlobalesStats.categoriaAMejorar.tiempoTexto %> prom. (Meta: <%= tiemposGlobalesStats.categoriaAMejorar.tiempoBaseHoras %>h)
+                                            <% if (tiemposGlobalesStats.categoriaAMejorar.excesoHoras > 0) { %>
+                                                <span class="text-brand-700 font-bold">(+<%= tiemposGlobalesStats.categoriaAMejorar.excesoHoras %>h sobre meta)</span>
+                                            <% } %>
+                                        </div>
+                                    <% } else if (tiemposGlobalesStats.categoriaMasRapida) { %>
+                                        <span class="text-emerald-700 font-semibold text-[11px]">Todas las categorías resueltas están dentro del tiempo meta.</span>
+                                    <% } else { %>
+                                        <span class="text-slate-400 italic">Sin tickets resueltos aún</span>
+                                    <% } %>
+                                </div>
+                            </div>
+
+                            <div class="chart-wrapper">
+                                <canvas id="chart-tiempos-resolucion"></canvas>
+                            </div>
+
+                            <div class="mt-4 mb-2 flex items-center justify-between gap-2 flex-wrap">
+                                <span class="text-xs font-bold uppercase text-slate-600 block">⏱️ Tiempos Promedio y Alertas:</span>
+                                <div class="relative w-44">
+                                    <input 
+                                        type="text" 
+                                        id="buscarTablaTiemposGeneral" 
+                                        oninput="filtrarTablaTiemposGeneral()" 
+                                        placeholder="Buscar categoría..." 
+                                        class="w-full rounded border border-slate-200 pl-6 pr-5 py-1 text-[11px] text-slate-900 placeholder-slate-400 bg-slate-50 focus:bg-white focus:border-brand-600 focus:outline-none"
+                                    >
+                                    <span class="absolute left-1.5 top-1 text-slate-400 text-[10px]">🔍</span>
+                                </div>
+                            </div>
+
+                            <div class="overflow-x-auto rounded border border-slate-200 text-xs">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-slate-50 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                            <th class="py-2 px-3">Categoría</th>
+                                            <th class="py-2 px-3 text-right">Promedio</th>
+                                            <th class="py-2 px-3 text-center">Meta</th>
+                                            <th class="py-2 px-3 text-center">Alerta</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        <% 
+                                            const coloresPaleta = [
+                                                '#dc2626', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', 
+                                                '#f97316', '#06b6d4', '#84cc16', '#6366f1', '#eab308'
+                                            ];
+                                        %>
+                                        <% categoriasStats.forEach((catItem, cIdx) => { %>
+                                            <% const catColor = coloresPaleta[cIdx % coloresPaleta.length]; %>
+                                            <tr class="fila-tiempo-cat-general hover:bg-slate-50" data-search="<%= (catItem.nombre || '').toLowerCase() %>">
+                                                <td class="py-2 px-3 font-semibold text-slate-800 flex items-center gap-1.5 truncate max-w-[120px]" title="<%= catItem.nombre %>">
+                                                    <span class="w-2 h-2 rounded-full flex-shrink-0" style="background-color: <%= catColor %>;"></span>
+                                                    <span class="truncate"><%= catItem.nombre %></span>
+                                                </td>
+                                                <td class="py-2 px-3 text-right font-bold text-brand-600 whitespace-nowrap">
+                                                    <%= catItem.promResolucionTexto %>
+                                                </td>
+                                                <td class="py-2 px-3 text-center text-slate-500 whitespace-nowrap font-medium">
+                                                    <%= catItem.tiempoBaseHoras %>h
+                                                </td>
+                                                <td class="py-2 px-3 text-center whitespace-nowrap" id="alerta-cat-cell-<%= catItem.id %>">
+                                                    <% if (catItem.resueltosCount === 0) { %>
+                                                        <span class="badge-perf badge-perf-na">En atención</span>
+                                                    <% } else if (catItem.velocidadEstatus === 'rapido') { %>
+                                                        <span class="badge-perf badge-perf-fast">⚡ Rápido</span>
+                                                    <% } else if (catItem.velocidadEstatus === 'limite') { %>
+                                                        <span class="badge-perf badge-perf-med">🟡 En límite</span>
+                                                    <% } else { %>
+                                                        <span class="badge-perf badge-perf-slow">🔴 A mejorar</span>
+                                                    <% } %>
+                                                </td>
+                                            </tr>
+                                        <% }) %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- VISTAS INDIVIDUALES POR CATEGORÍA Y VISTA DE TODAS -->
+            <% categoriasStats.forEach((cat, idx) => { %>
+                <div id="vista-dash-cat-<%= cat.id %>" class="vista-dashboard space-y-6" style="display: none;">
+                    
+                    <!-- Tarjeta Cabecera de la Categoría -->
+                    <div class="bg-white rounded-md border border-slate-200 p-5 border-l-4 border-l-brand-600 shadow-2xs flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl">🏷️</span>
+                                <h3 class="text-lg font-bold text-slate-900"><%= cat.nombre %></h3>
+                                <span class="text-xs bg-brand-50 text-brand-700 border border-brand-200 font-bold px-2.5 py-0.5 rounded">
+                                    <%= cat.total %> ticket<%= cat.total === 1 ? '' : 's' %>
+                                </span>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">
+                                Promedio de Resolución de esta categoría: <strong class="text-brand-700 font-extrabold"><%= cat.promResolucionTexto %></strong> | Primera atención: <strong class="text-emerald-700 font-bold"><%= cat.promAtencionTexto %></strong>
+                            </p>
+                        </div>
+
+                        <div>
+                            <button 
+                                type="button" 
+                                onclick="exportarCategoriaExcel('<%= cat.id %>', this, event)" 
+                                class="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3.5 py-2 rounded text-xs shadow-xs transition-colors cursor-pointer"
+                                title="Descargar reporte en Excel para <%= cat.nombre %>"
+                            >
+                                <span>📥 Descargar Excel de <%= cat.nombre %></span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- GRID 2 DASHBOARDS: VOLUMEN (IZQ) Y TIEMPOS (DER) -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                        <!-- DASHBOARD IZQUIERDO: DISTRIBUCIÓN POR SUBCATEGORÍA -->
+                        <div class="bg-white rounded-md border border-slate-200 p-5 shadow-2xs space-y-4">
+                            <div class="flex items-center justify-between pb-3 border-b border-slate-100 gap-2">
+                                <div>
+                                    <strong class="text-sm font-bold text-slate-900 block">📁 Volumen por Subcategoría</strong>
+                                    <span class="text-[11px] text-slate-400">Distribución de tickets registrados</span>
+                                </div>
+                                <div class="bg-slate-100 p-0.5 rounded border border-slate-200 inline-flex" id="toggle-group-cat-<%= cat.id %>">
+                                    <button type="button" class="btn-toggle-view active" onclick="cambiarTipoGrafica('cat-<%= cat.id %>', 'pie', this)">🥧 Pastel</button>
+                                    <button type="button" class="btn-toggle-view" onclick="cambiarTipoGrafica('cat-<%= cat.id %>', 'bar', this)">📊 Barras</button>
+                                </div>
+                            </div>
+
+                            <div class="chart-wrapper" style="height: 260px;">
+                                <canvas id="chart-cat-<%= cat.id %>"></canvas>
+                            </div>
+
+                            <div class="overflow-x-auto rounded border border-slate-200 text-xs">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-slate-50 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                            <th class="py-2 px-3">Subcategoría</th>
+                                            <th class="py-2 px-3 text-right">Tickets</th>
+                                            <th class="py-2 px-3 text-right">%</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        <% if (cat.subcategorias.length === 0 && cat.sinSubCount === 0) { %>
+                                            <tr><td colspan="3" class="py-4 text-center text-slate-400 italic">Sin subcategorías definidas.</td></tr>
+                                        <% } %>
+                                        <% cat.subcategorias.forEach((sub, subIdx) => { %>
+                                            <% 
+                                                const coloresPaleta = ['#dc2626', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16'];
+                                                const subColor = coloresPaleta[(subIdx + idx) % coloresPaleta.length];
+                                                const subPct = cat.total > 0 ? ((sub.count / cat.total) * 100).toFixed(1) : '0.0';
+                                            %>
+                                            <tr class="hover:bg-slate-50">
+                                                <td class="py-2 px-3 font-semibold text-slate-800 flex items-center gap-1.5">
+                                                    <span class="w-2 h-2 rounded-full" style="background-color: <%= subColor %>;"></span>
+                                                    <%= sub.nombre %>
+                                                </td>
+                                                <td class="py-2 px-3 text-right font-bold text-slate-900 whitespace-nowrap">
+                                                    <%= sub.count %>
+                                                </td>
+                                                <td class="py-2 px-3 text-right font-bold text-slate-600">
+                                                    <%= subPct %>%
+                                                </td>
+                                            </tr>
+                                        <% }) %>
+                                        <% if (cat.sinSubCount > 0) { %>
+                                            <% const sinSubPct = cat.total > 0 ? ((cat.sinSubCount / cat.total) * 100).toFixed(1) : '0.0'; %>
+                                            <tr class="hover:bg-slate-50 text-slate-500">
+                                                <td class="py-2 px-3 italic">General / Sin especificar</td>
+                                                <td class="py-2 px-3 text-right font-bold"><%= cat.sinSubCount %></td>
+                                                <td class="py-2 px-3 text-right font-bold"><%= sinSubPct %>%</td>
+                                            </tr>
+                                        <% } %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- DASHBOARD DERECHO: TIEMPOS DE RESOLUCIÓN -->
+                        <div class="bg-white rounded-md border border-slate-200 p-5 shadow-2xs space-y-4 border-l-4 border-l-brand-600">
+                            <div class="flex items-center justify-between pb-3 border-b border-slate-100 gap-2">
+                                <div>
+                                    <strong class="text-sm font-bold text-slate-900 block">⏱️ Tiempos de Resolución: <%= cat.nombre %></strong>
+                                    <span class="text-[11px] text-slate-400">Monitoreo de tiempos y velocidad de atención</span>
+                                </div>
+                                <div class="bg-slate-100 p-0.5 rounded border border-slate-200 inline-flex" id="toggle-group-cat-tiempo-<%= cat.id %>">
+                                    <button type="button" class="btn-toggle-view active" onclick="cambiarTipoGrafica('cat-tiempo-<%= cat.id %>', 'bar', this)">📊 Barras</button>
+                                    <button type="button" class="btn-toggle-view" onclick="cambiarTipoGrafica('cat-tiempo-<%= cat.id %>', 'pie', this)">🥧 Pastel</button>
+                                </div>
+                            </div>
+
+                            <!-- Mini resumen -->
+                            <div class="grid grid-cols-3 gap-2">
+                                <div class="bg-slate-50 border border-slate-200 rounded p-2 text-center">
+                                    <span class="text-[9px] font-bold uppercase text-slate-500 block">Prom. Resolución</span>
+                                    <span class="text-xs font-extrabold text-brand-700 truncate block mt-0.5"><%= cat.promResolucionTexto %></span>
+                                </div>
+                                <div class="bg-slate-50 border border-slate-200 rounded p-2 text-center">
+                                    <span class="text-[9px] font-bold uppercase text-slate-500 block">1ra Atención</span>
+                                    <span class="text-xs font-extrabold text-emerald-700 truncate block mt-0.5"><%= cat.promAtencionTexto %></span>
+                                </div>
+                                <div class="bg-slate-50 border border-slate-200 rounded p-2 text-center">
+                                    <span class="text-[9px] font-bold uppercase text-slate-500 block">Más Rápido</span>
+                                    <span class="text-xs font-extrabold text-slate-800 truncate block mt-0.5"><%= cat.minResolucionTexto %></span>
+                                </div>
+                            </div>
+
+                            <div class="chart-wrapper" style="height: 260px;">
+                                <canvas id="chart-cat-tiempo-<%= cat.id %>"></canvas>
+                            </div>
+
+                            <div class="flex items-center justify-between gap-2 pt-1 flex-wrap">
+                                <span class="text-xs font-bold uppercase text-slate-700">⏱️ Metas y Tiempos Base:</span>
+                                <div class="flex items-center gap-2">
+                                    <% if (cat.subcategorias && cat.subcategorias.length > 0) { %>
+                                        <div class="relative w-40">
+                                            <input 
+                                                type="text" 
+                                                id="buscarSubcatDash-<%= cat.id %>" 
+                                                oninput="filtrarTablaSubcatDash('<%= cat.id %>')" 
+                                                placeholder="Buscar subcategoría..." 
+                                                class="w-full rounded border border-slate-200 pl-6 pr-2 py-0.5 text-[11px] text-slate-900 placeholder-slate-400 bg-slate-50 focus:bg-white focus:border-brand-600 focus:outline-none"
+                                            >
+                                            <span class="absolute left-1.5 top-1 text-slate-400 text-[10px]">🔍</span>
+                                        </div>
+                                        <button 
+                                            type="button" 
+                                            onclick="guardarTodosSubcategorias('<%= cat.id %>')"
+                                            class="px-2.5 py-1 rounded text-[11px] font-bold text-white bg-brand-600 hover:bg-brand-700 shadow-2xs transition-colors cursor-pointer"
+                                        >
+                                            💾 Guardar todos
+                                        </button>
+                                    <% } %>
+                                </div>
+                            </div>
+
+                            <div class="overflow-x-auto rounded border border-slate-200 text-xs">
+                                <table class="w-full text-left border-collapse" id="tabla-tiempos-cat-<%= cat.id %>">
+                                    <thead>
+                                        <tr class="bg-slate-50 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                            <th class="py-2 px-3">Subcategoría</th>
+                                            <th class="py-2 px-3 text-right">Resueltos</th>
+                                            <th class="py-2 px-3 text-right">Promedio</th>
+                                            <th class="py-2 px-3 text-center">Tiempo Base Meta</th>
+                                            <th class="py-2 px-3 text-center">Alerta</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        <% if (cat.subcategorias.length === 0 && cat.sinSubCount === 0) { %>
+                                            <tr><td colspan="5" class="py-4 text-center text-slate-400 italic">Sin datos de tiempos.</td></tr>
+                                        <% } %>
+                                        <% cat.subcategorias.forEach((sub, subIdx) => { %>
+                                            <% 
+                                                const coloresPaleta = ['#dc2626', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16'];
+                                                const subColor = coloresPaleta[(subIdx + idx) % coloresPaleta.length]; 
+                                            %>
+                                            <tr id="fila-sub-<%= sub.id %>" class="fila-subcat-dash-<%= cat.id %> hover:bg-slate-50" data-search="<%= (sub.nombre || '').toLowerCase() %>">
+                                                <td class="py-2 px-3 font-semibold text-slate-800 flex items-center gap-1.5">
+                                                    <span class="w-2 h-2 rounded-full" style="background-color: <%= subColor %>;"></span>
+                                                    <%= sub.nombre %>
+                                                </td>
+                                                <td class="py-2 px-3 text-right font-bold text-slate-600 whitespace-nowrap">
+                                                    <%= sub.resueltosCount %> / <%= sub.count %>
+                                                </td>
+                                                <td class="py-2 px-3 text-right font-bold text-brand-700 whitespace-nowrap">
+                                                    <%= sub.promResolucionTexto %>
+                                                </td>
+                                                <td class="py-2 px-3 text-center whitespace-nowrap">
+                                                    <% if (typeof sub.id === 'number' || (!isNaN(Number(sub.id)) && !String(sub.id).startsWith('sub-extra-'))) { %>
+                                                        <div class="inline-flex items-center justify-center gap-1">
+                                                            <input 
+                                                                type="number" 
+                                                                step="0.5" 
+                                                                min="0.1" 
+                                                                id="input-base-<%= sub.id %>"
+                                                                class="input-base-sub-<%= cat.id %> w-14 rounded border border-slate-300 px-1 py-0.5 text-center font-bold text-xs text-slate-900 bg-white"
+                                                                data-sub-id="<%= sub.id %>" 
+                                                                data-prom-horas="<%= sub.promResolucionHoras || 0 %>"
+                                                                data-resueltos="<%= sub.resueltosCount %>"
+                                                                value="<%= sub.tiempoBaseHoras %>" 
+                                                                onkeydown="if(event.key==='Enter') guardarTiempoBaseSub('<%= sub.id %>', this)"
+                                                            >
+                                                            <span class="text-[11px] text-slate-400 font-semibold">h</span>
+                                                            <button 
+                                                                type="button" 
+                                                                id="btn-save-<%= sub.id %>"
+                                                                onclick="guardarTiempoBaseSub('<%= sub.id %>', this)"
+                                                                title="Guardar tiempo base de <%= sub.nombre %>" 
+                                                                class="bg-brand-600 hover:bg-brand-700 text-white rounded p-1 text-xs cursor-pointer transition-colors"
+                                                            >💾</button>
+                                                        </div>
+                                                    <% } else { %>
+                                                        <span class="text-slate-400 text-xs"><%= sub.tiempoBaseHoras %> hrs</span>
+                                                    <% } %>
+                                                </td>
+                                                <td class="py-2 px-3 text-center whitespace-nowrap" id="alerta-cell-<%= sub.id %>">
+                                                    <% if (sub.resueltosCount === 0) { %>
+                                                        <span class="badge-perf badge-perf-na">En atención</span>
+                                                    <% } else if (sub.velocidadEstatus === 'rapido') { %>
+                                                        <span class="badge-perf badge-perf-fast">⚡ Rápido</span>
+                                                    <% } else if (sub.velocidadEstatus === 'limite') { %>
+                                                        <span class="badge-perf badge-perf-med">🟡 En límite</span>
+                                                    <% } else { %>
+                                                        <span class="badge-perf badge-perf-slow">🔴 A mejorar</span>
+                                                    <% } %>
+                                                </td>
+                                            </tr>
+                                        <% }) %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+            <% }) %>
+
+            <!-- VISTA: TODAS LAS CATEGORÍAS JUNTAS -->
+            <div id="vista-dash-todas" class="vista-dashboard space-y-6" style="display: none;">
+                <div class="bg-white rounded-md border border-slate-200 p-4 border-l-4 border-l-brand-600 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">📁 Vista General de Todas las Categorías</h3>
+                        <p class="text-xs text-slate-500 mt-0.5">Explora todas las métricas de todas las categorías en pantalla completa.</p>
+                    </div>
+                    <div class="relative min-w-[260px]">
+                        <input 
+                            type="text" 
+                            id="buscarDashTodasCategorias" 
+                            oninput="filtrarDashboardsTodasCategorias()" 
+                            placeholder="Buscar categoría o subcategoría..." 
+                            class="w-full rounded-md border border-slate-300 pl-8 pr-7 py-1.5 text-xs text-slate-900 placeholder-slate-400 bg-white focus:border-brand-600 focus:outline-none shadow-2xs"
+                        >
+                        <span class="absolute left-2.5 top-2 text-slate-400 text-xs">🔍</span>
+                        <button 
+                            type="button" 
+                            id="btnClearDashTodasCat" 
+                            onclick="document.getElementById('buscarDashTodasCategorias').value=''; filtrarDashboardsTodasCategorias();" 
+                            style="display: none;" 
+                            class="absolute right-2 top-1.5 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer"
+                        >✕</button>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <% categoriasStats.forEach((cat, idx) => { %>
+                        <% const subNombresStr = (cat.subcategorias || []).map(s => s.nombre).join(' '); %>
+                        <div 
+                            class="tarjeta-dash-todas-cat bg-white rounded-md border border-slate-200 p-5 shadow-2xs space-y-3"
+                            data-search="<%= ((cat.nombre || '') + ' ' + subNombresStr).toLowerCase() %>"
+                        >
+                            <div class="flex items-center justify-between border-b border-slate-100 pb-3 flex-wrap gap-2">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="text-base">🏷️</span>
+                                    <h4 class="text-sm font-bold text-slate-900"><%= cat.nombre %></h4>
+                                    <span class="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-bold"><%= cat.total %> tickets</span>
+                                    <span class="text-xs text-brand-700 font-bold ml-2">Promedio: <%= cat.promResolucionTexto %></span>
+                                </div>
+                                <button 
+                                    type="button" 
+                                    onclick="cambiarVistaDashboard('cat-<%= cat.id %>')" 
+                                    class="text-xs font-bold text-brand-600 hover:text-brand-800 underline cursor-pointer"
+                                >
+                                    Ver dashboard individual →
+                                </button>
+                            </div>
+                            <% if (cat.subcategorias && cat.subcategorias.length > 0) { %>
+                                <div class="flex flex-wrap gap-1.5 pt-1">
+                                    <% cat.subcategorias.forEach(s => { %>
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-slate-50 text-slate-700 border border-slate-200">
+                                            <span><%= s.nombre %>:</span>
+                                            <strong><%= s.count %></strong>
+                                        </span>
+                                    <% }) %>
+                                </div>
+                            <% } %>
+                        </div>
+                    <% }) %>
+                    <div id="sinCoincidenciasDashTodasCat" style="display: none;" class="bg-white rounded-md border border-slate-200 p-8 text-center text-slate-400 italic text-xs">
+                        🔍 No se encontraron categorías o subcategorías que coincidan con tu búsqueda.
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Toast de Notificación Flotante -->
+    <div id="toast-notificacion" class="fixed bottom-6 right-6 bg-slate-900 text-white px-4 py-3 rounded text-xs font-bold shadow-xl flex items-center gap-2 z-50 transition-opacity duration-300" style="display: none; opacity: 0;">
+        <span id="toast-icono" class="text-base">✅</span>
+        <span id="toast-mensaje">Notificación</span>
+    </div>
+
+    <!-- SCRIPTS DE CHARTS, TABS Y EXCEL -->
+    <script>
+        if (typeof ChartDataLabels !== 'undefined') {
+            Chart.register(ChartDataLabels);
+        }
+
+        const chartsMap = {};
+
+        const PALETA_COLORES = [
+            '#dc2626', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', 
+            '#f97316', '#06b6d4', '#84cc16', '#6366f1', '#eab308'
+        ];
+
+        function formatearHoras(valHoras) {
+            if (!valHoras || valHoras <= 0) return '0 min';
+            const totalMinutos = Math.round(valHoras * 60);
+            if (totalMinutos < 60) return `${totalMinutos} min`;
+            const horas = Math.floor(totalMinutos / 60);
+            const mins = totalMinutos % 60;
+            if (horas < 24) {
+                return mins > 0 ? `${horas}h ${mins}m` : `${horas} hrs`;
+            }
+            const dias = Math.floor(horas / 24);
+            const hRest = horas % 24;
+            return hRest > 0 ? `${dias}d ${hRest}h` : `${dias} días`;
+        }
+
+        const datosEstatus = {
+            labels: ['Nuevos', 'En proceso', 'Pendientes', 'Resueltos'],
+            counts: [
+                <%= estatusStats.nuevos %>,
+                <%= estatusStats.enProceso %>,
+                <%= estatusStats.pendientes %>,
+                <%= estatusStats.resueltos %>
+            ],
+            colors: ['#0284c7', '#d97706', '#dc2626', '#16a34a']
+        };
+
+        const datosPrioridad = {
+            labels: ['Baja', 'Media', 'Alta'],
+            counts: [
+                <%= prioridadStats.baja %>,
+                <%= prioridadStats.media %>,
+                <%= prioridadStats.alta %>
+            ],
+            colors: ['#16a34a', '#d97706', '#dc2626']
+        };
+
+        const categoriasData = <%- JSON.stringify(categoriasStats || []) %>;
+        const tiemposGlobalesData = <%- JSON.stringify(tiemposGlobalesStats || {}) %>;
+        let TOLERANCIA_GLOBAL_PCT = <%= toleranciaPct %>;
+
+        const datosTiemposResolucion = {
+            labels: categoriasData.map(c => c.nombre),
+            hours: categoriasData.map(c => c.promResolucionHoras),
+            formattedTexts: categoriasData.map(c => c.promResolucionTexto),
+            colors: categoriasData.map((c, i) => PALETA_COLORES[i % PALETA_COLORES.length])
+        };
+
+        function crearConfiguracionGrafica(tipo, labels, data, colors, titulo, esTiempo = false, formatLabels = null) {
+            const esBarra = tipo === 'bar';
+
+            return {
+                type: tipo,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: esTiempo ? 'Tiempo Promedio (Horas)' : 'Cantidad de Tickets',
+                        data: data,
+                        backgroundColor: colors,
+                        borderColor: esBarra ? colors : '#ffffff',
+                        borderWidth: esBarra ? 1 : 2,
+                        borderRadius: esBarra ? 4 : 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: {
+                        padding: {
+                            top: esBarra ? 20 : 6,
+                            bottom: 6,
+                            left: 6,
+                            right: 6
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: !esBarra,
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 10,
+                                padding: 12,
+                                color: '#0f172a',
+                                font: { size: 11, weight: 'bold' }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const val = context.parsed.y !== undefined ? context.parsed.y : context.parsed;
+                                    if (esTiempo) {
+                                        const formatted = (formatLabels && formatLabels[context.dataIndex]) 
+                                            ? formatLabels[context.dataIndex] 
+                                            : formatearHoras(val);
+                                        return ` Tiempo prom: ${formatted} (${val.toFixed(2)} hrs)`;
+                                    } else {
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                                        return ` ${val} ticket(s) (${pct}%)`;
+                                    }
+                                }
+                            }
+                        },
+                        datalabels: {
+                            display: function(context) {
+                                const val = context.dataset.data[context.dataIndex];
+                                if (!esBarra && val === 0) return false;
+                                return true;
+                            },
+                            color: esBarra ? '#0f172a' : '#ffffff',
+                            anchor: esBarra ? 'end' : 'center',
+                            align: esBarra ? 'top' : 'center',
+                            offset: esBarra ? 4 : 0,
+                            font: {
+                                weight: 'bold',
+                                size: 11
+                            },
+                            formatter: function(value, context) {
+                                if (esTiempo) {
+                                    if (formatLabels && formatLabels[context.dataIndex] && formatLabels[context.dataIndex] !== 'N/A') {
+                                        return formatLabels[context.dataIndex];
+                                    }
+                                    return value > 0 ? formatearHoras(value) : '0 min';
+                                }
+                                return value;
+                            }
+                        }
+                    },
+                    scales: esBarra ? {
+                        y: {
+                            beginAtZero: true,
+                            grace: '20%',
+                            title: { 
+                                display: esTiempo, 
+                                text: esTiempo ? 'Horas' : 'Tickets', 
+                                color: '#475569', 
+                                font: { size: 11, weight: 'bold' } 
+                            },
+                            ticks: { 
+                                precision: esTiempo ? 1 : 0,
+                                color: '#475569',
+                                font: { size: 10, weight: '600' },
+                                callback: function(val) {
+                                    return esTiempo ? val + 'h' : val;
+                                }
+                            },
+                            grid: { color: '#f1f5f9' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                color: '#0f172a',
+                                font: { size: 11, weight: 'bold' },
+                                maxRotation: 25,
+                                minRotation: 0,
+                                autoSkip: false
+                            }
+                        }
+                    } : {}
+                }
+            };
+        }
+
+        function renderizarGrafica(chartId, tipo, labels, data, colors, titulo, esTiempo = false, formatLabels = null) {
+            const ctx = document.getElementById('chart-' + chartId);
+            if (!ctx) return;
+
+            if (chartsMap[chartId]) {
+                chartsMap[chartId].destroy();
+            }
+
+            const config = crearConfiguracionGrafica(tipo, labels, data, colors, titulo, esTiempo, formatLabels);
+            chartsMap[chartId] = new Chart(ctx, config);
+            chartsMap[chartId]._currentType = tipo;
+        }
+
+        function prepararDatosCategoria(cat) {
+            const labels = [];
+            const counts = [];
+            const colors = [];
+
+            cat.subcategorias.forEach((sub, i) => {
+                labels.push(sub.nombre);
+                counts.push(sub.count);
+                colors.push(PALETA_COLORES[i % PALETA_COLORES.length]);
+            });
+
+            if (cat.sinSubCount > 0) {
+                labels.push('General / Sin especificar');
+                counts.push(cat.sinSubCount);
+                colors.push('#94a3b8');
+            }
+
+            if (labels.length === 0) {
+                labels.push('Falla General');
+                counts.push(cat.total);
+                colors.push('#dc2626');
+            }
+
+            return { labels, counts, colors };
+        }
+
+        function prepararDatosTiemposCategoria(cat) {
+            const labels = [];
+            const hours = [];
+            const formatted = [];
+            const colors = [];
+
+            cat.subcategorias.forEach((sub, i) => {
+                labels.push(sub.nombre);
+                hours.push(sub.promResolucionHoras);
+                formatted.push(sub.promResolucionTexto);
+                colors.push(PALETA_COLORES[i % PALETA_COLORES.length]);
+            });
+
+            if (cat.sinSubCount > 0) {
+                labels.push('General / Sin especificar');
+                hours.push(cat.sinSubPromResolucionHoras || 0);
+                formatted.push(cat.sinSubPromResolucionTexto || 'N/A');
+                colors.push('#94a3b8');
+            }
+
+            if (labels.length === 0) {
+                labels.push(cat.nombre);
+                hours.push(cat.promResolucionHoras);
+                formatted.push(cat.promResolucionTexto);
+                colors.push('#dc2626');
+            }
+
+            return { labels, hours, formatted, colors };
+        }
+
+        function cambiarTipoGrafica(id, nuevoTipo, btn) {
+            const grupo = btn.parentElement;
+            grupo.querySelectorAll('.btn-toggle-view').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            if (id === 'estatus') {
+                renderizarGrafica('estatus', nuevoTipo, datosEstatus.labels, datosEstatus.counts, datosEstatus.colors, 'Estatus', false);
+            } else if (id === 'prioridad') {
+                renderizarGrafica('prioridad', nuevoTipo, datosPrioridad.labels, datosPrioridad.counts, datosPrioridad.colors, 'Prioridad', false);
+            } else if (id === 'tiempos-resolucion') {
+                renderizarGrafica('tiempos-resolucion', nuevoTipo, datosTiemposResolucion.labels, datosTiemposResolucion.hours, datosTiemposResolucion.colors, 'Tiempos de Resolución', true, datosTiemposResolucion.formattedTexts);
+            } else if (id.startsWith('cat-tiempo-')) {
+                const catId = id.replace('cat-tiempo-', '');
+                const cat = categoriasData.find(c => String(c.id) === String(catId));
+                if (cat) {
+                    const { labels, hours, formatted, colors } = prepararDatosTiemposCategoria(cat);
+                    renderizarGrafica(id, nuevoTipo, labels, hours, colors, 'Tiempos ' + cat.nombre, true, formatted);
+                }
+            } else {
+                const catId = id.replace('cat-', '');
+                const cat = categoriasData.find(c => String(c.id) === String(catId));
+                if (cat) {
+                    const { labels, counts, colors } = prepararDatosCategoria(cat);
+                    renderizarGrafica(id, nuevoTipo, labels, counts, colors, cat.nombre, false);
+                }
+            }
+        }
+
+        // Navegación de vistas en el menú lateral
+        function cambiarVistaDashboard(vistaKey) {
+            document.querySelectorAll('.vista-dashboard').forEach(v => v.style.display = 'none');
+            document.querySelectorAll('.dash-menu-item').forEach(b => {
+                b.classList.remove('active');
+                b.classList.add('text-slate-700');
+            });
+
+            const vistaElement = document.getElementById('vista-dash-' + vistaKey);
+            const btnElement = document.getElementById('btn-dash-' + vistaKey);
+
+            if (vistaElement) vistaElement.style.display = 'block';
+            if (btnElement) {
+                btnElement.classList.add('active');
+                btnElement.classList.remove('text-slate-700');
+            }
+
+            // Si es una categoría individual, renderizar o redimensionar sus gráficas
+            if (vistaKey.startsWith('cat-')) {
+                const catId = vistaKey.replace('cat-', '');
+                const cat = categoriasData.find(c => String(c.id) === String(catId));
+                if (cat) {
+                    setTimeout(() => {
+                        const chartKeyVol = 'cat-' + catId;
+                        if (!chartsMap[chartKeyVol]) {
+                            const { labels, counts, colors } = prepararDatosCategoria(cat);
+                            renderizarGrafica(chartKeyVol, 'pie', labels, counts, colors, cat.nombre, false);
+                        } else {
+                            chartsMap[chartKeyVol].resize();
+                        }
+
+                        const chartKeyTiempo = 'cat-tiempo-' + catId;
+                        if (!chartsMap[chartKeyTiempo]) {
+                            const { labels, hours, formatted, colors } = prepararDatosTiemposCategoria(cat);
+                            renderizarGrafica(chartKeyTiempo, 'bar', labels, hours, colors, 'Tiempos ' + cat.nombre, true, formatted);
+                        } else {
+                            chartsMap[chartKeyTiempo].resize();
+                        }
+                    }, 50);
+                }
+            } else if (vistaKey === 'general') {
+                setTimeout(() => {
+                    if (chartsMap['estatus']) chartsMap['estatus'].resize();
+                    if (chartsMap['prioridad']) chartsMap['prioridad'].resize();
+                    if (chartsMap['tiempos-resolucion']) chartsMap['tiempos-resolucion'].resize();
+                }, 50);
+            }
+
+            try {
+                window.location.hash = vistaKey;
+            } catch(e){}
+        }
+
+        function mostrarToast(mensaje, icono = '✅') {
+            const toast = document.getElementById('toast-notificacion');
+            const msg = document.getElementById('toast-mensaje');
+            const ico = document.getElementById('toast-icono');
+            if (!toast || !msg || !ico) return;
+            msg.textContent = mensaje;
+            ico.textContent = icono;
+            toast.style.display = 'flex';
+            toast.style.opacity = '1';
+            if (window._toastTimeout) clearTimeout(window._toastTimeout);
+            window._toastTimeout = setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => { toast.style.display = 'none'; }, 300);
+            }, 2500);
+        }
+
+        function actualizarBadgeAlerta(subId, nuevoBase, promHoras, resueltos) {
+            const celda = document.getElementById('alerta-cell-' + subId);
+            if (!celda) return;
+            if (resueltos === 0) {
+                celda.innerHTML = '<span class="badge-perf badge-perf-na">En atención</span>';
+                return;
+            }
+            const factor = 1 + (TOLERANCIA_GLOBAL_PCT / 100);
+            if (promHoras <= nuevoBase) {
+                celda.innerHTML = '<span class="badge-perf badge-perf-fast">⚡ Rápido</span>';
+            } else if (promHoras <= nuevoBase * factor) {
+                celda.innerHTML = '<span class="badge-perf badge-perf-med">🟡 En límite</span>';
+            } else {
+                celda.innerHTML = '<span class="badge-perf badge-perf-slow">🔴 A mejorar</span>';
+            }
+        }
+
+        function recalcularTodasLasAlertas() {
+            const lblMed = document.getElementById('label-tolerancia-med');
+            const lblSlow = document.getElementById('label-tolerancia-slow');
+            if (lblMed) lblMed.textContent = TOLERANCIA_GLOBAL_PCT;
+            if (lblSlow) lblSlow.textContent = TOLERANCIA_GLOBAL_PCT;
+
+            document.querySelectorAll('input[id^="input-base-"]').forEach(inp => {
+                const subId = inp.getAttribute('data-sub-id');
+                const nuevoBase = parseFloat(inp.value);
+                const promHoras = parseFloat(inp.getAttribute('data-prom-horas') || 0);
+                const resueltos = parseInt(inp.getAttribute('data-resueltos') || 0, 10);
+                if (subId && !isNaN(nuevoBase)) {
+                    actualizarBadgeAlerta(subId, nuevoBase, promHoras, resueltos);
+                }
+            });
+
+            categoriasData.forEach(cat => {
+                const celdaCat = document.getElementById('alerta-cat-cell-' + cat.id);
+                if (!celdaCat) return;
+
+                if (cat.resueltosCount === 0) {
+                    celdaCat.innerHTML = '<span class="badge-perf badge-perf-na">En atención</span>';
+                    return;
+                }
+
+                const factor = 1 + (TOLERANCIA_GLOBAL_PCT / 100);
+                if (cat.promResolucionHoras <= cat.tiempoBaseHoras) {
+                    celdaCat.innerHTML = '<span class="badge-perf badge-perf-fast">⚡ Rápido</span>';
+                } else if (cat.promResolucionHoras <= cat.tiempoBaseHoras * factor) {
+                    celdaCat.innerHTML = '<span class="badge-perf badge-perf-med">🟡 En límite</span>';
+                } else {
+                    celdaCat.innerHTML = '<span class="badge-perf badge-perf-slow">🔴 A mejorar</span>';
+                }
+            });
+        }
+
+        async function guardarToleranciaGlobal() {
+            const inp = document.getElementById('input-tolerancia-pct');
+            if (!inp) return;
+            const val = parseFloat(inp.value);
+            if (isNaN(val) || val < 0 || val > 500) {
+                mostrarToast('Introduce un porcentaje válido entre 0% y 500%', '⚠️');
+                return;
+            }
+
+            const btn = document.getElementById('btn-save-tolerancia');
+            if (btn) btn.textContent = '⏳';
+
+            try {
+                const res = await fetch('/admin/dashboards/actualizar-tolerancia', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ tolerancia_pct: val })
+                });
+
+                if (res.status === 401) {
+                    mostrarToast('Sesión expirada. Por favor recarga e inicia sesión.', '⚠️');
+                    if (btn) btn.textContent = '💾 Guardar %';
+                    return;
+                }
+
+                const data = await res.json();
+                if (data.ok) {
+                    TOLERANCIA_GLOBAL_PCT = val;
+                    recalcularTodasLasAlertas();
+                    if (btn) btn.textContent = '✅';
+                    mostrarToast(`Margen de alerta actualizado al ${val}%`, '✅');
+                    setTimeout(() => { if (btn) btn.textContent = '💾 Guardar %'; }, 1500);
+                } else {
+                    if (btn) btn.textContent = '💾 Guardar %';
+                    mostrarToast(data.error || 'Error al guardar', '❌');
+                }
+            } catch (err) {
+                if (btn) btn.textContent = '💾 Guardar %';
+                mostrarToast('Error de conexión con el servidor', '❌');
+            }
+        }
+
+        function capturarImagenGraficaOffscreen(tipo, labels, data, colors, titulo, esTiempo = false, formatLabels = null) {
+            return new Promise((resolve) => {
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 650;
+                    canvas.height = 340;
+                    const ctx = canvas.getContext('2d');
+
+                    const pluginFondoBlanco = {
+                        id: 'custom_canvas_background_color_' + Math.random().toString(36).substring(2, 7),
+                        beforeDraw: (chart) => {
+                            const c = chart.canvas.getContext('2d');
+                            c.save();
+                            c.globalCompositeOperation = 'destination-over';
+                            c.fillStyle = '#ffffff';
+                            c.fillRect(0, 0, chart.width, chart.height);
+                            c.restore();
+                        }
+                    };
+
+                    const config = crearConfiguracionGrafica(tipo, labels, data, colors, titulo, esTiempo, formatLabels);
+                    config.plugins = [pluginFondoBlanco];
+                    config.options.animation = false;
+                    config.options.responsive = false;
+
+                    const chart = new Chart(ctx, config);
+
+                    setTimeout(() => {
+                        try {
+                            const dataUrl = canvas.toDataURL('image/png');
+                            chart.destroy();
+                            resolve(dataUrl);
+                        } catch (err) {
+                            console.error('Error generando dataURL:', err);
+                            chart.destroy();
+                            resolve(null);
+                        }
+                    }, 40);
+                } catch (e) {
+                    console.error('Error generando gráfica offscreen:', e);
+                    resolve(null);
+                }
+            });
+        }
+
+        async function exportarReporteGeneralExcel(btn) {
+            const originalText = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span>⏳ Generando Excel...</span>';
+            }
+
+            mostrarToast('Generando reporte general con gráficas y tablas...', '⏳');
+
+            try {
+                const imgEstatus = await capturarImagenGraficaOffscreen('pie', datosEstatus.labels, datosEstatus.counts, datosEstatus.colors, 'Estatus');
+                const imgPrioridad = await capturarImagenGraficaOffscreen('pie', datosPrioridad.labels, datosPrioridad.counts, datosPrioridad.colors, 'Prioridad');
+                const imgTiempos = await capturarImagenGraficaOffscreen('bar', datosTiemposResolucion.labels, datosTiemposResolucion.hours, datosTiemposResolucion.colors, 'Tiempos de Resolución', true, datosTiemposResolucion.formattedTexts);
+
+                const graficasCategorias = {};
+                for (const cat of categoriasData) {
+                    const dVol = prepararDatosCategoria(cat);
+                    const imgVol = await capturarImagenGraficaOffscreen('pie', dVol.labels, dVol.counts, dVol.colors, cat.nombre);
+
+                    const dT = prepararDatosTiemposCategoria(cat);
+                    const imgT = await capturarImagenGraficaOffscreen('bar', dT.labels, dT.hours, dT.colors, 'Tiempos ' + cat.nombre, true, dT.formatted);
+
+                    graficasCategorias[cat.id] = {
+                        distribucion: imgVol,
+                        tiempos: imgT
+                    };
+                }
+
+                const resp = await fetch('/admin/dashboards/exportar-excel', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                    },
+                    body: JSON.stringify({
+                        tipo: 'general',
+                        graficas: {
+                            estatus: imgEstatus,
+                            prioridad: imgPrioridad,
+                            tiemposResolucion: imgTiempos,
+                            categorias: graficasCategorias
+                        }
+                    })
+                });
+
+                if (!resp.ok) {
+                    let errorMsg = 'Error al generar el reporte en Excel';
+                    try { const j = await resp.json(); if (j.error) errorMsg = j.error; } catch(e){}
+                    mostrarToast(errorMsg, '❌');
+                    if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
+                    return;
+                }
+
+                const blob = await resp.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const disposition = resp.headers.get('Content-Disposition') || '';
+                const match = disposition.match(/filename="?([^";]+)"?/);
+                const nowStr = new Date().toISOString().slice(0, 10);
+                a.download = match ? match[1] : `Reporte_General_Completo_Dashboards_${nowStr}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+
+                mostrarToast('¡Reporte General Completo descargado con éxito!', '📥');
+            } catch (err) {
+                console.error('Error exportando Excel general:', err);
+                mostrarToast('Error al procesar la exportación a Excel', '❌');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            }
+        }
+
+        async function exportarDashboardsPrincipalesExcel(btn) {
+            const originalText = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span>⏳ Generando...</span>';
+            }
+
+            mostrarToast('Generando Excel de Dashboards Principales...', '⏳');
+
+            try {
+                const imgEstatus = await capturarImagenGraficaOffscreen('pie', datosEstatus.labels, datosEstatus.counts, datosEstatus.colors, 'Estatus');
+                const imgPrioridad = await capturarImagenGraficaOffscreen('pie', datosPrioridad.labels, datosPrioridad.counts, datosPrioridad.colors, 'Prioridad');
+                const imgTiempos = await capturarImagenGraficaOffscreen('bar', datosTiemposResolucion.labels, datosTiemposResolucion.hours, datosTiemposResolucion.colors, 'Tiempos de Resolución', true, datosTiemposResolucion.formattedTexts);
+
+                const resp = await fetch('/admin/dashboards/exportar-excel', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                    },
+                    body: JSON.stringify({
+                        tipo: 'principales',
+                        graficas: {
+                            estatus: imgEstatus,
+                            prioridad: imgPrioridad,
+                            tiemposResolucion: imgTiempos
+                        }
+                    })
+                });
+
+                if (!resp.ok) {
+                    let errorMsg = 'Error al generar el reporte de dashboards principales';
+                    try { const j = await resp.json(); if (j.error) errorMsg = j.error; } catch(e){}
+                    mostrarToast(errorMsg, '❌');
+                    if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
+                    return;
+                }
+
+                const blob = await resp.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const disposition = resp.headers.get('Content-Disposition') || '';
+                const match = disposition.match(/filename="?([^";]+)"?/);
+                const nowStr = new Date().toISOString().slice(0, 10);
+                a.download = match ? match[1] : `Reporte_Dashboards_Principales_${nowStr}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+
+                mostrarToast('¡Dashboards Principales descargados en Excel!', '📥');
+            } catch (err) {
+                console.error('Error exportando dashboards principales:', err);
+                mostrarToast('Error al procesar el archivo Excel', '❌');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            }
+        }
+
+        async function exportarCategoriaExcel(catId, btn, event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            const originalText = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span>⏳ Generando...</span>';
+            }
+
+            const cat = categoriasData.find(c => String(c.id) === String(catId));
+            if (!cat) {
+                mostrarToast('Categoría no encontrada', '⚠️');
+                if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
+                return;
+            }
+
+            mostrarToast(`Generando Excel para categoría "${cat.nombre}"...`, '⏳');
+
+            try {
+                const dVol = prepararDatosCategoria(cat);
+                const imgVol = await capturarImagenGraficaOffscreen('pie', dVol.labels, dVol.counts, dVol.colors, cat.nombre);
+
+                const dT = prepararDatosTiemposCategoria(cat);
+                const imgT = await capturarImagenGraficaOffscreen('bar', dT.labels, dT.hours, dT.colors, 'Tiempos ' + cat.nombre, true, dT.formatted);
+
+                const resp = await fetch('/admin/dashboards/exportar-excel', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                    },
+                    body: JSON.stringify({
+                        tipo: 'categoria',
+                        categoria_id: catId,
+                        graficas: {
+                            distribucion: imgVol,
+                            tiempos: imgT
+                        }
+                    })
+                });
+
+                if (!resp.ok) {
+                    let errorMsg = 'Error al exportar la categoría';
+                    try { const j = await resp.json(); if (j.error) errorMsg = j.error; } catch(e){}
+                    mostrarToast(errorMsg, '❌');
+                    if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
+                    return;
+                }
+
+                const blob = await resp.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const disposition = resp.headers.get('Content-Disposition') || '';
+                const match = disposition.match(/filename="?([^";]+)"?/);
+                const catSafe = cat.nombre.replace(/[^a-zA-Z0-9_-]/g, '_');
+                a.download = match ? match[1] : `Reporte_Dashboards_${catSafe}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+
+                mostrarToast(`¡Reporte de "${cat.nombre}" descargado!`, '📥');
+            } catch (err) {
+                console.error('Error exportando categoría a Excel:', err);
+                mostrarToast('Error al procesar el archivo Excel', '❌');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            }
+        }
+
+        async function guardarTiempoBaseSub(subId, triggerElement) {
+            const input = document.getElementById('input-base-' + subId);
+            if (!input) return;
+            const nuevoValor = parseFloat(input.value);
+            if (isNaN(nuevoValor) || nuevoValor <= 0) {
+                mostrarToast('Por favor introduce un número mayor a 0', '⚠️');
+                return;
+            }
+
+            const btn = document.getElementById('btn-save-' + subId);
+            if (btn) btn.textContent = '⏳';
+
+            try {
+                const res = await fetch('/admin/dashboards/actualizar-tiempo-base', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        id: subId,
+                        tiempo_base_horas: nuevoValor
+                    })
+                });
+
+                if (res.status === 401) {
+                    mostrarToast('Sesión expirada. Por favor recarga e inicia sesión.', '⚠️');
+                    if (btn) btn.textContent = '💾';
+                    return;
+                }
+
+                const data = await res.json();
+                if (data.ok) {
+                    if (btn) btn.textContent = '✅';
+                    const promHoras = parseFloat(input.getAttribute('data-prom-horas') || 0);
+                    const resueltos = parseInt(input.getAttribute('data-resueltos') || 0, 10);
+                    actualizarBadgeAlerta(subId, nuevoValor, promHoras, resueltos);
+                    mostrarToast(`Tiempo base actualizado a ${nuevoValor} hrs`, '✅');
+                    setTimeout(() => { if (btn) btn.textContent = '💾'; }, 1500);
+                } else {
+                    if (btn) btn.textContent = '💾';
+                    mostrarToast(data.error || 'Error al guardar', '❌');
+                }
+            } catch (err) {
+                if (btn) btn.textContent = '💾';
+                mostrarToast('Error al conectar con el servidor', '❌');
+            }
+        }
+
+        async function guardarTodosSubcategorias(catId) {
+            const inputs = document.querySelectorAll('.input-base-sub-' + catId);
+            if (!inputs || inputs.length === 0) return;
+
+            const items = [];
+            inputs.forEach(inp => {
+                const subId = inp.getAttribute('data-sub-id');
+                const val = parseFloat(inp.value);
+                if (subId && !isNaN(val) && val > 0) {
+                    items.push({ id: subId, tiempo_base_horas: val });
+                }
+            });
+
+            if (items.length === 0) {
+                mostrarToast('No hay tiempos válidos para guardar', '⚠️');
+                return;
+            }
+
+            try {
+                const res = await fetch('/admin/dashboards/actualizar-tiempo-base', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ items })
+                });
+
+                if (res.status === 401) {
+                    mostrarToast('Sesión expirada. Por favor recarga e inicia sesión.', '⚠️');
+                    return;
+                }
+
+                const data = await res.json();
+                if (data.ok) {
+                    items.forEach(item => {
+                        const inp = document.getElementById('input-base-' + item.id);
+                        if (inp) {
+                            const promHoras = parseFloat(inp.getAttribute('data-prom-horas') || 0);
+                            const resueltos = parseInt(inp.getAttribute('data-resueltos') || 0, 10);
+                            actualizarBadgeAlerta(item.id, item.tiempo_base_horas, promHoras, resueltos);
+                            const btn = document.getElementById('btn-save-' + item.id);
+                            if (btn) {
+                                btn.textContent = '✅';
+                                setTimeout(() => { btn.textContent = '💾'; }, 1500);
+                            }
+                        }
+                    });
+                    mostrarToast('¡Tiempos base guardados exitosamente!', '✅');
+                } else {
+                    mostrarToast(data.error || 'Error al guardar', '❌');
+                }
+            } catch (err) {
+                mostrarToast('Error al conectar con el servidor', '❌');
+            }
+        }
+
+        function filtrarMenuCategoriasDash() {
+            const busq = (document.getElementById('buscarMenuCategoriaDash')?.value || '').toLowerCase().trim();
+            const btnClear = document.getElementById('btnClearMenuCatDash');
+            if (btnClear) btnClear.style.display = busq.length > 0 ? 'block' : 'none';
+
+            const items = document.querySelectorAll('.item-menu-cat-dash');
+            let visCount = 0;
+            items.forEach(item => {
+                const coincide = !busq || (item.dataset.search || '').includes(busq);
+                if (coincide) {
+                    item.style.display = '';
+                    visCount++;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            const msgSin = document.getElementById('sinCategoriasMenuDash');
+            if (msgSin) {
+                msgSin.style.display = (items.length > 0 && visCount === 0) ? 'block' : 'none';
+            }
+        }
+
+        function filtrarTablaTiemposGeneral() {
+            const busq = (document.getElementById('buscarTablaTiemposGeneral')?.value || '').toLowerCase().trim();
+            const filas = document.querySelectorAll('.fila-tiempo-cat-general');
+            filas.forEach(fila => {
+                const coincide = !busq || (fila.dataset.search || '').includes(busq);
+                fila.style.display = coincide ? '' : 'none';
+            });
+        }
+
+        function filtrarTablaSubcatDash(catId) {
+            const busq = (document.getElementById('buscarSubcatDash-' + catId)?.value || '').toLowerCase().trim();
+            const filas = document.querySelectorAll('.fila-subcat-dash-' + catId);
+            filas.forEach(fila => {
+                const coincide = !busq || (fila.dataset.search || '').includes(busq);
+                fila.style.display = coincide ? '' : 'none';
+            });
+        }
+
+        function filtrarDashboardsTodasCategorias() {
+            const busq = (document.getElementById('buscarDashTodasCategorias')?.value || '').toLowerCase().trim();
+            const btnClear = document.getElementById('btnClearDashTodasCat');
+            if (btnClear) btnClear.style.display = busq.length > 0 ? 'block' : 'none';
+
+            const tarjetas = document.querySelectorAll('.tarjeta-dash-todas-cat');
+            let visCount = 0;
+            tarjetas.forEach(t => {
+                const coincide = !busq || (t.dataset.search || '').includes(busq);
+                if (coincide) {
+                    t.style.display = '';
+                    visCount++;
+                } else {
+                    t.style.display = 'none';
+                }
+            });
+
+            const msgSin = document.getElementById('sinCoincidenciasDashTodasCat');
+            if (msgSin) {
+                msgSin.style.display = (tarjetas.length > 0 && visCount === 0) ? 'block' : 'none';
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            renderizarGrafica('estatus', 'pie', datosEstatus.labels, datosEstatus.counts, datosEstatus.colors, 'Estatus', false);
+            renderizarGrafica('prioridad', 'pie', datosPrioridad.labels, datosPrioridad.counts, datosPrioridad.colors, 'Prioridad', false);
+            renderizarGrafica('tiempos-resolucion', 'bar', datosTiemposResolucion.labels, datosTiemposResolucion.hours, datosTiemposResolucion.colors, 'Tiempos de Resolución', true, datosTiemposResolucion.formattedTexts);
+
+            const hash = window.location.hash ? window.location.hash.replace('#', '') : '';
+            if (hash && (hash === 'general' || hash === 'todas' || hash.startsWith('cat-'))) {
+                cambiarVistaDashboard(hash);
+            } else {
+                cambiarVistaDashboard('general');
+            }
+        });
+    </script>
+</body>
+</html>
