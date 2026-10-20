@@ -132,14 +132,26 @@ function notificarNuevoTicketAdmin(ticketId, datosTicket, opciones = {}) {
         const remitente = resolverRemitente(config, opciones.adminRemitente);
 
         // Obtener correos de todos los administradores activos
-        db.all('SELECT email, nombre FROM usuarios WHERE rol = "admin" AND deleted_at IS NULL', [], (errAdmin, admins) => {
+        db.all("SELECT email, nombre FROM usuarios WHERE rol = 'admin' AND deleted_at IS NULL", [], (errAdmin, admins) => {
             if (errAdmin || !admins || admins.length === 0) {
                 console.log('[Correo] No hay administradores registrados para notificar.');
                 return;
             }
 
-            const adminEmails = admins.map(a => a.email).filter(Boolean);
-            if (adminEmails.length === 0) return;
+            // Filtrar correos válidos. Si el relay es interno sin contraseña, priorizar dominios corporativos @grupo-cdm.mx
+            const esRelayInterno = (!config.password_remitente || !config.password_remitente.trim()) && (config.smtp_host || '').includes('grupo-cdm');
+            const adminsValidos = admins.filter(a => {
+                if (!a.email || !a.email.trim()) return false;
+                if (esRelayInterno) {
+                    return a.email.toLowerCase().endsWith('@grupo-cdm.mx');
+                }
+                return true;
+            });
+
+            if (adminsValidos.length === 0) {
+                console.log('[Correo] No hay administradores con correo corporativo activo para recibir la notificación.');
+                return;
+            }
 
             // Obtener plantilla para nuevo ticket
             db.get('SELECT * FROM plantillas_correo WHERE clave = "ticket_nuevo" OR clave = "nuevo_ticket_admin"', [], (errPl, plantilla) => {
@@ -171,40 +183,60 @@ function notificarNuevoTicketAdmin(ticketId, datosTicket, opciones = {}) {
                 const cuerpoTextoFinal = reemplazarVariables(plantilla.cuerpo, variables);
                 const cuerpoHtmlFinal = generarHtml(asuntoFinal, cuerpoTextoFinal, variables, remitente);
 
-                const mailOptions = {
-                    from: `"${remitente.nombre}" <${remitente.email}>`,
-                    replyTo: remitente.email,
-                    to: adminEmails.join(','),
-                    subject: asuntoFinal,
-                    text: cuerpoTextoFinal,
-                    html: cuerpoHtmlFinal
-                };
+                // Enviar individualmente a cada administrador para garantizar entrega sin rechazos por lote
+                adminsValidos.forEach(admin => {
+                    const mailOptions = {
+                        from: `"${remitente.nombre}" <${remitente.email}>`,
+                        replyTo: remitente.email,
+                        to: admin.email.trim(),
+                        subject: asuntoFinal,
+                        text: cuerpoTextoFinal,
+                        html: cuerpoHtmlFinal
+                    };
 
-                transporter.sendMail(mailOptions, (error, info) => {
-                    if (error) {
-                        console.error('[Correo] Error al enviar notificación a administradores:', error.message);
-                    } else {
-                        console.log('[Correo] Notificación de nuevo ticket enviada con éxito a los admins:', info.messageId);
-                    }
+                    transporter.sendMail(mailOptions, (error, info) => {
+                        if (error) {
+                            console.error(`[Correo] Error al enviar notificación de nuevo ticket a ${admin.email}:`, error.message);
+                        } else {
+                            console.log(`[Correo] Notificación de nuevo ticket #${ticketId} enviada con éxito a ${admin.email}:`, info.messageId);
+                        }
+                    });
                 });
             });
         });
     });
 }
 
-// 1.1 Enviar notificación al USUARIO confirmando que se levantó su ticket
+// 1.1 Enviar notificación al USUARIO confirmando que se levantó su ticket (y copia al admin que lo levantó)
 function notificarTicketCreadoUsuario(ticketId, datosTicket, opciones = {}) {
     if (!datosTicket || !datosTicket.usuario_email) {
+        // Fallback: consultar el ticket y usuario en la base de datos si falta el correo
+        db.get(
+            `SELECT tickets.*, COALESCE(usuarios.nombre, tickets.creado_por_admin, 'Usuario') AS usuario_nombre, usuarios.email AS usuario_email
+             FROM tickets 
+             LEFT JOIN usuarios ON tickets.usuario_id = usuarios.id
+             WHERE tickets.id = ?`,
+            [ticketId],
+            (err, ticketRow) => {
+                if (!err && ticketRow && ticketRow.usuario_email) {
+                    notificarTicketCreadoUsuario(ticketId, ticketRow, opciones);
+                } else {
+                    console.error(`[Correo] No se pudo encontrar correo de destino para el ticket #${ticketId}`);
+                }
+            }
+        );
         return;
     }
 
     obtenerConfig((errConf, config) => {
         if (!config || !config.activo) {
+            console.log('[Correo] Notificación de creación omitida: servicio de correo inactivo.');
             return;
         }
 
         const transporter = crearTransportador(config);
         if (!transporter) {
+            console.log('[Correo] No se pudo crear el transportador de correo.');
             return;
         }
 
@@ -239,22 +271,49 @@ function notificarTicketCreadoUsuario(ticketId, datosTicket, opciones = {}) {
             const cuerpoTextoFinal = reemplazarVariables(plantilla.cuerpo, variables);
             const cuerpoHtmlFinal = generarHtml(asuntoFinal, cuerpoTextoFinal, variables, remitente);
 
-            const mailOptions = {
+            // 1. Enviar correo al usuario solicitante
+            const mailOptionsUsuario = {
                 from: `"${remitente.nombre}" <${remitente.email}>`,
                 replyTo: remitente.email,
-                to: datosTicket.usuario_email,
+                to: datosTicket.usuario_email.trim(),
                 subject: asuntoFinal,
                 text: cuerpoTextoFinal,
                 html: cuerpoHtmlFinal
             };
 
-            transporter.sendMail(mailOptions, (error, info) => {
+            transporter.sendMail(mailOptionsUsuario, (error, info) => {
                 if (error) {
-                    console.error(`[Correo] Error al enviar confirmación de ticket a ${datosTicket.usuario_email}:`, error.message);
+                    console.error(`[Correo] Error al enviar confirmación de ticket #${ticketId} a ${datosTicket.usuario_email}:`, error.message);
                 } else {
-                    console.log(`[Correo] Confirmación enviada exitosamente a ${datosTicket.usuario_email}:`, info.messageId);
+                    console.log(`[Correo] Confirmación de ticket #${ticketId} enviada exitosamente a ${datosTicket.usuario_email}:`, info.messageId);
                 }
             });
+
+            // 2. Si el ticket fue levantado por un administrador, enviar también copia de confirmación al administrador
+            const adminEmailCreador = (opciones.adminRemitente && opciones.adminRemitente.email) 
+                ? opciones.adminRemitente.email.trim() 
+                : (datosTicket.creado_por_admin_email ? datosTicket.creado_por_admin_email.trim() : null);
+
+            if (adminEmailCreador && adminEmailCreador.toLowerCase() !== (datosTicket.usuario_email || '').trim().toLowerCase()) {
+                const asuntoAdmin = `📋 [Ticket #${ticketId}] Confirmación: Has levantado el ticket para ${datosTicket.usuario_nombre || 'Usuario'}: ${datosTicket.titulo || ''}`;
+                const cuerpoAdminTexto = `Hola ${opciones.adminRemitente?.nombre || datosTicket.creado_por_admin || 'Administrador'},\n\nTe confirmamos que has levantado exitosamente el ticket de soporte #${ticketId} para el usuario ${datosTicket.usuario_nombre} (${datosTicket.usuario_email}):\n\n• Número de Ticket: #${ticketId}\n• Título: ${datosTicket.titulo}\n• Tipo de Falla: ${datosTicket.tipo_falla}\n• Subcategoría: ${datosTicket.subcategoria || 'Sin subcategoría'}\n• Prioridad: ${datosTicket.prioridad}\n• Estatus: ${datosTicket.estatus || 'Nuevo ticket'}\n• Fecha de reporte: ${fechaFormateada}\n\nDescripción del problema:\n${datosTicket.descripcion}\n\nEl usuario ya ha recibido su notificación automática de confirmación.`;
+                const cuerpoAdminHtml = generarHtml(asuntoAdmin, cuerpoAdminTexto, variables, remitente);
+
+                transporter.sendMail({
+                    from: `"${remitente.nombre}" <${remitente.email}>`,
+                    replyTo: remitente.email,
+                    to: adminEmailCreador,
+                    subject: asuntoAdmin,
+                    text: cuerpoAdminTexto,
+                    html: cuerpoAdminHtml
+                }, (errorAdmin, infoAdmin) => {
+                    if (errorAdmin) {
+                        console.error(`[Correo] Error al enviar confirmación de ticket #${ticketId} al administrador creador (${adminEmailCreador}):`, errorAdmin.message);
+                    } else {
+                        console.log(`[Correo] Confirmación de ticket #${ticketId} enviada exitosamente al admin creador (${adminEmailCreador}):`, infoAdmin.messageId);
+                    }
+                });
+            }
         });
     });
 }

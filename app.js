@@ -1143,6 +1143,7 @@ function obtenerDatosAdmin(req, res, mensaje = null, error = null) {
                                                         adminNombre: req.session.usuario.nombre,
                                                         adminPuesto: req.session.usuario.puesto || 'Especialista TI',
                                                         adminId: req.session.usuario.id,
+                                                        adminEmail: req.session.usuario.email,
                                                         usuarios: usuarios || [],
                                                         usuariosEliminados: usuariosEliminados || [],
                                                         ticketsEliminados: ticketsEliminados || [],
@@ -1475,14 +1476,15 @@ app.post('/admin/tickets/crear', esAdmin, upload.single('imagen'), (req, res) =>
                                     estatus: 'Nuevo ticket',
                                     usuario_nombre: usuarioDestino.nombre,
                                     usuario_email: usuarioDestino.email,
-                                    creado_por_admin: adminNombre
+                                    creado_por_admin: adminNombre,
+                                    creado_por_admin_email: (req.session && req.session.usuario) ? req.session.usuario.email : null
                                 };
 
                                 // Notificar a los administradores
-                                mailer.notificarNuevoTicketAdmin(ticketId, datosTicket);
+                                mailer.notificarNuevoTicketAdmin(ticketId, datosTicket, { adminRemitente: req.session.usuario });
 
                                 // Notificar al usuario a su correo Outlook
-                                mailer.notificarTicketCreadoUsuario(ticketId, datosTicket);
+                                mailer.notificarTicketCreadoUsuario(ticketId, datosTicket, { adminRemitente: req.session.usuario });
 
                                 req.session.mensajeFlash = `¡Ticket #${ticketId} levantado exitosamente para el usuario ${usuarioDestino.nombre}!`;
                                 return res.redirect('/admin');
