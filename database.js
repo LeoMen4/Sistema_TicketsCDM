@@ -1,25 +1,107 @@
 const sqlite3 = require('sqlite3').verbose();
+const { createClient } = require('@libsql/client');
 const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const path = require('path');
 
-let dbPath = path.join(__dirname, 'tickets.db');
+// Configuración de Turso Cloud SQLite (Persistencia permanente en la nube)
+const TURSO_URL = process.env.TURSO_DATABASE_URL || 'libsql://sistema-tickets-leomen4.aws-us-east-1.turso.io';
+const TURSO_TOKEN = process.env.TURSO_AUTH_TOKEN || 'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTI1MTM4MjQsImlkIjoiMDFhMTVhMjQtZTAwMS03N2Y3LTk2ZjEtNjViOTZkYjE4NjEyIiwia2lkIjoiSnhFMXlTSXdBYU5xOWIzYXNxSFZVWUNNV05ZckVLTE9pWkdYTnhjckhnUSIsInJpZCI6IjBjOWExNWFjLTU5MmYtNDQ1Ni1iMWMyLTEwODIzNDc5ZWYyYSJ9.d_6-WuTYPwmatV7d4dAWJaPDqC4l8jEYN5BgV8n7EcsCG1_TC4MmbmdyW9u8L-j6QQs_xdtqXKYMYJfETxF8Aw';
 
-// En entornos serverless como Vercel donde el sistema de archivos raíz es de solo lectura,
-// clonamos la base de datos a /tmp para permitir lectura y escritura.
-if (process.env.VERCEL) {
-    const tmpDb = path.join('/tmp', 'tickets.db');
-    try {
-        if (!fs.existsSync(tmpDb) && fs.existsSync(dbPath)) {
-            fs.copyFileSync(dbPath, tmpDb);
+let db;
+
+if (TURSO_URL && TURSO_TOKEN) {
+    console.log('[Base de Datos] Conectado a Turso Cloud SQLite permanente:', TURSO_URL);
+    const client = createClient({ url: TURSO_URL, authToken: TURSO_TOKEN });
+
+    db = {
+        isTurso: true,
+        client: client,
+        serialize(fn) {
+            if (fn) fn();
+        },
+        run(sql, params, callback) {
+            if (typeof params === 'function') {
+                callback = params;
+                params = [];
+            }
+            params = params || [];
+            client.execute({ sql, args: params })
+                .then(res => {
+                    const ctx = {
+                        lastID: res.lastInsertRowid !== undefined ? Number(res.lastInsertRowid) : 0,
+                        changes: res.rowsAffected || 0
+                    };
+                    if (callback) callback.call(ctx, null);
+                })
+                .catch(err => {
+                    if (callback) callback(err);
+                });
+        },
+        get(sql, params, callback) {
+            if (typeof params === 'function') {
+                callback = params;
+                params = [];
+            }
+            params = params || [];
+            client.execute({ sql, args: params })
+                .then(res => {
+                    const row = res.rows && res.rows.length > 0 ? { ...res.rows[0] } : undefined;
+                    if (callback) callback(null, row);
+                })
+                .catch(err => {
+                    if (callback) callback(err);
+                });
+        },
+        all(sql, params, callback) {
+            if (typeof params === 'function') {
+                callback = params;
+                params = [];
+            }
+            params = params || [];
+            client.execute({ sql, args: params })
+                .then(res => {
+                    const rows = (res.rows || []).map(r => ({ ...r }));
+                    if (callback) callback(null, rows);
+                })
+                .catch(err => {
+                    if (callback) callback(err);
+                });
+        },
+        prepare(sql) {
+            return {
+                run(...args) {
+                    const cb = typeof args[args.length - 1] === 'function' ? args.pop() : null;
+                    const params = args.length === 1 && Array.isArray(args[0]) ? args[0] : args;
+                    client.execute({ sql, args: params })
+                        .then(res => {
+                            if (cb) cb.call({ lastID: Number(res.lastInsertRowid || 0), changes: res.rowsAffected || 0 }, null);
+                        })
+                        .catch(err => {
+                            if (cb) cb(err);
+                        });
+                },
+                finalize(cb) {
+                    if (cb) cb(null);
+                }
+            };
         }
-        dbPath = tmpDb;
-    } catch (e) {
-        console.error('Error al inicializar sqlite en /tmp:', e.message);
+    };
+} else {
+    let dbPath = path.join(__dirname, 'tickets.db');
+    if (process.env.VERCEL) {
+        const tmpDb = path.join('/tmp', 'tickets.db');
+        try {
+            if (!fs.existsSync(tmpDb) && fs.existsSync(dbPath)) {
+                fs.copyFileSync(dbPath, tmpDb);
+            }
+            dbPath = tmpDb;
+        } catch (e) {
+            console.error('Error al inicializar sqlite en /tmp:', e.message);
+        }
     }
+    db = new sqlite3.Database(dbPath);
 }
-
-const db = new sqlite3.Database(dbPath);
 
 // Asegurar que el logo corporativo CDM esté disponible en public/img/logo-cdm.jpg
 try {
