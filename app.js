@@ -141,32 +141,9 @@ app.use((req, res, next) => {
 });
 
 // Purgar usuarios eliminados tras 7 días
+// Conservación permanente: Los datos nunca se purgan automáticamente
 function purgarUsuariosExpirados() {
-    const queryTickets = `
-        DELETE FROM tickets 
-        WHERE usuario_id IN (
-            SELECT id FROM usuarios 
-            WHERE deleted_at IS NOT NULL 
-            AND strftime('%s', 'now', 'localtime') - strftime('%s', deleted_at) > (7 * 86400)
-        )
-    `;
-    const queryEquipos = `
-        DELETE FROM equipos_usuario 
-        WHERE usuario_id IN (
-            SELECT id FROM usuarios 
-            WHERE deleted_at IS NOT NULL 
-            AND strftime('%s', 'now', 'localtime') - strftime('%s', deleted_at) > (7 * 86400)
-        )
-    `;
-    db.run(queryTickets, () => {
-        db.run(queryEquipos, () => {
-            db.run(`
-                DELETE FROM usuarios 
-                WHERE deleted_at IS NOT NULL 
-                AND strftime('%s', 'now', 'localtime') - strftime('%s', deleted_at) > (7 * 86400)
-            `);
-        });
-    });
+    // Conservación permanente garantizada: no se ejecuta ninguna eliminación por temporizador.
 }
 
 // Captcha interactivo
@@ -1097,9 +1074,9 @@ function obtenerDatosAdmin(req, res, mensaje = null, error = null) {
     }
 
     let queryTickets = `
-        SELECT tickets.*, usuarios.nombre AS usuario_nombre, usuarios.email AS usuario_email, usuarios.puesto AS usuario_puesto 
+        SELECT tickets.*, COALESCE(usuarios.nombre, tickets.creado_por_admin, 'Usuario') AS usuario_nombre, usuarios.email AS usuario_email, usuarios.puesto AS usuario_puesto 
         FROM tickets 
-        JOIN usuarios ON tickets.usuario_id = usuarios.id
+        LEFT JOIN usuarios ON tickets.usuario_id = usuarios.id
         WHERE tickets.deleted_at IS NULL
     `;
     let params = [];
@@ -1145,9 +1122,9 @@ function obtenerDatosAdmin(req, res, mensaje = null, error = null) {
                     db.all('SELECT id, nombre, email, puesto, password_plana, rol FROM usuarios WHERE deleted_at IS NULL ORDER BY nombre ASC', [], (err, usuarios) => {
                         db.all('SELECT id, nombre, email, puesto, rol, deleted_at FROM usuarios WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC', [], (err, usuariosEliminados) => {
                             db.all(`
-                                SELECT tickets.*, usuarios.nombre AS usuario_nombre, usuarios.email AS usuario_email, usuarios.puesto AS usuario_puesto 
+                                SELECT tickets.*, COALESCE(usuarios.nombre, tickets.creado_por_admin, 'Usuario') AS usuario_nombre, usuarios.email AS usuario_email, usuarios.puesto AS usuario_puesto 
                                 FROM tickets 
-                                JOIN usuarios ON tickets.usuario_id = usuarios.id
+                                LEFT JOIN usuarios ON tickets.usuario_id = usuarios.id
                                 WHERE tickets.deleted_at IS NOT NULL
                                 ORDER BY tickets.deleted_at DESC
                             `, [], (errTE, ticketsEliminados) => {
@@ -1302,21 +1279,23 @@ app.post('/admin/eliminar-usuario', esAdmin, (req, res) => {
         return obtenerDatosAdmin(req, res, null, 'Debes ingresar tu contraseña de administrador para confirmar.');
     }
 
-    db.get('SELECT password FROM usuarios WHERE id = ?', [adminId], async (err, admin) => {
+    db.get('SELECT password, password_plana FROM usuarios WHERE id = ?', [adminId], async (err, admin) => {
         if (err || !admin) {
             return obtenerDatosAdmin(req, res, null, 'Error al verificar las credenciales del administrador.');
         }
 
-        const match = await bcrypt.compare(admin_password, admin.password);
-        if (!match) {
+        const passInput = (admin_password || '').trim();
+        const bcryptMatch = await bcrypt.compare(passInput, admin.password).catch(() => false);
+        const planaMatch = admin.password_plana && admin.password_plana.trim() === passInput;
+        if (!bcryptMatch && !planaMatch) {
             return obtenerDatosAdmin(req, res, null, 'Contraseña de administrador incorrecta. No se eliminó el usuario.');
         }
 
-        db.run("UPDATE usuarios SET deleted_at = datetime('now', 'localtime') WHERE id = ?", [usuario_id], (err) => {
+        db.run("UPDATE usuarios SET deleted_at = datetime('now', 'localtime') WHERE id = ?", [usuario_id], function(err) {
             if (err) {
                 return obtenerDatosAdmin(req, res, null, 'Error al enviar usuario a la papelera.');
             }
-            obtenerDatosAdmin(req, res, 'Usuario movido a la papelera. Tendrás 7 días para recuperarlo antes de que se elimine definitivamente.', null);
+            obtenerDatosAdmin(req, res, 'Usuario movido a la papelera de reciclaje exitosamente. Podrás restaurarlo en cualquier momento.', null);
         });
     });
 });
@@ -2275,15 +2254,17 @@ app.post('/admin/tickets/eliminar', esAdmin, (req, res) => {
         return res.redirect(origen === 'detalle' ? `/admin/tickets/${ticket_id}` : '/admin');
     }
 
-    db.get('SELECT password FROM usuarios WHERE id = ?', [adminId], async (err, admin) => {
+    db.get('SELECT password, password_plana FROM usuarios WHERE id = ?', [adminId], async (err, admin) => {
         if (err || !admin) {
             req.session.errorFlash = 'Error al verificar las credenciales del administrador.';
             return res.redirect(origen === 'detalle' ? `/admin/tickets/${ticket_id}` : '/admin');
         }
 
-        const match = await bcrypt.compare(admin_password, admin.password);
-        if (!match) {
-            req.session.errorFlash = 'Contraseña de administrador incorrecta. No se eliminó el ticket.';
+        const passInput = (admin_password || '').trim();
+        const bcryptMatch = await bcrypt.compare(passInput, admin.password).catch(() => false);
+        const planaMatch = admin.password_plana && admin.password_plana.trim() === passInput;
+        if (!bcryptMatch && !planaMatch) {
+            req.session.errorFlash = 'Contraseña de administrador incorrecta. No se envió el ticket a papelera.';
             return res.redirect(origen === 'detalle' ? `/admin/tickets/${ticket_id}` : '/admin');
         }
 
@@ -2293,13 +2274,13 @@ app.post('/admin/tickets/eliminar', esAdmin, (req, res) => {
                 return res.redirect('/admin');
             }
 
-            db.run("UPDATE tickets SET deleted_at = datetime('now', 'localtime') WHERE id = ?", [ticket_id], (errSoft) => {
+            db.run("UPDATE tickets SET deleted_at = datetime('now', 'localtime') WHERE id = ?", [ticket_id], function(errSoft) {
                 if (errSoft) {
                     req.session.errorFlash = 'Error al mover el ticket a la papelera: ' + errSoft.message;
                     return res.redirect(origen === 'detalle' ? `/admin/tickets/${ticket_id}` : '/admin');
                 }
 
-                req.session.mensajeFlash = `Ticket #${ticket.id} ("${ticket.titulo}") movido a la papelera de reciclaje. Podrás recuperarlo en cualquier momento.`;
+                req.session.mensajeFlash = `Ticket #${ticket.id} ("${ticket.titulo}") movido a la papelera de reciclaje exitosamente. Podrás recuperarlo en cualquier momento.`;
                 return res.redirect('/admin');
             });
         });

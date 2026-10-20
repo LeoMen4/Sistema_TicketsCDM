@@ -35,6 +35,11 @@ try {
 } catch (e) {}
 
 db.serialize(() => {
+    // Modo WAL y persistencia garantizada en disco
+    db.run("PRAGMA journal_mode = WAL;");
+    db.run("PRAGMA synchronous = NORMAL;");
+    db.run("PRAGMA busy_timeout = 5000;");
+    db.run("PRAGMA foreign_keys = ON;");
     db.run(`
         CREATE TABLE IF NOT EXISTS usuarios (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

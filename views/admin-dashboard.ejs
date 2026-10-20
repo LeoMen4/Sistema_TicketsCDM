@@ -3764,18 +3764,20 @@
 
             <% if (error) { %>
                 const errTexto = <%- JSON.stringify(error) %>;
-                if (errTexto.includes('Guía') || errTexto.includes('guía')) {
+                if (errTexto.includes('papelera') || errTexto.includes('recuperar') || errTexto.includes('restaurar') || errTexto.includes('definitivo')) {
+                    moduloInicial = 'papelera';
+                } else if (errTexto.includes('Guía') || errTexto.includes('guía')) {
                     moduloInicial = 'guias';
                 } else if (errTexto.includes('Outlook') || errTexto.includes('plantilla') || errTexto.includes('SMTP') || (errTexto.includes('correo') && !errTexto.includes('registrado'))) {
                     moduloInicial = 'correo';
                 } else if (errTexto.includes('equipo') || errTexto.includes('componente') || errTexto.includes('periférico')) {
                     moduloInicial = 'equipos';
-                } else if (errTexto.includes('usuario') || errTexto.includes('contraseña')) {
-                    moduloInicial = 'crear-usuario';
                 } else if (errTexto.includes('categoría') || errTexto.includes('subcategoría')) {
                     moduloInicial = 'categorias';
                 } else if (errTexto.includes('solicitante') || errTexto.includes('levantar')) {
                     moduloInicial = 'crear-ticket';
+                } else if (errTexto.includes('usuario') || errTexto.includes('contraseña')) {
+                    moduloInicial = 'crear-usuario';
                 } else {
                     moduloInicial = 'tickets';
                 }
@@ -3783,7 +3785,14 @@
 
             <% if (mensaje) { %>
                 const msgTexto = <%- JSON.stringify(mensaje) %>;
-                if (msgTexto.includes('Guía') || msgTexto.includes('guía')) {
+                if (msgTexto.includes('papelera') || msgTexto.includes('recuperado') || msgTexto.includes('restaurado') || msgTexto.includes('definitivamente')) {
+                    moduloInicial = 'papelera';
+                    if (msgTexto.toLowerCase().includes('ticket')) {
+                        setTimeout(() => mostrarSubtabPapelera('tickets'), 60);
+                    } else if (msgTexto.toLowerCase().includes('usuario')) {
+                        setTimeout(() => mostrarSubtabPapelera('usuarios'), 60);
+                    }
+                } else if (msgTexto.includes('Guía') || msgTexto.includes('guía')) {
                     moduloInicial = 'guias';
                 } else if (msgTexto.includes('Outlook') || msgTexto.includes('correo') || msgTexto.includes('Plantilla') || msgTexto.includes('plantilla') || msgTexto.includes('prueba')) {
                     moduloInicial = 'correo';
