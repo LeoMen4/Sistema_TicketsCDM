@@ -682,10 +682,11 @@
                                         <!-- Acciones (Modificar / Eliminar sólo si estatus es Nuevo ticket) -->
                                         <td class="py-3.5 px-4 text-center whitespace-nowrap">
                                             <% if (t.estatus === 'Nuevo ticket') { %>
+                                                <script type="application/json" id="ticket-data-<%= t.id %>"><%- JSON.stringify(t).replace(/</g, '\\u003c') %></script>
                                                 <div class="flex items-center justify-center gap-1.5">
                                                     <button 
                                                         type="button" 
-                                                        onclick="abrirModalEditarTicketUsuario(<%= JSON.stringify(t).replace(/"/g, '&quot;') %>)"
+                                                        onclick="abrirModalEditarTicketUsuario(<%= t.id %>)"
                                                         class="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-bold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 transition-colors cursor-pointer"
                                                         title="Modificar los datos de este ticket"
                                                     >
@@ -694,7 +695,7 @@
                                                     </button>
                                                     <button 
                                                         type="button" 
-                                                        onclick="abrirModalEliminarTicketUsuario(<%= t.id %>, '<%= (t.titulo || '').replace(/'/g, "\\'") %>')"
+                                                        onclick="abrirModalEliminarTicketUsuario(<%= t.id %>)"
                                                         class="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors cursor-pointer"
                                                         title="Cancelar y eliminar este ticket"
                                                     >
@@ -1264,12 +1265,30 @@
         // ==========================================
         // FUNCIONES DE MODIFICACIÓN Y CANCELACIÓN DE TICKETS POR USUARIO
         // ==========================================
-        function abrirModalEditarTicketUsuario(ticket) {
-            if (!ticket) return;
+        function abrirModalEditarTicketUsuario(ticketIdOrObj) {
+            let ticket = null;
+            if (typeof ticketIdOrObj === 'object' && ticketIdOrObj !== null) {
+                ticket = ticketIdOrObj;
+            } else {
+                const el = document.getElementById('ticket-data-' + ticketIdOrObj);
+                if (el) {
+                    try {
+                        ticket = JSON.parse(el.textContent);
+                    } catch (e) {
+                        console.error('Error parseando datos del ticket:', e);
+                    }
+                }
+            }
+            if (!ticket) {
+                console.error('No se pudieron obtener los datos del ticket para edición:', ticketIdOrObj);
+                return;
+            }
+
             if (ticket.estatus !== 'Nuevo ticket') {
                 alert('Este ticket ya está en estatus "' + ticket.estatus + '" y se encuentra en proceso de atención. Una vez cambiado el estatus ya no puede ser editado.');
                 return;
             }
+
             document.getElementById('editTicketIdSpan').textContent = ticket.id;
             document.getElementById('editTicketIdInput').value = ticket.id;
             document.getElementById('editTicketTitulo').value = ticket.titulo || '';
@@ -1329,10 +1348,29 @@
             }
         }
 
-        function abrirModalEliminarTicketUsuario(ticketId, titulo) {
+        function abrirModalEliminarTicketUsuario(ticketIdOrObj, tituloParam) {
+            let ticketId = ticketIdOrObj;
+            let titulo = tituloParam || '';
+
+            if (typeof ticketIdOrObj === 'object' && ticketIdOrObj !== null) {
+                ticketId = ticketIdOrObj.id;
+                titulo = ticketIdOrObj.titulo || '';
+            } else {
+                const el = document.getElementById('ticket-data-' + ticketIdOrObj);
+                if (el) {
+                    try {
+                        const t = JSON.parse(el.textContent);
+                        if (t) {
+                            ticketId = t.id;
+                            if (!titulo) titulo = t.titulo || '';
+                        }
+                    } catch (e) {}
+                }
+            }
+
             document.getElementById('delTicketIdSpan').textContent = ticketId;
             document.getElementById('delTicketIdInput').value = ticketId;
-            document.getElementById('delTicketTituloPreview').textContent = '#' + ticketId + ' - ' + titulo;
+            document.getElementById('delTicketTituloPreview').textContent = '#' + ticketId + (titulo ? ' - ' + titulo : '');
             document.getElementById('modalEliminarTicketUsuario').style.display = 'block';
         }
 
