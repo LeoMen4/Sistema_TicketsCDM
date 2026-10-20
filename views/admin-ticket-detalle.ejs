@@ -223,9 +223,17 @@
                 <% } %>
             </div>
             
-            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-snug mb-4">
-                <%= ticket.titulo %>
-            </h1>
+            <div class="flex items-center gap-3 flex-wrap mb-4">
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-snug">
+                    <%= ticket.titulo %>
+                </h1>
+                <% if (ticket.editado) { %>
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs" title="Modificado por el usuario solicitante <%= ticket.editado_at ? 'el ' + new Date(ticket.editado_at).toLocaleString('es-ES') : '' %>">
+                        <span>✏️</span>
+                        <span>Editado por el usuario</span>
+                    </span>
+                <% } %>
+            </div>
 
             <div class="flex flex-wrap items-center gap-2">
                 <!-- Estatus Actual -->

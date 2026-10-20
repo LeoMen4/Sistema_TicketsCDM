@@ -383,6 +383,138 @@ app.post('/tickets/crear', esUsuario, upload.single('imagen'), (req, res) => {
     );
 });
 
+// Modificar Ticket desde la vista de Usuario (Solo permitido mientras el estatus sea 'Nuevo ticket')
+const procesarEdicionTicketUsuario = (req, res) => {
+    const { ticket_id, titulo, tipo_falla, subcategoria, prioridad, descripcion } = req.body;
+    const usuarioId = req.session.usuario.id;
+    const usuarioNombre = req.session.usuario.nombre;
+
+    if (!ticket_id || !titulo || !tipo_falla || !descripcion) {
+        req.session.errorFlash = 'Todos los campos obligatorios deben completarse para modificar el ticket.';
+        return res.redirect('/usuario');
+    }
+
+    db.get('SELECT * FROM tickets WHERE id = ? AND deleted_at IS NULL', [ticket_id], (err, ticket) => {
+        if (err || !ticket) {
+            req.session.errorFlash = 'El ticket que intentas modificar no existe o ha sido retirado.';
+            return res.redirect('/usuario');
+        }
+
+        if (ticket.usuario_id !== usuarioId) {
+            req.session.errorFlash = 'No tienes permiso para modificar este ticket.';
+            return res.redirect('/usuario');
+        }
+
+        // Restricción crítica: una vez cambiado el estatus ya no se puede editar
+        if (ticket.estatus !== 'Nuevo ticket') {
+            req.session.errorFlash = `No es posible modificar el ticket #${ticket_id} porque su estatus actual es "${ticket.estatus}" y el equipo de TI ya comenzó a atenderlo.`;
+            return res.redirect('/usuario');
+        }
+
+        const tituloFinal = titulo.trim();
+        const tipoFallaFinal = tipo_falla.trim();
+        const subcatFinal = (subcategoria && subcategoria.trim()) ? subcategoria.trim() : null;
+        const prioFinal = prioridad || 'Media';
+        const descFinal = descripcion.trim();
+        const imagenFinal = req.file ? req.file.filename : ticket.imagen;
+
+        db.run(
+            `UPDATE tickets 
+             SET titulo = ?, 
+                 tipo_falla = ?, 
+                 subcategoria = ?, 
+                 prioridad = ?, 
+                 descripcion = ?, 
+                 imagen = ?, 
+                 editado = 1, 
+                 editado_at = datetime('now', 'localtime') 
+             WHERE id = ?`,
+            [tituloFinal, tipoFallaFinal, subcatFinal, prioFinal, descFinal, imagenFinal, ticket_id],
+            function(errUpdate) {
+                if (errUpdate) {
+                    req.session.errorFlash = 'Error al actualizar el ticket: ' + errUpdate.message;
+                    return res.redirect('/usuario');
+                }
+
+                db.run(
+                    `INSERT INTO historial_tickets (ticket_id, estatus, usuario_nombre, usuario_puesto, detalle, fecha) 
+                     VALUES (?, ?, ?, ?, ?, datetime('now', 'localtime'))`,
+                    [ticket_id, 'Nuevo ticket', usuarioNombre, req.session.usuario.puesto || 'Usuario', 'Ticket modificado por el usuario solicitante'],
+                    () => {
+                        req.session.mensajeFlash = `¡Ticket #${ticket_id} modificado exitosamente!`;
+                        return res.redirect('/usuario');
+                    }
+                );
+            }
+        );
+    });
+};
+
+app.post('/tickets/editar', esUsuario, upload.single('imagen'), procesarEdicionTicketUsuario);
+app.post('/usuario/tickets/editar', esUsuario, upload.single('imagen'), procesarEdicionTicketUsuario);
+
+// Eliminar / Cancelar Ticket desde la vista de Usuario (Solo permitido mientras el estatus sea 'Nuevo ticket')
+const procesarEliminacionTicketUsuario = (req, res) => {
+    const { ticket_id, motivo } = req.body;
+    const usuarioId = req.session.usuario.id;
+    const usuarioNombre = req.session.usuario.nombre;
+
+    if (!ticket_id) {
+        req.session.errorFlash = 'No se especificó el ticket a eliminar.';
+        return res.redirect('/usuario');
+    }
+
+    db.get('SELECT * FROM tickets WHERE id = ? AND deleted_at IS NULL', [ticket_id], (err, ticket) => {
+        if (err || !ticket) {
+            req.session.errorFlash = 'El ticket no existe o ya fue eliminado.';
+            return res.redirect('/usuario');
+        }
+
+        if (ticket.usuario_id !== usuarioId) {
+            req.session.errorFlash = 'No tienes permiso para eliminar este ticket.';
+            return res.redirect('/usuario');
+        }
+
+        // Restricción: solo se puede eliminar si aún está en 'Nuevo ticket'
+        if (ticket.estatus !== 'Nuevo ticket') {
+            req.session.errorFlash = `No es posible eliminar el ticket #${ticket_id} porque ya se encuentra en estatus "${ticket.estatus}". Comunícate por el chat de seguimiento si requieres cancelarlo.`;
+            return res.redirect('/usuario');
+        }
+
+        const detalleHistorial = motivo && motivo.trim() 
+            ? `Ticket cancelado y eliminado por el usuario (${usuarioNombre}). Motivo: ${motivo.trim()}`
+            : `Ticket cancelado y eliminado por el usuario (${usuarioNombre})`;
+
+        db.run(
+            `UPDATE tickets 
+             SET deleted_at = datetime('now', 'localtime'), 
+                 eliminado_por = 'usuario', 
+                 eliminado_por_nombre = ? 
+             WHERE id = ?`,
+            [usuarioNombre, ticket_id],
+            function(errDel) {
+                if (errDel) {
+                    req.session.errorFlash = 'Error al eliminar el ticket: ' + errDel.message;
+                    return res.redirect('/usuario');
+                }
+
+                db.run(
+                    `INSERT INTO historial_tickets (ticket_id, estatus, usuario_nombre, usuario_puesto, detalle, fecha) 
+                     VALUES (?, ?, ?, ?, ?, datetime('now', 'localtime'))`,
+                    [ticket_id, 'Cancelado por usuario', usuarioNombre, req.session.usuario.puesto || 'Usuario', detalleHistorial],
+                    () => {
+                        req.session.mensajeFlash = `El ticket #${ticket_id} fue cancelado y retirado exitosamente.`;
+                        return res.redirect('/usuario');
+                    }
+                );
+            }
+        );
+    });
+};
+
+app.post('/tickets/eliminar-usuario', esUsuario, procesarEliminacionTicketUsuario);
+app.post('/usuario/tickets/eliminar', esUsuario, procesarEliminacionTicketUsuario);
+
 function renderUserDashboardWithMsg(req, res, mensaje, error) {
     const usuarioId = req.session.usuario.id;
     db.get('SELECT nombre, puesto FROM usuarios WHERE id = ?', [usuarioId], (errU, userDb) => {

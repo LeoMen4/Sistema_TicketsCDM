@@ -161,6 +161,10 @@ db.serialize(() => {
             modelo_nuevo TEXT,
             numero_serie_nuevo TEXT,
             creado_por_admin TEXT DEFAULT NULL,
+            editado INTEGER DEFAULT 0,
+            editado_at DATETIME DEFAULT NULL,
+            eliminado_por TEXT DEFAULT NULL,
+            eliminado_por_nombre TEXT DEFAULT NULL,
             FOREIGN KEY(usuario_id) REFERENCES usuarios(id)
         )
     `);
@@ -181,6 +185,10 @@ db.serialize(() => {
     db.run(`ALTER TABLE tickets ADD COLUMN numero_serie_nuevo TEXT`, (err) => {});
     db.run(`ALTER TABLE tickets ADD COLUMN creado_por_admin TEXT DEFAULT NULL`, (err) => {});
     db.run(`ALTER TABLE tickets ADD COLUMN deleted_at DATETIME DEFAULT NULL`, (err) => {});
+    db.run(`ALTER TABLE tickets ADD COLUMN editado INTEGER DEFAULT 0`, (err) => {});
+    db.run(`ALTER TABLE tickets ADD COLUMN editado_at DATETIME DEFAULT NULL`, (err) => {});
+    db.run(`ALTER TABLE tickets ADD COLUMN eliminado_por TEXT DEFAULT NULL`, (err) => {});
+    db.run(`ALTER TABLE tickets ADD COLUMN eliminado_por_nombre TEXT DEFAULT NULL`, (err) => {});
     db.run(`CREATE INDEX IF NOT EXISTS idx_tickets_deleted_at ON tickets(deleted_at)`, (err) => {});
 
     // Migración para eliminar la restricción del campo obsoleto 'periferico' si aún existe
