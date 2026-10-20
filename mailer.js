@@ -11,35 +11,49 @@ function obtenerConfig(callback) {
     });
 }
 
-// Crear transportador Nodemailer optimizado para Outlook / Office 365
+// Crear transportador Nodemailer optimizado para correo corporativo de Grupo CDM (puerto 2525 / 25 / 587)
 function crearTransportador(config) {
-    if (!config || !config.email_remitente) {
+    if (!config) {
         return null;
     }
 
-    const host = (config.smtp_host && config.smtp_host.trim()) ? config.smtp_host.trim() : 'smtp-mail.outlook.com';
-    const port = parseInt(config.smtp_port) || 587;
+    const host = (config.smtp_host && config.smtp_host.trim()) ? config.smtp_host.trim() : 'mail.grupo-cdm.mx';
+    const port = parseInt(config.smtp_port) || 2525;
 
     const transportOpts = {
         host: host,
         port: port,
         secure: port === 465,
         tls: {
-            ciphers: 'SSLv3',
             rejectUnauthorized: false
         }
     };
 
-    // Si tiene contraseña configurada, se usa autenticación SMTP.
-    // Si no tiene contraseña (ej. Direct Send en puerto 25), se conecta sin auth.
-    if (config.password_remitente && config.password_remitente.trim()) {
+    // Solo enviamos auth si hay contraseña explícita y no es el relay interno de grupo-cdm (o si se configuró externamente)
+    if (config.password_remitente && config.password_remitente.trim() && host !== 'mail.grupo-cdm.mx') {
         transportOpts.auth = {
-            user: config.email_remitente.trim(),
+            user: (config.email_remitente || '').trim(),
             pass: config.password_remitente.trim()
         };
     }
 
     return nodemailer.createTransport(transportOpts);
+}
+
+// Determinar el remitente (permite que cualquier administrador activo sea el remitente)
+function resolverRemitente(config, adminRemitente = null) {
+    let email = 'sistemas1@grupo-cdm.mx';
+    let nombre = 'Mesa de ayuda de TI';
+
+    if (adminRemitente && adminRemitente.email) {
+        email = adminRemitente.email.trim();
+        nombre = adminRemitente.nombre ? `${adminRemitente.nombre.trim()} - Mesa de Ayuda TI` : (config?.nombre_remitente || 'Mesa de ayuda de TI');
+    } else if (config && config.email_remitente && config.email_remitente.trim()) {
+        email = config.email_remitente.trim();
+        nombre = config.nombre_remitente ? config.nombre_remitente.trim() : 'Mesa de ayuda de TI';
+    }
+
+    return { email, nombre };
 }
 
 // Reemplazar etiquetas {variable} en el texto
@@ -55,13 +69,15 @@ function reemplazarVariables(plantilla, variables) {
     return resultado;
 }
 
-// Generar versión HTML bonita para Outlook y otros clientes
-function generarHtml(asunto, cuerpoTexto, datos) {
+// Generar versión HTML para correos
+function generarHtml(asunto, cuerpoTexto, datos, remitente = null) {
     const textoSeguro = cuerpoTexto
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/\n/g, '<br>');
+
+    const nombreRemitente = remitente ? remitente.nombre : 'Mesa de ayuda de TI';
 
     return `
     <!DOCTYPE html>
@@ -81,7 +97,7 @@ function generarHtml(asunto, cuerpoTexto, datos) {
     <body>
         <div class="mail-container">
             <div class="mail-header">
-                <h1>Sistema de Tickets y Soporte</h1>
+                <h1>${nombreRemitente}</h1>
             </div>
             <div class="mail-body">
                 <div class="ticket-badge">Ticket #${datos.id || ''}</div>
@@ -90,7 +106,8 @@ function generarHtml(asunto, cuerpoTexto, datos) {
                 </div>
             </div>
             <div class="mail-footer">
-                Este es un mensaje automático generado por el Sistema de Tickets. Por favor no respondas a este correo.
+                Mensaje generado automáticamente por el Sistema de Tickets Grupo CDM.<br>
+                Remitente: ${remitente ? remitente.email : 'sistemas1@grupo-cdm.mx'}
             </div>
         </div>
     </body>
@@ -99,7 +116,7 @@ function generarHtml(asunto, cuerpoTexto, datos) {
 }
 
 // 1. Enviar notificación de NUEVO TICKET a los administradores
-function notificarNuevoTicketAdmin(ticketId, datosTicket) {
+function notificarNuevoTicketAdmin(ticketId, datosTicket, opciones = {}) {
     obtenerConfig((errConf, config) => {
         if (!config || !config.activo) {
             console.log('[Correo] Envío de correos desactivado o no configurado.');
@@ -111,6 +128,8 @@ function notificarNuevoTicketAdmin(ticketId, datosTicket) {
             console.log('[Correo] Credenciales de correo no configuradas.');
             return;
         }
+
+        const remitente = resolverRemitente(config, opciones.adminRemitente);
 
         // Obtener correos de todos los administradores activos
         db.all('SELECT email, nombre FROM usuarios WHERE rol = "admin" AND deleted_at IS NULL', [], (errAdmin, admins) => {
@@ -150,10 +169,11 @@ function notificarNuevoTicketAdmin(ticketId, datosTicket) {
 
                 const asuntoFinal = reemplazarVariables(plantilla.asunto, variables);
                 const cuerpoTextoFinal = reemplazarVariables(plantilla.cuerpo, variables);
-                const cuerpoHtmlFinal = generarHtml(asuntoFinal, cuerpoTextoFinal, variables);
+                const cuerpoHtmlFinal = generarHtml(asuntoFinal, cuerpoTextoFinal, variables, remitente);
 
                 const mailOptions = {
-                    from: `"${config.nombre_remitente || 'Sistema de Tickets'}" <${config.email_remitente}>`,
+                    from: `"${remitente.nombre}" <${remitente.email}>`,
+                    replyTo: remitente.email,
                     to: adminEmails.join(','),
                     subject: asuntoFinal,
                     text: cuerpoTextoFinal,
@@ -173,7 +193,7 @@ function notificarNuevoTicketAdmin(ticketId, datosTicket) {
 }
 
 // 1.1 Enviar notificación al USUARIO confirmando que se levantó su ticket
-function notificarTicketCreadoUsuario(ticketId, datosTicket) {
+function notificarTicketCreadoUsuario(ticketId, datosTicket, opciones = {}) {
     if (!datosTicket || !datosTicket.usuario_email) {
         return;
     }
@@ -187,6 +207,8 @@ function notificarTicketCreadoUsuario(ticketId, datosTicket) {
         if (!transporter) {
             return;
         }
+
+        const remitente = resolverRemitente(config, opciones.adminRemitente);
 
         db.get('SELECT * FROM plantillas_correo WHERE clave = "ticket_creado_usuario"', [], (errPl, plantilla) => {
             if (!plantilla) {
@@ -215,10 +237,11 @@ function notificarTicketCreadoUsuario(ticketId, datosTicket) {
 
             const asuntoFinal = reemplazarVariables(plantilla.asunto, variables);
             const cuerpoTextoFinal = reemplazarVariables(plantilla.cuerpo, variables);
-            const cuerpoHtmlFinal = generarHtml(asuntoFinal, cuerpoTextoFinal, variables);
+            const cuerpoHtmlFinal = generarHtml(asuntoFinal, cuerpoTextoFinal, variables, remitente);
 
             const mailOptions = {
-                from: `"${config.nombre_remitente || 'Sistema de Tickets'}" <${config.email_remitente}>`,
+                from: `"${remitente.nombre}" <${remitente.email}>`,
+                replyTo: remitente.email,
                 to: datosTicket.usuario_email,
                 subject: asuntoFinal,
                 text: cuerpoTextoFinal,
@@ -237,7 +260,7 @@ function notificarTicketCreadoUsuario(ticketId, datosTicket) {
 }
 
 // 2. Enviar notificación de CAMBIO DE ESTATUS al usuario del ticket
-function notificarCambioEstatusUsuario(ticketId, nuevoEstatus, datosResolucion = {}) {
+function notificarCambioEstatusUsuario(ticketId, nuevoEstatus, datosResolucion = {}, opciones = {}) {
     obtenerConfig((errConf, config) => {
         if (!config || !config.activo) {
             console.log('[Correo] Envío de correos desactivado o no configurado.');
@@ -250,11 +273,15 @@ function notificarCambioEstatusUsuario(ticketId, nuevoEstatus, datosResolucion =
             return;
         }
 
-        // Consultar información del ticket y del usuario que lo creó
+        const remitente = resolverRemitente(config, opciones.adminRemitente);
+
+        // Consultar información del ticket y del usuario que lo creó (LEFT JOIN para no perder datos si usuario difiere)
         const queryTicket = `
-            SELECT tickets.*, usuarios.nombre AS usuario_nombre, usuarios.email AS usuario_email
+            SELECT tickets.*, 
+                   COALESCE(usuarios.nombre, tickets.creado_por_admin, 'Usuario') AS usuario_nombre, 
+                   usuarios.email AS usuario_email
             FROM tickets
-            JOIN usuarios ON tickets.usuario_id = usuarios.id
+            LEFT JOIN usuarios ON tickets.usuario_id = usuarios.id
             WHERE tickets.id = ?
         `;
 
@@ -304,10 +331,11 @@ function notificarCambioEstatusUsuario(ticketId, nuevoEstatus, datosResolucion =
 
                 const asuntoFinal = reemplazarVariables(plantilla.asunto, variables);
                 const cuerpoTextoFinal = reemplazarVariables(plantilla.cuerpo, variables);
-                const cuerpoHtmlFinal = generarHtml(asuntoFinal, cuerpoTextoFinal, variables);
+                const cuerpoHtmlFinal = generarHtml(asuntoFinal, cuerpoTextoFinal, variables, remitente);
 
                 const mailOptions = {
-                    from: `"${config.nombre_remitente || 'Sistema de Tickets'}" <${config.email_remitente}>`,
+                    from: `"${remitente.nombre}" <${remitente.email}>`,
+                    replyTo: remitente.email,
                     to: ticket.usuario_email,
                     subject: asuntoFinal,
                     text: cuerpoTextoFinal,
@@ -318,7 +346,7 @@ function notificarCambioEstatusUsuario(ticketId, nuevoEstatus, datosResolucion =
                     if (error) {
                         console.error(`[Correo] Error al enviar correo de cambio de estatus a ${ticket.usuario_email}:`, error.message);
                     } else {
-                        console.log(`[Correo] Notificación enviada con éxito a ${ticket.usuario_email}:`, info.messageId);
+                        console.log(`[Correo] Notificación enviada con éxito desde ${remitente.email} a ${ticket.usuario_email}:`, info.messageId);
                     }
                 });
             });
@@ -326,37 +354,44 @@ function notificarCambioEstatusUsuario(ticketId, nuevoEstatus, datosResolucion =
     });
 }
 
-// 3. Enviar correo de prueba para validar credenciales SMTP
-function enviarCorreoPrueba(destinatario, callback) {
+// 3. Enviar correo de prueba para validar credenciales SMTP (permite especificar remitente)
+function enviarCorreoPrueba(destinatario, adminRemitente = null, callback = null) {
+    if (typeof adminRemitente === 'function') {
+        callback = adminRemitente;
+        adminRemitente = null;
+    }
+
     obtenerConfig((errConf, config) => {
         if (!config) {
-            return callback(new Error('No se pudo cargar la configuración de correo.'));
+            return callback && callback(new Error('No se pudo cargar la configuración de correo.'));
         }
 
-        if (!config.email_remitente) {
-            return callback(new Error('Debes ingresar al menos tu correo remitente antes de enviar una prueba.'));
-        }
-
+        const remitente = resolverRemitente(config, adminRemitente);
         const transporter = crearTransportador(config);
         if (!transporter) {
-            return callback(new Error('No se pudo inicializar la conexión con el servidor SMTP.'));
+            return callback && callback(new Error('No se pudo inicializar la conexión con el servidor SMTP.'));
         }
 
         const mailOptions = {
-            from: `"${config.nombre_remitente || 'Sistema de Tickets'}" <${config.email_remitente}>`,
+            from: `"${remitente.nombre}" <${remitente.email}>`,
+            replyTo: remitente.email,
             to: destinatario,
-            subject: '✅ Correo de Prueba - Conexión de Outlook Exitosa',
-            text: '¡Hola!\n\nEste es un correo de prueba enviado desde tu Sistema de Tickets. La configuración de Outlook / SMTP está funcionando correctamente.',
+            subject: `✅ Correo de Prueba - Enviado por ${remitente.nombre}`,
+            text: `¡Hola!\n\nEste es un correo de prueba enviado desde tu Sistema de Tickets por el administrador remitente ${remitente.nombre} (${remitente.email}).\nEl servidor de correo (${config.smtp_host}:${config.smtp_port}) está operando correctamente.`,
             html: `
             <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f9;">
                 <div style="background: white; padding: 25px; border-radius: 8px; border-left: 5px solid #10b981; max-width: 500px; margin: auto;">
-                    <h2 style="color: #10b981; margin-top: 0;">✅ Conexión Exitosa</h2>
+                    <h2 style="color: #10b981; margin-top: 0;">✅ Conexión de Correo Exitosa</h2>
                     <p style="color: #334155; font-size: 14px; line-height: 1.5;">
-                        ¡Excelente! Tu cuenta de Outlook está vinculada y lista para enviar notificaciones automáticas de tickets y cambios de estatus.
+                        ¡Excelente! El sistema de notificaciones está vinculado y listo para enviar correos automáticos.
                     </p>
-                    <p style="font-size: 12px; color: #64748b; margin-top: 15px;">
-                        Remitente: <strong>${config.email_remitente}</strong><br>
-                        Servidor: <strong>${config.smtp_host}</strong> (Puerto ${config.smtp_port})
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin: 15px 0; font-size: 13px; color: #475569;">
+                        👤 <strong>Administrador Remitente:</strong> ${remitente.nombre}<br>
+                        📧 <strong>Correo Remitente:</strong> ${remitente.email}<br>
+                        🌐 <strong>Servidor:</strong> ${config.smtp_host} (Puerto ${config.smtp_port})
+                    </div>
+                    <p style="font-size: 12px; color: #64748b; margin-top: 10px;">
+                        Todos los administradores del sistema están habilitados como remitentes automáticos.
                     </p>
                 </div>
             </div>
@@ -365,9 +400,9 @@ function enviarCorreoPrueba(destinatario, callback) {
 
         transporter.sendMail(mailOptions, (error, info) => {
             if (error) {
-                return callback(error);
+                return callback && callback(error);
             }
-            callback(null, info);
+            callback && callback(null, info);
         });
     });
 }
@@ -377,5 +412,6 @@ module.exports = {
     notificarNuevoTicketAdmin,
     notificarTicketCreadoUsuario,
     notificarCambioEstatusUsuario,
-    enviarCorreoPrueba
+    enviarCorreoPrueba,
+    resolverRemitente
 };

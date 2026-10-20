@@ -384,17 +384,27 @@
         <!-- ÁREA PRINCIPAL DE CONTENIDO (PANTALLA COMPLETA A LA DERECHA) -->
         <main class="flex-1 w-full p-4 sm:p-6 lg:p-8 bg-slate-50 space-y-6 overflow-x-hidden">
 
-            <!-- Mensajes de Alerta -->
+            <!-- Mensajes de Alerta con botón de cierre (✕) y auto-cierre -->
             <% if (mensaje) { %>
-                <div class="rounded-md bg-emerald-50 border border-emerald-200 p-4 text-sm text-emerald-800 flex items-start gap-3 shadow-xs">
-                    <span class="text-base leading-none text-emerald-600">✅</span>
-                    <div class="font-medium"><%= mensaje %></div>
+                <div id="alertaMensajeExito" class="rounded-md bg-emerald-50 border border-emerald-200 p-3.5 text-sm text-emerald-800 flex items-start justify-between gap-3 shadow-xs transition-opacity duration-300">
+                    <div class="flex items-start gap-2.5">
+                        <span class="text-base leading-none text-emerald-600 mt-0.5">✅</span>
+                        <div class="font-medium text-xs sm:text-sm leading-snug"><%= mensaje %></div>
+                    </div>
+                    <button type="button" onclick="cerrarAlerta('alertaMensajeExito')" class="text-emerald-500 hover:text-emerald-800 hover:bg-emerald-100 p-1 rounded transition-colors text-xs font-bold leading-none cursor-pointer flex-shrink-0" title="Cerrar notificación">
+                        ✕
+                    </button>
                 </div>
             <% } %>
             <% if (error) { %>
-                <div class="rounded-md bg-brand-50 border border-brand-200 p-4 text-sm text-brand-700 flex items-start gap-3 shadow-xs">
-                    <span class="text-base leading-none text-brand-600">⚠️</span>
-                    <div class="font-medium"><%= error %></div>
+                <div id="alertaMensajeError" class="rounded-md bg-rose-50 border border-rose-200 p-3.5 text-sm text-rose-800 flex items-start justify-between gap-3 shadow-xs transition-opacity duration-300">
+                    <div class="flex items-start gap-2.5">
+                        <span class="text-base leading-none text-rose-600 mt-0.5">⚠️</span>
+                        <div class="font-medium text-xs sm:text-sm leading-snug"><%= error %></div>
+                    </div>
+                    <button type="button" onclick="cerrarAlerta('alertaMensajeError')" class="text-rose-500 hover:text-rose-800 hover:bg-rose-100 p-1 rounded transition-colors text-xs font-bold leading-none cursor-pointer flex-shrink-0" title="Cerrar notificación">
+                        ✕
+                    </button>
                 </div>
             <% } %>
 
@@ -793,17 +803,7 @@
                                                 </select>
 
                                                 <div class="flex flex-wrap items-center gap-1">
-                                                    <!-- Botón de guardado rápido directo para esta fila -->
-                                                    <button 
-                                                        type="button" 
-                                                        id="btnGuardarFila-<%= t.id %>"
-                                                        style="display: none;"
-                                                        onclick="guardarEstatusTicketFila('<%= t.id %>')"
-                                                        class="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 shadow-xs cursor-pointer animate-pulse transition-all whitespace-nowrap"
-                                                        title="Guardar el cambio de estatus de este ticket inmediatamente"
-                                                    >
-                                                        <span>✓ Guardar</span>
-                                                    </button>
+
 
                                                     <!-- Botón Chat / Seguimiento Remoto -->
                                                     <button 
@@ -2093,15 +2093,27 @@
                                                 ⏰ <%= new Date(u.deleted_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) %>
                                             </td>
                                             <td class="py-3 px-4 text-center whitespace-nowrap">
-                                                <form action="/admin/recuperar-usuario" method="POST" style="display:inline;">
-                                                    <input type="hidden" name="usuario_id" value="<%= u.id %>">
+                                                <div class="flex items-center justify-center gap-1.5">
+                                                    <form action="/admin/recuperar-usuario" method="POST" style="display:inline;">
+                                                        <input type="hidden" name="usuario_id" value="<%= u.id %>">
+                                                        <button 
+                                                            type="submit" 
+                                                            class="inline-flex items-center gap-1 px-3 py-1 rounded text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors cursor-pointer"
+                                                            title="Restaurar cuenta de usuario a la lista activa"
+                                                        >
+                                                            <span>🔄</span>
+                                                            <span>Restaurar Cuenta</span>
+                                                        </button>
+                                                    </form>
                                                     <button 
-                                                        type="submit" 
-                                                        class="px-3 py-1 rounded text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors cursor-pointer"
+                                                        type="button" 
+                                                        onclick="abrirModalEliminarUsuarioDefinitivo(<%= u.id %>, '<%= (u.nombre || '').replace(/'/g, "\\'") %>', '<%= (u.email || '').replace(/'/g, "\\'") %>')" 
+                                                        class="p-1 px-2 rounded text-[11px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors cursor-pointer"
+                                                        title="Eliminar usuario definitivamente del sistema"
                                                     >
-                                                        🔄 Restaurar Cuenta
+                                                        🗑️
                                                     </button>
-                                                </form>
+                                                </div>
                                             </td>
                                         </tr>
                                     <% }) %>
@@ -2239,25 +2251,61 @@
                             </div>
                         </form>
 
-                        <!-- Prueba de conexión -->
+                        <!-- Panel de Administradores Habilitados como Remitentes -->
+                        <div class="bg-emerald-50/80 border border-emerald-200 rounded-md p-4 space-y-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-base">👥</span>
+                                <strong class="text-xs font-bold text-emerald-950 uppercase tracking-wide">
+                                    Todos los Administradores están habilitados como Remitentes de Correo:
+                                </strong>
+                            </div>
+                            <p class="text-[11px] text-emerald-800 leading-relaxed">
+                                Cualquier administrador que atienda, cambie el estatus o responda a un ticket enviará las notificaciones al usuario con <strong>su propio nombre y correo institucional</strong> como remitente automático.
+                            </p>
+                            <div class="flex flex-wrap gap-2 pt-1">
+                                <% 
+                                    const adminsRemitentes = (typeof usuarios !== 'undefined' ? usuarios : []).filter(u => u.rol === 'admin');
+                                    adminsRemitentes.forEach(adm => { 
+                                %>
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-white border border-emerald-300 text-[11px] font-semibold text-emerald-900 shadow-2xs">
+                                        <span class="text-emerald-600">✓</span>
+                                        <span><%= adm.nombre %></span>
+                                        <span class="text-slate-500 font-mono text-[10px]">&lt;<%= adm.email %>&gt;</span>
+                                    </span>
+                                <% }) %>
+                            </div>
+                        </div>
+
+                        <!-- Prueba de conexión y envío -->
                         <div class="pt-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
                             <div>
-                                <strong class="text-xs text-slate-800">📨 Probar Conexión y Envío de Correo:</strong>
-                                <p class="text-[11px] text-slate-500">Envía un correo de prueba para comprobar la autenticación con Microsoft Outlook.</p>
+                                <strong class="text-xs text-slate-800">📨 Probar Envío de Correo:</strong>
+                                <p class="text-[11px] text-slate-500">Envía un correo de prueba seleccionando el administrador remitente.</p>
                             </div>
-                            <form action="/admin/config-correo/probar" method="POST" class="flex gap-2 max-w-sm w-full">
+                            <form action="/admin/config-correo/probar" method="POST" class="flex flex-wrap sm:flex-nowrap gap-2 max-w-lg w-full">
+                                <select 
+                                    name="remitente_email" 
+                                    class="rounded border border-slate-300 px-2 py-1.5 text-xs text-slate-900 focus:border-brand-600 focus:outline-none bg-white shadow-2xs"
+                                    title="Selecciona el remitente para la prueba"
+                                >
+                                    <% adminsRemitentes.forEach(adm => { %>
+                                        <option value="<%= adm.email %>" <%= (typeof usuario !== 'undefined' && usuario.id === adm.id) ? 'selected' : '' %>>
+                                            De: <%= adm.nombre %> (<%= adm.email %>)
+                                        </option>
+                                    <% }) %>
+                                </select>
                                 <input 
                                     type="email" 
                                     name="email_prueba" 
-                                    placeholder="tu_correo@empresa.com" 
+                                    placeholder="Para: destinatario@empresa.com" 
                                     required 
                                     class="flex-1 rounded border border-slate-300 px-3 py-1.5 text-xs text-slate-900 focus:border-brand-600 focus:outline-none bg-white shadow-2xs"
                                 >
                                 <button 
                                     type="submit" 
-                                    class="inline-flex items-center gap-1 py-1.5 px-3 rounded text-xs font-bold text-slate-700 bg-slate-200 hover:bg-slate-300 transition-colors cursor-pointer whitespace-nowrap"
+                                    class="inline-flex items-center gap-1 py-1.5 px-3 rounded text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors cursor-pointer whitespace-nowrap shadow-2xs"
                                 >
-                                    Enviar Prueba
+                                    📨 Enviar Prueba
                                 </button>
                             </form>
                         </div>
@@ -3285,6 +3333,56 @@
         </div>
     </div>
 
+    <!-- MODAL DE CONFIRMACIÓN PARA ELIMINAR USUARIO DEFINITIVAMENTE -->
+    <div id="modalEliminarUsuarioDefinitivo" class="modal">
+        <div class="modal-content" style="max-width: 480px;">
+            <div class="flex items-center gap-2 mb-2 text-rose-600">
+                <span class="text-xl">⚠️</span>
+                <h4 class="text-base font-bold text-slate-900 m-0">
+                    Eliminar Definitivamente Usuario #<span id="txtIdUsuarioDefinitivo"></span>
+                </h4>
+            </div>
+            <p class="text-xs text-slate-600 mb-1">¿Estás seguro de que deseas purgar permanentemente esta cuenta de usuario?</p>
+            <p class="text-xs text-slate-800 font-semibold mb-2">Usuario: <span id="txtNombreUsuarioDefinitivo" class="text-slate-600 font-normal"></span> (<span id="txtEmailUsuarioDefinitivo" class="text-slate-500 font-normal"></span>)</p>
+            
+            <div class="rounded bg-rose-50 border border-rose-200 p-2.5 text-xs text-rose-800 mb-3">
+                🚨 <strong>Atención crítica:</strong> Esta cuenta será eliminada de forma permanente del sistema. Esta operación <strong>NO se puede deshacer</strong>.
+            </div>
+
+            <form action="/admin/usuarios/eliminar-definitivo" method="POST" class="space-y-3">
+                <input type="hidden" name="usuario_id" id="idUsuarioDefinitivo">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                        Ingresa TU contraseña de Administrador para confirmar:
+                    </label>
+                    <div class="relative">
+                        <input 
+                            type="password" 
+                            id="passAdminEliminarUsuarioDefinitivo"
+                            name="admin_password" 
+                            required 
+                            placeholder="Tu contraseña de administrador"
+                            autocomplete="current-password"
+                            class="w-full rounded border border-slate-300 pl-3 pr-10 py-2 text-xs text-slate-900 focus:border-brand-600 focus:outline-none"
+                        >
+                        <button 
+                            type="button" 
+                            onclick="toggleVerPassword('passAdminEliminarUsuarioDefinitivo', this)" 
+                            title="Mostrar / Ocultar contraseña"
+                            class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 focus:outline-none text-sm cursor-pointer"
+                        >
+                            👁️
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" onclick="cerrarModalEliminarUsuarioDefinitivo()" class="px-3.5 py-1.5 rounded text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200">Cancelar</button>
+                    <button type="submit" class="px-3.5 py-1.5 rounded text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-xs">Sí, Eliminar Definitivamente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- MODAL DE CONFIRMACIÓN PARA ELIMINAR TICKET DEFINITIVAMENTE -->
     <div id="modalEliminarTicketDefinitivo" class="modal">
         <div class="modal-content" style="max-width: 480px;">
@@ -4006,6 +4104,34 @@
                 btn.textContent = isPass ? '🙈' : '👁️';
                 btn.title = isPass ? 'Ocultar contraseña' : 'Ver contraseña';
             }
+        }
+
+        function cerrarAlerta(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.style.opacity = '0';
+                el.style.transition = 'opacity 0.25s ease';
+                setTimeout(() => { if (el) el.remove(); }, 250);
+            }
+        }
+
+        // Auto cerrar alerta de éxito después de 8 segundos
+        setTimeout(() => {
+            cerrarAlerta('alertaMensajeExito');
+        }, 8000);
+
+        function abrirModalEliminarUsuarioDefinitivo(id, nombre, email) {
+            document.getElementById('idUsuarioDefinitivo').value = id;
+            document.getElementById('txtIdUsuarioDefinitivo').textContent = id;
+            document.getElementById('txtNombreUsuarioDefinitivo').textContent = nombre;
+            document.getElementById('txtEmailUsuarioDefinitivo').textContent = email;
+            const pass = document.getElementById('passAdminEliminarUsuarioDefinitivo');
+            if (pass) pass.value = '';
+            document.getElementById('modalEliminarUsuarioDefinitivo').style.display = 'block';
+        }
+
+        function cerrarModalEliminarUsuarioDefinitivo() {
+            document.getElementById('modalEliminarUsuarioDefinitivo').style.display = 'none';
         }
 
         function abrirModalEliminarTicket(id, titulo) {

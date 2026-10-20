@@ -315,23 +315,30 @@ db.serialize(() => {
         }
     });
 
-    // Tablas para Configuración y Plantillas de Correo
+    // Tablas para Configuración y Plantillas de Correo (Optimizado para relay corporativo de Grupo CDM puerto 2525)
     db.run(`
         CREATE TABLE IF NOT EXISTS config_correo (
             id INTEGER PRIMARY KEY CHECK (id = 1),
-            smtp_host TEXT DEFAULT 'smtp-mail.outlook.com',
-            smtp_port INTEGER DEFAULT 587,
-            email_remitente TEXT DEFAULT '',
+            smtp_host TEXT DEFAULT 'mail.grupo-cdm.mx',
+            smtp_port INTEGER DEFAULT 2525,
+            email_remitente TEXT DEFAULT 'sistemas1@grupo-cdm.mx',
             password_remitente TEXT DEFAULT '',
-            nombre_remitente TEXT DEFAULT 'Sistema de Tickets',
+            nombre_remitente TEXT DEFAULT 'Mesa de ayuda de TI',
             activo INTEGER DEFAULT 1
         )
     `);
 
     db.run(`
         INSERT OR IGNORE INTO config_correo (id, smtp_host, smtp_port, email_remitente, password_remitente, nombre_remitente, activo)
-        VALUES (1, 'smtp-mail.outlook.com', 587, '', '', 'Sistema de Tickets', 1)
+        VALUES (1, 'mail.grupo-cdm.mx', 2525, 'sistemas1@grupo-cdm.mx', '', 'Mesa de ayuda de TI', 1)
     `);
+
+    // Actualizar configuración existente a puerto 2525 de mail.grupo-cdm.mx para compatibilidad en Render y Local
+    db.run(`
+        UPDATE config_correo 
+        SET smtp_host = 'mail.grupo-cdm.mx', smtp_port = 2525, nombre_remitente = 'Mesa de ayuda de TI' 
+        WHERE (smtp_host = 'smtp-mail.outlook.com' OR smtp_port = 587 OR smtp_port = 25) AND id = 1
+    `, (err) => {});
 
     db.run(`
         CREATE TABLE IF NOT EXISTS plantillas_correo (

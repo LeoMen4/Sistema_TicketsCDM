@@ -240,17 +240,27 @@
         <!-- CONTENIDO PRINCIPAL -->
         <main class="flex-1 min-w-0 p-4 sm:p-6 space-y-6">
 
-            <!-- Notificaciones de éxito o error -->
+            <!-- Notificaciones de éxito o error con botón de cierre (✕) -->
             <% if (mensaje) { %>
-                <div class="rounded-md bg-emerald-50 border border-emerald-200 p-4 text-sm text-emerald-800 flex items-start gap-3 shadow-xs">
-                    <span class="text-lg leading-none text-emerald-600">✅</span>
-                    <div class="font-medium"><%= mensaje %></div>
+                <div id="alertaMensajeUser" class="rounded-md bg-emerald-50 border border-emerald-200 p-3.5 text-sm text-emerald-800 flex items-start justify-between gap-3 shadow-xs transition-opacity duration-300">
+                    <div class="flex items-start gap-2.5">
+                        <span class="text-base leading-none text-emerald-600 mt-0.5">✅</span>
+                        <div class="font-medium text-xs sm:text-sm leading-snug"><%= mensaje %></div>
+                    </div>
+                    <button type="button" onclick="const a=document.getElementById('alertaMensajeUser'); if(a) a.remove();" class="text-emerald-500 hover:text-emerald-800 hover:bg-emerald-100 p-1 rounded transition-colors text-xs font-bold leading-none cursor-pointer flex-shrink-0" title="Cerrar notificación">
+                        ✕
+                    </button>
                 </div>
             <% } %>
             <% if (error) { %>
-                <div class="rounded-md bg-brand-50 border border-brand-200 p-4 text-sm text-brand-700 flex items-start gap-3 shadow-xs">
-                    <span class="text-lg leading-none text-brand-600">⚠️</span>
-                    <div class="font-medium"><%= error %></div>
+                <div id="alertaErrorUser" class="rounded-md bg-rose-50 border border-rose-200 p-3.5 text-sm text-rose-800 flex items-start justify-between gap-3 shadow-xs transition-opacity duration-300">
+                    <div class="flex items-start gap-2.5">
+                        <span class="text-base leading-none text-rose-600 mt-0.5">⚠️</span>
+                        <div class="font-medium text-xs sm:text-sm leading-snug"><%= error %></div>
+                    </div>
+                    <button type="button" onclick="const a=document.getElementById('alertaErrorUser'); if(a) a.remove();" class="text-rose-500 hover:text-rose-800 hover:bg-rose-100 p-1 rounded transition-colors text-xs font-bold leading-none cursor-pointer flex-shrink-0" title="Cerrar notificación">
+                        ✕
+                    </button>
                 </div>
             <% } %>
 

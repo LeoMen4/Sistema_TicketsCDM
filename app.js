@@ -1593,7 +1593,7 @@ app.post('/admin/tickets/cambiar-estatus', esAdmin, (req, res) => {
             `;
 
             db.run(insertHistorial, [ticket_id, estatus, adminActualNombre, adminActualPuesto, detalleHist], function(errHist) {
-                // Notificar al usuario por correo sobre el nuevo estatus
+                // Notificar al usuario por correo sobre el nuevo estatus usando el administrador actual como remitente
                 mailer.notificarCambioEstatusUsuario(ticket_id, estatus, {
                     tecnico_resolvio: tecResumen,
                     categoria_resolucion: cat,
@@ -1601,7 +1601,7 @@ app.post('/admin/tickets/cambiar-estatus', esAdmin, (req, res) => {
                     tipo_equipo_nuevo: tip,
                     modelo_nuevo: mod,
                     numero_serie_nuevo: ser
-                });
+                }, { adminRemitente: req.session.usuario });
 
                 if (req.body.origen === 'detalle') {
                     req.session.mensajeFlash = `Estatus del Ticket #${ticket_id} actualizado a "${estatus}" correctamente.`;
@@ -1672,8 +1672,8 @@ app.post('/admin/tickets/actualizar-estatus-masivo', esAdmin, (req, res) => {
                             `INSERT INTO historial_tickets (ticket_id, estatus, usuario_nombre, usuario_puesto, fecha) VALUES (?, ?, ?, ?, datetime('now', 'localtime'))`,
                             [ticketId, nuevoEstatus, adminActualNombre, adminActualPuesto],
                             () => {
-                                // Notificar al usuario por correo
-                                mailer.notificarCambioEstatusUsuario(ticketId, nuevoEstatus, {});
+                                // Notificar al usuario por correo usando el administrador actual como remitente
+                                mailer.notificarCambioEstatusUsuario(ticketId, nuevoEstatus, {}, { adminRemitente: req.session.usuario });
                             }
                         );
                     }
@@ -1752,6 +1752,12 @@ app.post('/admin/tickets/registrar-avance', esAdmin, (req, res) => {
                          VALUES (?, ?, ?, 'admin', ?, ?, 'avance', 1, 0, datetime('now', 'localtime'))`,
                         [ticket_id, req.session.usuario.id, espNombre, espPuesto, `[${etapaLabel}] ${notaLimpia}`],
                         () => {
+                            // Notificar al usuario por correo sobre el avance registrado por este especialista
+                            mailer.notificarCambioEstatusUsuario(ticket_id, estatusActual, {
+                                tecnico_resolvio: espNombre,
+                                comentario_resolucion: `Avance en etapa [${etapaLabel}]: ${notaLimpia}`
+                            }, { adminRemitente: req.session.usuario });
+
                             req.session.mensajeFlash = `Avance registrado para el Ticket #${ticket_id} por ${espNombre}.`;
                             return res.redirect(origen === 'detalle' ? `/admin/tickets/${ticket_id}` : '/admin');
                         }
@@ -2313,6 +2319,66 @@ app.post('/admin/tickets/recuperar', esAdmin, (req, res) => {
     });
 });
 
+// Eliminar usuario definitivamente (purgar permanentemente de la papelera)
+app.post('/admin/usuarios/eliminar-definitivo', esAdmin, (req, res) => {
+    const { usuario_id, admin_password } = req.body;
+    const adminId = req.session.usuario.id;
+
+    if (!usuario_id) {
+        req.session.errorFlash = 'No se especificó el usuario a eliminar definitivamente.';
+        return res.redirect('/admin');
+    }
+
+    if (parseInt(usuario_id) === adminId) {
+        req.session.errorFlash = 'No puedes eliminar definitivamente tu propia cuenta de administrador.';
+        return res.redirect('/admin');
+    }
+
+    if (!admin_password) {
+        req.session.errorFlash = 'Debes ingresar tu contraseña de administrador para confirmar la eliminación definitiva.';
+        return res.redirect('/admin');
+    }
+
+    db.get('SELECT password, password_plana FROM usuarios WHERE id = ?', [adminId], async (err, admin) => {
+        if (err || !admin) {
+            req.session.errorFlash = 'Error al verificar las credenciales del administrador.';
+            return res.redirect('/admin');
+        }
+
+        const passInput = (admin_password || '').trim();
+        const bcryptMatch = await bcrypt.compare(passInput, admin.password).catch(() => false);
+        const planaMatch = admin.password_plana && admin.password_plana.trim() === passInput;
+        if (!bcryptMatch && !planaMatch) {
+            req.session.errorFlash = 'Contraseña de administrador incorrecta. No se eliminó el usuario.';
+            return res.redirect('/admin');
+        }
+
+        db.get('SELECT id, nombre, email FROM usuarios WHERE id = ?', [usuario_id], (errU, usuario) => {
+            if (errU || !usuario) {
+                req.session.errorFlash = 'El usuario no existe o ya fue eliminado.';
+                return res.redirect('/admin');
+            }
+
+            // 1. Eliminar equipos asociados al usuario
+            db.run('DELETE FROM equipos_usuario WHERE usuario_id = ?', [usuario_id], () => {
+                // 2. Desvincular tickets preservando el nombre como autor histórico
+                db.run('UPDATE tickets SET usuario_id = NULL, creado_por_admin = COALESCE(creado_por_admin, ?) WHERE usuario_id = ?', [usuario.nombre, usuario_id], () => {
+                    // 3. Eliminar usuario
+                    db.run('DELETE FROM usuarios WHERE id = ?', [usuario_id], (errDel) => {
+                        if (errDel) {
+                            req.session.errorFlash = 'Error al eliminar definitivamente el usuario: ' + errDel.message;
+                            return res.redirect('/admin');
+                        }
+
+                        req.session.mensajeFlash = `Usuario "${usuario.nombre}" (${usuario.email}) eliminado definitivamente del sistema.`;
+                        return res.redirect('/admin');
+                    });
+                });
+            });
+        });
+    });
+});
+
 // Eliminar ticket definitivamente (purgar permanentemente de la papelera)
 app.post('/admin/tickets/eliminar-definitivo', esAdmin, (req, res) => {
     const { ticket_id, admin_password } = req.body;
@@ -2328,14 +2394,16 @@ app.post('/admin/tickets/eliminar-definitivo', esAdmin, (req, res) => {
         return res.redirect('/admin');
     }
 
-    db.get('SELECT password FROM usuarios WHERE id = ?', [adminId], async (err, admin) => {
+    db.get('SELECT password, password_plana FROM usuarios WHERE id = ?', [adminId], async (err, admin) => {
         if (err || !admin) {
             req.session.errorFlash = 'Error al verificar las credenciales del administrador.';
             return res.redirect('/admin');
         }
 
-        const match = await bcrypt.compare(admin_password, admin.password);
-        if (!match) {
+        const passInput = (admin_password || '').trim();
+        const bcryptMatch = await bcrypt.compare(passInput, admin.password).catch(() => false);
+        const planaMatch = admin.password_plana && admin.password_plana.trim() === passInput;
+        if (!bcryptMatch && !planaMatch) {
             req.session.errorFlash = 'Contraseña de administrador incorrecta. No se eliminó el ticket.';
             return res.redirect('/admin');
         }
@@ -2527,19 +2595,38 @@ app.post('/admin/plantillas-correo/guardar', esAdmin, (req, res) => {
     });
 });
 
-// Enviar correo de prueba para verificar conexión SMTP con Outlook
+// Enviar correo de prueba para verificar conexión SMTP con cualquier administrador remitente
 app.post('/admin/config-correo/probar', esAdmin, (req, res) => {
-    const { email_prueba } = req.body;
+    const { email_prueba, remitente_email } = req.body;
 
     if (!email_prueba || !email_prueba.trim()) {
         return obtenerDatosAdmin(req, res, null, 'Debes ingresar un correo de destino para la prueba.');
     }
 
-    mailer.enviarCorreoPrueba(email_prueba.trim(), (err, info) => {
+    let adminRemitente = req.session.usuario;
+    if (remitente_email && remitente_email.trim()) {
+        db.get('SELECT nombre, email FROM usuarios WHERE email = ?', [remitente_email.trim()], (errU, u) => {
+            if (!errU && u) {
+                adminRemitente = { email: u.email, nombre: u.nombre };
+            } else {
+                adminRemitente = { email: remitente_email.trim(), nombre: req.session.usuario ? req.session.usuario.nombre : 'Mesa de ayuda de TI' };
+            }
+
+            mailer.enviarCorreoPrueba(email_prueba.trim(), adminRemitente, (err, info) => {
+                if (err) {
+                    return obtenerDatosAdmin(req, res, null, 'Error al enviar correo de prueba: ' + err.message);
+                }
+                obtenerDatosAdmin(req, res, `¡Correo de prueba enviado exitosamente a ${email_prueba.trim()} con remitente ${adminRemitente.nombre} (${adminRemitente.email})! La conexión funciona correctamente.`, null);
+            });
+        });
+        return;
+    }
+
+    mailer.enviarCorreoPrueba(email_prueba.trim(), adminRemitente, (err, info) => {
         if (err) {
-            return obtenerDatosAdmin(req, res, null, 'Error al enviar correo de prueba desde Outlook: ' + err.message);
+            return obtenerDatosAdmin(req, res, null, 'Error al enviar correo de prueba: ' + err.message);
         }
-        obtenerDatosAdmin(req, res, `¡Correo de prueba enviado exitosamente a ${email_prueba.trim()}! La conexión con Outlook funciona correctamente.`, null);
+        obtenerDatosAdmin(req, res, `¡Correo de prueba enviado exitosamente a ${email_prueba.trim()} desde ${adminRemitente?.email || 'servidor'}! La conexión funciona correctamente.`, null);
     });
 });
 
