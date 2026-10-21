@@ -1,3 +1,4 @@
+process.env.TZ = 'America/Mexico_City';
 const sqlite3 = require('sqlite3').verbose();
 const { createClient } = require('@libsql/client');
 const bcrypt = require('bcryptjs');
@@ -149,7 +150,7 @@ db.serialize(() => {
             prioridad TEXT DEFAULT 'Media',
             imagen TEXT DEFAULT NULL,
             estatus TEXT DEFAULT 'Nuevo ticket',
-            fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+            fecha DATETIME DEFAULT (datetime('now', '-6 hours')),
             usuario_id INTEGER,
             categoria_resolucion TEXT,
             tecnico_resolvio TEXT,
@@ -203,7 +204,7 @@ db.serialize(() => {
             usuario_nombre TEXT DEFAULT NULL,
             usuario_puesto TEXT DEFAULT NULL,
             detalle TEXT DEFAULT NULL,
-            fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+            fecha DATETIME DEFAULT (datetime('now', '-6 hours')),
             FOREIGN KEY(ticket_id) REFERENCES tickets(id)
         )
     `);
@@ -226,7 +227,7 @@ db.serialize(() => {
             tipo_intervencion TEXT DEFAULT 'comentario',
             leido_admin INTEGER DEFAULT 0,
             leido_usuario INTEGER DEFAULT 0,
-            fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+            fecha DATETIME DEFAULT (datetime('now', '-6 hours')),
             FOREIGN KEY(ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
         )
     `);
@@ -246,8 +247,8 @@ db.serialize(() => {
             visibilidad TEXT DEFAULT 'todos',
             destacada INTEGER DEFAULT 0,
             autor_nombre TEXT DEFAULT 'Sistemas TI',
-            fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
-            fecha_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP
+            fecha_creacion DATETIME DEFAULT (datetime('now', '-6 hours')),
+            fecha_actualizacion DATETIME DEFAULT (datetime('now', '-6 hours'))
         )
     `);
 
@@ -357,7 +358,7 @@ db.serialize(() => {
             numero_serie TEXT,
             estado TEXT DEFAULT 'Operativo',
             detalles TEXT,
-            fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
+            fecha_registro DATETIME DEFAULT (datetime('now', '-6 hours')),
             FOREIGN KEY(usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
         )
     `);

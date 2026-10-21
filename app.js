@@ -1,3 +1,4 @@
+process.env.TZ = 'America/Mexico_City';
 const express = require('express');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
@@ -341,7 +342,7 @@ app.post('/tickets/crear', esUsuario, upload.single('imagen'), (req, res) => {
 
             db.run(
                 `INSERT INTO tickets (titulo, tipo_falla, subcategoria, prioridad, descripcion, imagen, estatus, fecha, usuario_id) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'), ?)`,
+                 VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', '-6 hours'), ?)`,
                 [tituloFinal, tipoFallaFinal, subcatFinal, prioFinal, descFinal, imagenNombre, 'Nuevo ticket', usuarioId],
                 function(err) {
                     if (err) {
@@ -351,7 +352,7 @@ app.post('/tickets/crear', esUsuario, upload.single('imagen'), (req, res) => {
                     
                     const ticketId = this.lastID;
                     db.run(
-                        `INSERT INTO historial_tickets (ticket_id, estatus, fecha) VALUES (?, ?, datetime('now', 'localtime'))`,
+                        `INSERT INTO historial_tickets (ticket_id, estatus, fecha) VALUES (?, ?, datetime('now', '-6 hours'))`,
                         [ticketId, 'Nuevo ticket'],
                         () => {
                             const datosTicket = {
@@ -427,7 +428,7 @@ const procesarEdicionTicketUsuario = (req, res) => {
                  descripcion = ?, 
                  imagen = ?, 
                  editado = 1, 
-                 editado_at = datetime('now', 'localtime') 
+                 editado_at = datetime('now', '-6 hours') 
              WHERE id = ?`,
             [tituloFinal, tipoFallaFinal, subcatFinal, prioFinal, descFinal, imagenFinal, ticket_id],
             function(errUpdate) {
@@ -438,7 +439,7 @@ const procesarEdicionTicketUsuario = (req, res) => {
 
                 db.run(
                     `INSERT INTO historial_tickets (ticket_id, estatus, usuario_nombre, usuario_puesto, detalle, fecha) 
-                     VALUES (?, ?, ?, ?, ?, datetime('now', 'localtime'))`,
+                     VALUES (?, ?, ?, ?, ?, datetime('now', '-6 hours'))`,
                     [ticket_id, 'Nuevo ticket', usuarioNombre, req.session.usuario.puesto || 'Usuario', 'Ticket modificado por el usuario solicitante'],
                     () => {
                         req.session.mensajeFlash = `¡Ticket #${ticket_id} modificado exitosamente!`;
@@ -487,7 +488,7 @@ const procesarEliminacionTicketUsuario = (req, res) => {
 
         db.run(
             `UPDATE tickets 
-             SET deleted_at = datetime('now', 'localtime'), 
+             SET deleted_at = datetime('now', '-6 hours'), 
                  eliminado_por = 'usuario', 
                  eliminado_por_nombre = ? 
              WHERE id = ?`,
@@ -500,7 +501,7 @@ const procesarEliminacionTicketUsuario = (req, res) => {
 
                 db.run(
                     `INSERT INTO historial_tickets (ticket_id, estatus, usuario_nombre, usuario_puesto, detalle, fecha) 
-                     VALUES (?, ?, ?, ?, ?, datetime('now', 'localtime'))`,
+                     VALUES (?, ?, ?, ?, ?, datetime('now', '-6 hours'))`,
                     [ticket_id, 'Cancelado por usuario', usuarioNombre, req.session.usuario.puesto || 'Usuario', detalleHistorial],
                     () => {
                         req.session.mensajeFlash = `El ticket #${ticket_id} fue cancelado y retirado exitosamente.`;
@@ -1424,7 +1425,7 @@ app.post('/admin/eliminar-usuario', esAdmin, (req, res) => {
             return obtenerDatosAdmin(req, res, null, 'Contraseña de administrador incorrecta. No se eliminó el usuario.');
         }
 
-        db.run("UPDATE usuarios SET deleted_at = datetime('now', 'localtime') WHERE id = ?", [usuario_id], function(err) {
+        db.run("UPDATE usuarios SET deleted_at = datetime('now', '-6 hours') WHERE id = ?", [usuario_id], function(err) {
             if (err) {
                 return obtenerDatosAdmin(req, res, null, 'Error al enviar usuario a la papelera.');
             }
@@ -1584,7 +1585,7 @@ app.post('/admin/tickets/crear', esAdmin, upload.single('imagen'), (req, res) =>
                 // 2. Inserción registrando a qué administrador lo creó
                 db.run(
                     `INSERT INTO tickets (titulo, tipo_falla, subcategoria, prioridad, descripcion, imagen, estatus, fecha, usuario_id, creado_por_admin) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'), ?, ?)`,
+                     VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', '-6 hours'), ?, ?)`,
                     [tituloFinal, tipoFallaFinal, subcatFinal, prioFinal, descFinal, imagenNombre, 'Nuevo ticket', usuarioDestino.id, adminNombre],
                     function(err) {
                         if (err) {
@@ -1595,7 +1596,7 @@ app.post('/admin/tickets/crear', esAdmin, upload.single('imagen'), (req, res) =>
                         const ticketId = this.lastID;
 
                         db.run(
-                            `INSERT INTO historial_tickets (ticket_id, estatus, fecha) VALUES (?, ?, datetime('now', 'localtime'))`,
+                            `INSERT INTO historial_tickets (ticket_id, estatus, fecha) VALUES (?, ?, datetime('now', '-6 hours'))`,
                             [ticketId, 'Nuevo ticket'],
                             () => {
                                 const datosTicket = {
@@ -1690,7 +1691,7 @@ app.post('/admin/tickets/cambiar-estatus', esAdmin, (req, res) => {
         const updateQuery = `
             UPDATE tickets 
             SET estatus = ?, 
-                fecha = datetime('now', 'localtime'),
+                fecha = datetime('now', '-6 hours'),
                 categoria_resolucion = ?,
                 tecnico_resolvio = ?,
                 atendido_por = ?,
@@ -1723,7 +1724,7 @@ app.post('/admin/tickets/cambiar-estatus', esAdmin, (req, res) => {
 
             const insertHistorial = `
                 INSERT INTO historial_tickets (ticket_id, estatus, usuario_nombre, usuario_puesto, detalle, fecha) 
-                VALUES (?, ?, ?, ?, ?, datetime('now', 'localtime'))
+                VALUES (?, ?, ?, ?, ?, datetime('now', '-6 hours'))
             `;
 
             db.run(insertHistorial, [ticket_id, estatus, adminActualNombre, adminActualPuesto, detalleHist], function(errHist) {
@@ -1796,14 +1797,14 @@ app.post('/admin/tickets/actualizar-estatus-masivo', esAdmin, (req, res) => {
             const nuevosPart = combinarParticipantesTI(tRow.participantes_ti, adminActualNombre);
 
             db.run(
-                `UPDATE tickets SET estatus = ?, atendido_por = ?, participantes_ti = ?, fecha = datetime('now', 'localtime') WHERE id = ?`,
+                `UPDATE tickets SET estatus = ?, atendido_por = ?, participantes_ti = ?, fecha = datetime('now', '-6 hours') WHERE id = ?`,
                 [nuevoEstatus, nuevoAtendido, nuevosPart, ticketId],
                 function(err) {
                     if (err) {
                         errores++;
                     } else {
                         db.run(
-                            `INSERT INTO historial_tickets (ticket_id, estatus, usuario_nombre, usuario_puesto, fecha) VALUES (?, ?, ?, ?, datetime('now', 'localtime'))`,
+                            `INSERT INTO historial_tickets (ticket_id, estatus, usuario_nombre, usuario_puesto, fecha) VALUES (?, ?, ?, ?, datetime('now', '-6 hours'))`,
                             [ticketId, nuevoEstatus, adminActualNombre, adminActualPuesto],
                             () => {
                                 // Notificar al usuario por correo usando el administrador actual como remitente
@@ -1867,7 +1868,7 @@ app.post('/admin/tickets/registrar-avance', esAdmin, (req, res) => {
         const nuevosPart = combinarParticipantesTI(tRow.participantes_ti, espNombre);
 
         // El estatus permanece exactamente como está actualmente en el ticket
-        const queryUpdate = `UPDATE tickets SET atendido_por = ?, participantes_ti = ?, fecha = datetime('now', 'localtime') WHERE id = ?`;
+        const queryUpdate = `UPDATE tickets SET atendido_por = ?, participantes_ti = ?, fecha = datetime('now', '-6 hours') WHERE id = ?`;
         const paramsUpdate = [nuevoAtendido, nuevosPart, ticket_id];
 
         db.run(queryUpdate, paramsUpdate, function(errUpd) {
@@ -1877,13 +1878,13 @@ app.post('/admin/tickets/registrar-avance', esAdmin, (req, res) => {
             // Guardar en el historial de trazabilidad conservando el estatus actual para mantener su color
             db.run(
                 `INSERT INTO historial_tickets (ticket_id, estatus, usuario_nombre, usuario_puesto, detalle, fecha)
-                 VALUES (?, ?, ?, ?, ?, datetime('now', 'localtime'))`,
+                 VALUES (?, ?, ?, ?, ?, datetime('now', '-6 hours'))`,
                 [ticket_id, estatusActual, espNombre, espPuesto, detalleHistorial],
                 () => {
                     // También registrar en el hilo de comentarios/seguimiento del ticket
                     db.run(
                         `INSERT INTO ticket_comentarios (ticket_id, usuario_id, autor_nombre, autor_rol, autor_puesto, mensaje, tipo_intervencion, leido_admin, leido_usuario, fecha)
-                         VALUES (?, ?, ?, 'admin', ?, ?, 'avance', 1, 0, datetime('now', 'localtime'))`,
+                         VALUES (?, ?, ?, 'admin', ?, ?, 'avance', 1, 0, datetime('now', '-6 hours'))`,
                         [ticket_id, req.session.usuario.id, espNombre, espPuesto, `[${etapaLabel}] ${notaLimpia}`],
                         () => {
                             // Notificar al usuario por correo sobre el avance registrado por este especialista
@@ -1996,7 +1997,7 @@ app.post('/api/tickets/:id/comentarios', upload.single('imagen'), (req, res) => 
 
         db.run(
             `INSERT INTO ticket_comentarios (ticket_id, usuario_id, autor_nombre, autor_rol, autor_puesto, mensaje, imagen, tipo_intervencion, leido_admin, leido_usuario, fecha)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))`,
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '-6 hours'))`,
             [ticketId, usuarioActual.id, autorPersonalizado, usuarioActual.rol, autorPuesto, msgFinal, imagenNombre, tipoIntervencion, leidoAdmin, leidoUsuario],
             function(errIns) {
                 if (errIns) {
@@ -2017,7 +2018,7 @@ app.post('/api/tickets/:id/comentarios', upload.single('imagen'), (req, res) => 
                             : (tipoIntervencion === 'entrega' ? 'Entrega / Cierre' : 'Avance Técnico');
                         db.run(
                             `INSERT INTO historial_tickets (ticket_id, estatus, usuario_nombre, usuario_puesto, detalle, fecha)
-                             VALUES (?, ?, ?, ?, ?, datetime('now', 'localtime'))`,
+                             VALUES (?, ?, ?, ?, ?, datetime('now', '-6 hours'))`,
                             [ticketId, ticket.estatus || 'En proceso', autorPersonalizado, autorPuesto, `[${etiquetaHist}] ${msgFinal}`]
                         );
                     }
@@ -2081,7 +2082,7 @@ app.post('/api/tickets/comentarios/:id/editar', (req, res) => {
         }
 
         db.run(
-            `UPDATE ticket_comentarios SET mensaje = ?, editado = 1, fecha_edicion = datetime('now', 'localtime') WHERE id = ?`,
+            `UPDATE ticket_comentarios SET mensaje = ?, editado = 1, fecha_edicion = datetime('now', '-6 hours') WHERE id = ?`,
             [nuevoMensaje, comentarioId],
             function(errUp) {
                 if (errUp) {
@@ -2255,7 +2256,7 @@ app.post('/admin/guias/crear', esAdmin, upload.single('imagen'), (req, res) => {
 
     db.run(
         `INSERT INTO guias_rapidas (titulo, categoria, resumen, contenido, imagen, visibilidad, destacada, autor_nombre, fecha_creacion, fecha_actualizacion)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'), datetime('now', 'localtime'))`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '-6 hours'), datetime('now', '-6 hours'))`,
         [titulo.trim(), catFinal, resFinal, String(contenidoFinal).trim(), imagenNombre, visFinal, destFinal, autorNombre],
         function(err) {
             if (err) {
@@ -2292,7 +2293,7 @@ app.post('/admin/guias/editar', esAdmin, upload.single('imagen'), (req, res) => 
 
         db.run(
             `UPDATE guias_rapidas
-             SET titulo = ?, categoria = ?, resumen = ?, contenido = ?, imagen = ?, visibilidad = ?, destacada = ?, fecha_actualizacion = datetime('now', 'localtime')
+             SET titulo = ?, categoria = ?, resumen = ?, contenido = ?, imagen = ?, visibilidad = ?, destacada = ?, fecha_actualizacion = datetime('now', '-6 hours')
              WHERE id = ?`,
             [titulo.trim(), catFinal, resFinal, String(contenidoFinal).trim(), imgFinal, visFinal, destFinal, guia_id],
             function(err) {
@@ -2414,7 +2415,7 @@ app.post('/admin/tickets/eliminar', esAdmin, (req, res) => {
                 return res.redirect('/admin');
             }
 
-            db.run("UPDATE tickets SET deleted_at = datetime('now', 'localtime') WHERE id = ?", [ticket_id], function(errSoft) {
+            db.run("UPDATE tickets SET deleted_at = datetime('now', '-6 hours') WHERE id = ?", [ticket_id], function(errSoft) {
                 if (errSoft) {
                     req.session.errorFlash = 'Error al mover el ticket a la papelera: ' + errSoft.message;
                     return res.redirect(origen === 'detalle' ? `/admin/tickets/${ticket_id}` : '/admin');
