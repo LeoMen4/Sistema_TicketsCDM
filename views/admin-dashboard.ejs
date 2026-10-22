@@ -11,6 +11,12 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+        // Protección contra el botón atrás del navegador tras cerrar sesión (bfcache)
+        window.addEventListener('pageshow', function (event) {
+            if (event.persisted || (window.performance && window.performance.navigation && window.performance.navigation.type === 2) || (window.performance && window.performance.getEntriesByType && window.performance.getEntriesByType('navigation')[0]?.type === 'back_forward')) {
+                window.location.replace('/');
+            }
+        });
         tailwind.config = {
             theme: {
                 extend: {
@@ -427,6 +433,60 @@
 
             <!-- MÓDULO 1: ATENCIÓN DE TICKETS DE FALLAS (VISIBLE PRINCIPALMENTE) -->
             <section id="modulo-tickets" class="modulo-admin space-y-4">
+                <%
+                    const hoyInicioDia = new Date().toISOString().slice(0, 10);
+                    const ticketsCitaHoyAdmin = (tickets || []).filter(t => {
+                        if (!t.fecha_programada_cliente) return false;
+                        const fStr = String(t.fecha_programada_cliente).replace(' ', 'T');
+                        return fStr.startsWith(hoyInicioDia);
+                    });
+                %>
+                <% if (ticketsCitaHoyAdmin.length > 0) { %>
+                    <div class="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 rounded-lg shadow-md p-4 text-white border-2 border-amber-300">
+                        <div class="flex items-center justify-between gap-3 flex-wrap border-b border-white/20 pb-2.5 mb-3">
+                            <div class="flex items-center gap-2.5">
+                                <span class="text-2xl animate-bounce">🔔</span>
+                                <div>
+                                    <h3 class="text-xs font-black uppercase tracking-wider text-amber-100 flex items-center gap-1.5">
+                                        <span>RECORDATORIO DE HOY: <%= ticketsCitaHoyAdmin.length %> CITA(S) / CONTACTO(S) PROGRAMADOS</span>
+                                    </h3>
+                                    <p class="text-xs font-bold text-white mt-0.5">Tienes visitas técnicas o seguimientos acordados con usuarios para el día de hoy:</p>
+                                </div>
+                            </div>
+                            <span class="px-2.5 py-1 rounded-full bg-white text-amber-800 text-[10px] font-black uppercase shadow-xs">
+                                ⏰ Horario CDMX
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            <% ticketsCitaHoyAdmin.forEach(tc => { 
+                                const dCita = new Date(String(tc.fecha_programada_cliente).replace(' ', 'T'));
+                                const horaStr = !isNaN(dCita.getTime()) ? dCita.toLocaleTimeString('es-MX', { timeZone: 'America/Mexico_City', hour: '2-digit', minute: '2-digit' }) : tc.fecha_programada_cliente;
+                            %>
+                                <div class="bg-white/15 backdrop-blur-xs rounded-md p-3 border border-white/25 flex flex-col justify-between space-y-2">
+                                    <div>
+                                        <div class="flex items-center justify-between gap-1">
+                                            <span class="text-xs font-black text-amber-200">⏰ Hoy a las <%= horaStr %> hrs</span>
+                                            <span class="text-[10px] font-bold bg-white/20 px-1.5 py-0.2 rounded">#<%= tc.id %></span>
+                                        </div>
+                                        <div class="text-xs font-bold text-white truncate mt-1" title="<%= tc.titulo %>"><%= tc.titulo %></div>
+                                        <div class="text-[11px] text-amber-100 truncate">👤 <%= tc.usuario_nombre %> <%= tc.usuario_puesto ? '• ' + tc.usuario_puesto : '' %></div>
+                                        <% if (tc.motivo_pendiente_cliente) { %>
+                                            <div class="text-[10px] text-white/90 italic line-clamp-2 mt-0.5">"<%= tc.motivo_pendiente_cliente %>"</div>
+                                        <% } %>
+                                    </div>
+                                    <div class="pt-1 flex items-center gap-2">
+                                        <a href="/admin/tickets/<%= tc.id %>" target="_blank" class="px-2.5 py-1 rounded bg-white text-amber-900 font-extrabold text-[11px] hover:bg-amber-50 shadow-2xs inline-flex items-center gap-1">
+                                            📂 Abrir Ticket
+                                        </a>
+                                        <button type="button" onclick="abrirChatTicketAdmin('<%= tc.id %>')" class="px-2.5 py-1 rounded bg-black/20 hover:bg-black/30 text-white font-bold text-[11px] cursor-pointer">
+                                            💬 Chat
+                                        </button>
+                                    </div>
+                                </div>
+                            <% }) %>
+                        </div>
+                    </div>
+                <% } %>
                 
                 <div class="bg-white rounded-md shadow-xs border border-slate-200 overflow-hidden">
                     
@@ -754,6 +814,25 @@
                                                     </button>
                                                 <% } %>
                                             </div>
+
+                                            <% if (t.fecha_programada_cliente) { %>
+                                                <% 
+                                                    const ahoraDiaHoy = new Date().toISOString().slice(0, 10);
+                                                    const fProgStr = String(t.fecha_programada_cliente).replace(' ', 'T');
+                                                    const esHoyProg = fProgStr.startsWith(ahoraDiaHoy);
+                                                    const dProg = new Date(fProgStr);
+                                                    const horaFmt = !isNaN(dProg.getTime()) ? dProg.toLocaleString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : t.fecha_programada_cliente;
+                                                %>
+                                                <div class="mt-1 px-2 py-0.5 rounded border <%= esHoyProg ? 'bg-amber-100 border-amber-300 text-amber-950 font-black animate-pulse' : 'bg-orange-50 border-orange-200 text-orange-900 font-bold' %> text-[10px] flex items-center gap-1">
+                                                    <span><%= esHoyProg ? '🚨 CITA HOY:' : '📅 Cita:' %></span>
+                                                    <span><%= horaFmt %></span>
+                                                </div>
+                                            <% } %>
+                                            <% if (t.motivo_pendiente_cliente) { %>
+                                                <div class="text-[10px] text-slate-500 italic mt-0.5 max-w-[200px] truncate" title="<%= t.motivo_pendiente_cliente %>">
+                                                    Motivo: <%= t.motivo_pendiente_cliente %>
+                                                </div>
+                                            <% } %>
 
                                             <!-- Resumen visible de quiénes han intervenido (Multi-especialista) -->
                                             <% if (t.atendido_por || t.entregado_por || t.tecnico_resolvio) { %>
@@ -2787,6 +2866,82 @@
         &copy; <%= new Date().getFullYear() %> Sistema Corporativo de Tickets TI &bull; Panel Central de Administración
     </footer>
 
+    <!-- MODAL PARA CAMBIO A 'PENDIENTE POR CLIENTE' (CON CONTEO PAUSADO Y CITA PROGRAMADA) -->
+    <div id="modalPendienteCliente" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 520px; border-top: 4px solid #f59e0b;">
+            <div class="flex items-center gap-2.5 mb-3 border-b border-slate-100 pb-2.5">
+                <span class="text-2xl">⏳</span>
+                <div>
+                    <h4 class="text-base font-bold text-slate-900 m-0">
+                        Pausar Ticket: Pendiente por Cliente
+                    </h4>
+                    <p class="text-[11px] text-slate-500">Pausa el conteo del tiempo de resolución mientras se espera disponibilidad del usuario.</p>
+                </div>
+            </div>
+            
+            <form action="/admin/tickets/cambiar-estatus" method="POST" class="space-y-4">
+                <input type="hidden" name="ticket_id" id="idTicketPendienteCliente">
+                <input type="hidden" name="estatus" value="Pendiente por cliente">
+
+                <div class="bg-amber-50 border border-amber-200 rounded-md p-3 text-xs text-amber-900 space-y-1">
+                    <div class="font-bold flex items-center gap-1.5">
+                        <span>⏱️ Medición de tiempos y gráficos pausados</span>
+                    </div>
+                    <p class="text-[11px] leading-relaxed text-amber-800">
+                        Los días o momentos que el ticket permanezca en este estatus <strong>no contarán en los gráficos ni afectarán el cumplimiento de SLA</strong>.
+                    </p>
+                </div>
+
+                <!-- 1. Fecha y hora programada de contacto / visita -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                        📅 Fecha y hora programada de visita / contacto (Opcional):
+                    </label>
+                    <input 
+                        type="datetime-local" 
+                        name="fecha_programada_cliente" 
+                        id="inputFechaProgramadaCliente"
+                        class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 bg-white focus:border-amber-600 focus:outline-none shadow-2xs font-bold"
+                    >
+                    <span class="text-[10px] text-slate-500 block mt-1">
+                        Si programas una fecha, el sistema te mostrará una alerta destacada ese día en la barra superior para recordarte la cita.
+                    </span>
+                </div>
+
+                <!-- 2. Motivo o breve descripción -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                        📝 Motivo / Breve descripción (Opcional):
+                    </label>
+                    <textarea 
+                        name="motivo_pendiente_cliente" 
+                        id="inputMotivoPendienteCliente"
+                        rows="2"
+                        placeholder="Ej. El usuario estará disponible el día 2 de octubre a las 3:00 pm para revisión física."
+                        class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 bg-white focus:border-amber-600 focus:outline-none shadow-2xs"
+                    ></textarea>
+                </div>
+
+                <div class="modal-actions pt-2 flex items-center justify-end gap-2">
+                    <button 
+                        type="button" 
+                        onclick="cerrarModalPendienteCliente()" 
+                        class="px-4 py-2 rounded text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+                    >
+                        Cancelar
+                    </button>
+                    <button 
+                        type="submit" 
+                        class="px-4 py-2 rounded text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 transition-colors shadow-xs cursor-pointer flex items-center gap-1.5"
+                    >
+                        <span>⏳</span>
+                        <span>Guardar y Pausar Ticket</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- MODAL PARA RESOLUCIÓN DE TICKET (CON BITÁCORA MULTI-ESPECIALISTA) -->
     <div id="modalResolucion" class="modal">
         <div class="modal-content" style="max-width: 540px; border-top: 4px solid #059669;">
@@ -4101,6 +4256,18 @@
                 tipoInput.required = false;
                 modelInput.required = false;
                 serieInput.required = false;
+            }
+        }
+
+        function cerrarModalPendienteCliente() {
+            document.getElementById('modalPendienteCliente').style.display = 'none';
+            if (selectEstatusPendiente) {
+                const ticketId = selectEstatusPendiente.dataset.ticketId;
+                const btnFila = document.getElementById('btnGuardarFila-' + ticketId);
+                if (btnFila) btnFila.style.display = 'none';
+                selectEstatusPendiente.value = selectEstatusPendiente.dataset.originalStatus;
+                selectEstatusPendiente = null;
+                actualizarVisualizacionCambios();
             }
         }
 

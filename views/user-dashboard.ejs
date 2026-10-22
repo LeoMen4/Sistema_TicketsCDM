@@ -11,6 +11,12 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+        // Protección contra el botón atrás del navegador tras cerrar sesión (bfcache)
+        window.addEventListener('pageshow', function (event) {
+            if (event.persisted || (window.performance && window.performance.navigation && window.performance.navigation.type === 2) || (window.performance && window.performance.getEntriesByType && window.performance.getEntriesByType('navigation')[0]?.type === 'back_forward')) {
+                window.location.replace('/');
+            }
+        });
         tailwind.config = {
             theme: {
                 extend: {
@@ -629,6 +635,18 @@
                                                     </span>
                                                 <% } %>
                                             </div>
+                                            <% if (t.fecha_programada_cliente) { %>
+                                                <% const dProg = new Date(String(t.fecha_programada_cliente).replace(' ', 'T')); %>
+                                                <div class="mt-1 text-[10px] font-bold text-amber-900 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded flex items-center gap-1">
+                                                    <span>📅</span>
+                                                    <span>Cita acordada: <%= !isNaN(dProg.getTime()) ? dProg.toLocaleString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : t.fecha_programada_cliente %> hrs</span>
+                                                </div>
+                                            <% } %>
+                                            <% if (t.motivo_pendiente_cliente) { %>
+                                                <div class="text-[10px] text-slate-500 italic mt-0.5 max-w-[200px] truncate" title="<%= t.motivo_pendiente_cliente %>">
+                                                    Nota: <%= t.motivo_pendiente_cliente %>
+                                                </div>
+                                            <% } %>
                                             <% if (t.atendido_por || t.entregado_por || t.tecnico_resolvio) { %>
                                                 <div class="mt-1.5 text-[10px] text-slate-600 space-y-0.5 bg-slate-50 p-1.5 rounded border border-slate-200/80">
                                                     <% if (t.atendido_por) { %>

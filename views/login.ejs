@@ -161,6 +161,17 @@
         <div class="mt-5 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
         <div class="bg-white py-8 px-6 sm:px-8 shadow-xs rounded-md border-t-4 border-brand-600 border-x border-b border-slate-200">
             
+            <!-- Mensaje de confirmación de sesión cerrada -->
+            <% if (typeof query !== 'undefined' && query && query.logout === '1') { %>
+                <div class="mb-5 rounded-md bg-emerald-50 border border-emerald-200 p-3.5 text-xs text-emerald-800 flex items-start gap-2.5">
+                    <span class="text-base leading-none">🔒</span>
+                    <div>
+                        <strong class="font-semibold text-emerald-900">Sesión finalizada:</strong>
+                        <p class="mt-0.5 text-emerald-700 leading-relaxed">Has cerrado sesión correctamente. Para volver a entrar ingresa tus credenciales.</p>
+                    </div>
+                </div>
+            <% } %>
+
             <!-- Mensaje por inactividad de sesión -->
             <% if (typeof mensajeInactividad !== 'undefined' && mensajeInactividad) { %>
                 <div class="mb-5 rounded-md bg-amber-50 border border-amber-200 p-3.5 text-xs text-amber-800 flex items-start gap-2.5">

@@ -95,7 +95,15 @@ app.use(session({
     }
 }));
 
-const CINCO_MINUTOS_MS = 5 * 60 * 1000; // 5 minutos = 300,000 milisegundos
+const CINCO_MINUTOS_MS = 5 * 60 * 1000;
+
+// Middleware global para prevenir almacenamiento en caché (evita que la flecha 'Atrás' muestre páginas protegidas tras cerrar sesión)
+app.use((req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    next();
+}); // 5 minutos = 300,000 milisegundos
 
 // Middleware de inactividad diferenciada:
 // - Administrador: SIN tiempo de inactividad (nunca se cierra automáticamente a menos que cierre sesión manualmente)
@@ -187,7 +195,8 @@ app.get('/', (req, res) => {
         email: '', 
         password: '',
         captcha: reto,
-        mensajeInactividad: mensajeInactividad
+        mensajeInactividad: mensajeInactividad,
+        query: req.query
     });
 });
 
@@ -619,6 +628,29 @@ function formatearDuracion(ms) {
     }
     const horasRestantes = horasTotales % 24;
     return horasRestantes > 0 ? `${diasTotales}d ${horasRestantes}h` : `${diasTotales} días`;
+}
+
+// Función auxiliar para calcular milisegundos que un ticket estuvo pausado en 'Pendiente por cliente'
+function calcularTiempoPausadoCliente(historialTicket, fechaFinTicket) {
+    if (!historialTicket || historialTicket.length === 0) return 0;
+    let totalPausadoMs = 0;
+    for (let i = 0; i < historialTicket.length; i++) {
+        const item = historialTicket[i];
+        if (item.estatus === 'Pendiente por cliente') {
+            const inicioPausa = item.fecha;
+            let finPausa = null;
+            if (i + 1 < historialTicket.length) {
+                finPausa = historialTicket[i + 1].fecha;
+            } else {
+                finPausa = fechaFinTicket || new Date();
+            }
+            const msPausa = calcularMsSinDomingos(inicioPausa, finPausa);
+            if (msPausa && msPausa > 0) {
+                totalPausadoMs += msPausa;
+            }
+        }
+    }
+    return totalPausadoMs;
 }
 
 // Función para calcular todas las métricas de dashboards y SLAs con exclusión de domingos
@@ -1728,6 +1760,14 @@ app.post('/admin/tickets/cambiar-estatus', esAdmin, (req, res) => {
             `;
 
             db.run(insertHistorial, [ticket_id, estatus, adminActualNombre, adminActualPuesto, detalleHist], function(errHist) {
+                if (estatus === 'Pendiente por cliente') {
+                    db.run(
+                        `INSERT INTO ticket_comentarios (ticket_id, usuario_id, autor_nombre, autor_rol, autor_puesto, mensaje, tipo_intervencion, leido_admin, leido_usuario, fecha)
+                         VALUES (?, ?, ?, 'admin', ?, ?, 'avance', 1, 0, datetime('now', '-6 hours'))`,
+                        [ticket_id, req.session.usuario.id, adminActualNombre, adminActualPuesto, `[Pendiente por cliente] ${detalleHist}`],
+                        () => {}
+                    );
+                }
                 // Notificar al usuario por correo sobre el nuevo estatus usando el administrador actual como remitente
                 mailer.notificarCambioEstatusUsuario(ticket_id, estatus, {
                     tecnico_resolvio: tecResumen,
