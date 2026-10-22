@@ -26,21 +26,18 @@ try {
 } catch (e) {}
 app.use(express.static(publicDir));
 
-// Ruta garantizada para el logo corporativo CDM
-app.get('/img/logo-cdm.jpg', (req, res) => {
-    const localLogo = path.join(publicDir, 'img', 'logo-cdm.jpg');
-    const uploadedLogo = 'C:/Users/siscd/.gemini/antigravity/brain/0f9dc841-b233-46ae-97e0-5a9e2f24fdda/.user_uploaded/media_1792420696881_57b3c692.jpg';
+// Ruta garantizada para el logo corporativo CDM (soporta .png y .jpg transparentes)
+app.get(['/img/logo-cdm.png', '/img/logo-cdm.jpg'], (req, res) => {
+    const localLogoPng = path.join(publicDir, 'img', 'logo-cdm.png');
+    const localLogoJpg = path.join(publicDir, 'img', 'logo-cdm.jpg');
     try {
-        if (!fs.existsSync(localLogo) && fs.existsSync(uploadedLogo)) {
-            const imgDir = path.join(publicDir, 'img');
-            if (!fs.existsSync(imgDir)) fs.mkdirSync(imgDir, { recursive: true });
-            fs.copyFileSync(uploadedLogo, localLogo);
+        if (fs.existsSync(localLogoPng)) {
+            res.setHeader('Content-Type', 'image/png');
+            return res.sendFile(localLogoPng);
         }
-        if (fs.existsSync(localLogo)) {
-            return res.sendFile(localLogo);
-        }
-        if (fs.existsSync(uploadedLogo)) {
-            return res.sendFile(uploadedLogo);
+        if (fs.existsSync(localLogoJpg)) {
+            res.setHeader('Content-Type', 'image/png');
+            return res.sendFile(localLogoJpg);
         }
     } catch (e) {}
 
