@@ -699,7 +699,9 @@ function calcularMetricasDashboards(callback) {
                             if (t.estatus === 'Resuelto') {
                                 const ultimoResuelto = [...h].reverse().find(x => x.estatus === 'Resuelto');
                                 const fResolucion = ultimoResuelto ? ultimoResuelto.fecha : t.fecha;
-                                tiempoResolucionMs = calcularMsSinDomingos(fCreacion, fResolucion);
+                                const msBrutos = calcularMsSinDomingos(fCreacion, fResolucion);
+                                const msPausados = calcularTiempoPausadoCliente(h, fResolucion);
+                                tiempoResolucionMs = (msBrutos !== null) ? Math.max(0, msBrutos - msPausados) : null;
                             }
 
                             return {
@@ -714,6 +716,7 @@ function calcularMetricasDashboards(callback) {
                             nuevos: tickets.filter(t => t.estatus === 'Nuevo ticket').length,
                             enProceso: tickets.filter(t => t.estatus === 'En proceso').length,
                             pendientes: tickets.filter(t => t.estatus === 'Pendiente').length,
+                            pendientesCliente: tickets.filter(t => t.estatus === 'Pendiente por cliente').length,
                             resueltos: tickets.filter(t => t.estatus === 'Resuelto').length,
                             total: tickets.length
                         };
@@ -1676,7 +1679,10 @@ app.post('/admin/tickets/cambiar-estatus', esAdmin, (req, res) => {
         comentario_resolucion, 
         tipo_equipo_nuevo, 
         modelo_nuevo, 
-        numero_serie_nuevo 
+        numero_serie_nuevo,
+        motivo_pendiente_cliente,
+        fecha_programada_cliente,
+        origen
     } = req.body;
 
     const adminActualNombre = (req.session && req.session.usuario && req.session.usuario.nombre) ? req.session.usuario.nombre : 'Administrador TI';
@@ -1720,6 +1726,14 @@ app.post('/admin/tickets/cambiar-estatus', esAdmin, (req, res) => {
             }
         }
 
+        const motivoCli = (estatus === 'Pendiente por cliente')
+            ? ((motivo_pendiente_cliente && motivo_pendiente_cliente.trim()) ? motivo_pendiente_cliente.trim() : null)
+            : null;
+
+        const fechaCli = (estatus === 'Pendiente por cliente')
+            ? ((fecha_programada_cliente && fecha_programada_cliente.trim()) ? fecha_programada_cliente.trim() : null)
+            : null;
+
         const updateQuery = `
             UPDATE tickets 
             SET estatus = ?, 
@@ -1732,11 +1746,13 @@ app.post('/admin/tickets/cambiar-estatus', esAdmin, (req, res) => {
                 comentario_resolucion = ?,
                 tipo_equipo_nuevo = ?,
                 modelo_nuevo = ?,
-                numero_serie_nuevo = ?
+                numero_serie_nuevo = ?,
+                motivo_pendiente_cliente = ?,
+                fecha_programada_cliente = ?
             WHERE id = ?
         `;
 
-        db.run(updateQuery, [estatus, cat, tecResumen, nuevoAtendidoPor, nuevoEntregadoPor, nuevosParticipantes, com, tip, mod, ser, ticket_id], function(err) {
+        db.run(updateQuery, [estatus, cat, tecResumen, nuevoAtendidoPor, nuevoEntregadoPor, nuevosParticipantes, com, tip, mod, ser, motivoCli, fechaCli, ticket_id], function(err) {
             if (err) {
                 if (req.body.origen === 'detalle') {
                     req.session.errorFlash = 'Error al actualizar el estatus: ' + err.message;
@@ -1761,10 +1777,13 @@ app.post('/admin/tickets/cambiar-estatus', esAdmin, (req, res) => {
 
             db.run(insertHistorial, [ticket_id, estatus, adminActualNombre, adminActualPuesto, detalleHist], function(errHist) {
                 if (estatus === 'Pendiente por cliente') {
+                    let msgNota = 'Estatus cambiado a: Pendiente por cliente (tiempo pausado).';
+                    if (fechaCli) msgNota += ' 📅 Cita programada: ' + fechaCli + '.';
+                    if (motivoCli) msgNota += ' 💬 Motivo: ' + motivoCli + '.';
                     db.run(
                         `INSERT INTO ticket_comentarios (ticket_id, usuario_id, autor_nombre, autor_rol, autor_puesto, mensaje, tipo_intervencion, leido_admin, leido_usuario, fecha)
                          VALUES (?, ?, ?, 'admin', ?, ?, 'avance', 1, 0, datetime('now', '-6 hours'))`,
-                        [ticket_id, req.session.usuario.id, adminActualNombre, adminActualPuesto, `[Pendiente por cliente] ${detalleHist}`],
+                        [ticket_id, req.session.usuario ? req.session.usuario.id : 1, adminActualNombre, adminActualPuesto, msgNota],
                         () => {}
                     );
                 }

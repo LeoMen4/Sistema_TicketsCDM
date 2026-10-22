@@ -120,7 +120,7 @@
             
             <div class="flex items-center gap-3.5">
                 <!-- Logo Corporativo CDM -->
-                <a href="<%= (typeof esAdmin !== 'undefined' && esAdmin) ? '/admin' : '/usuario' %>" class="flex items-center pr-3 border-r border-slate-200" title="Sistema de Tickets CDM">
+                <a href="<%= (typeof esAdmin !== 'undefined' && esAdmin) ? '/admin' : '/usuario' %>" onclick="volverAlPanelPrincipal(event, this.href)" class="flex items-center pr-3 border-r border-slate-200 cursor-pointer" title="Sistema de Tickets CDM">
                     <img 
                         src="/img/logo-cdm.jpg" 
                         alt="CDM" 
@@ -130,7 +130,9 @@
                 </a>
                 <a 
                     href="<%= (typeof esAdmin !== 'undefined' && esAdmin) ? '/admin' : '/usuario' %>" 
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
+                    id="btnVolverAlPanelDetalle"
+                    onclick="volverAlPanelPrincipal(event, this.href)"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
                 >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -258,11 +260,31 @@
                         <span class="w-2 h-2 rounded-full bg-rose-500"></span>
                         <%= ticket.estatus %>
                     </span>
+                <% } else if (ticket.estatus === 'Pendiente por cliente') { %>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-orange-100 text-orange-800 border border-orange-300 shadow-2xs">
+                        <span class="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
+                        ⏳ <%= ticket.estatus %>
+                    </span>
                 <% } else if (ticket.estatus === 'Resuelto') { %>
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                         <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
                         <%= ticket.estatus %>
                     </span>
+                <% } %>
+
+                <% if (ticket.estatus === 'Pendiente por cliente' && (ticket.fecha_programada_cliente || ticket.motivo_pendiente_cliente)) { %>
+                    <div class="w-full bg-amber-50 border border-amber-300 rounded-md p-3 text-xs text-amber-950 mt-2 space-y-1">
+                        <div class="font-bold flex items-center gap-1.5 text-amber-900">
+                            <span>⏳ Detalle de Espera por Disponibilidad del Cliente:</span>
+                        </div>
+                        <% if (ticket.fecha_programada_cliente) { %>
+                            <div><strong>📅 Cita / Contacto acordado:</strong> <%= ticket.fecha_programada_cliente %></div>
+                        <% } %>
+                        <% if (ticket.motivo_pendiente_cliente) { %>
+                            <div><strong>📝 Motivo:</strong> <%= ticket.motivo_pendiente_cliente %></div>
+                        <% } %>
+                        <div class="text-[10px] text-amber-700 italic">⏱️ El conteo de tiempo para mediciones y reportes de TI se encuentra pausado.</div>
+                    </div>
                 <% } %>
 
                 <!-- Prioridad -->
@@ -637,10 +659,11 @@
                                         required
                                         class="w-full rounded-md border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 bg-white shadow-xs font-bold"
                                     >
-                                        <option value="Nuevo ticket" <%= ticket.estatus === 'Nuevo ticket' ? 'selected' : '' %>>Nuevo ticket</option>
-                                        <option value="En proceso" <%= ticket.estatus === 'En proceso' ? 'selected' : '' %>>En proceso</option>
-                                        <option value="Pendiente" <%= ticket.estatus === 'Pendiente' ? 'selected' : '' %>>Pendiente</option>
-                                        <option value="Resuelto" <%= ticket.estatus === 'Resuelto' ? 'selected' : '' %>>Resuelto</option>
+                                        <option value="Nuevo ticket" <%= ticket.estatus === 'Nuevo ticket' ? 'selected' : '' %>>🔵 Nuevo ticket</option>
+                                        <option value="En proceso" <%= ticket.estatus === 'En proceso' ? 'selected' : '' %>>🟡 En proceso</option>
+                                        <option value="Pendiente" <%= ticket.estatus === 'Pendiente' ? 'selected' : '' %>>🔴 Pendiente TI</option>
+                                        <option value="Pendiente por cliente" <%= ticket.estatus === 'Pendiente por cliente' ? 'selected' : '' %>>⏳ Pendiente por cliente</option>
+                                        <option value="Resuelto" <%= ticket.estatus === 'Resuelto' ? 'selected' : '' %>>🟢 Resuelto</option>
                                     </select>
                                 </div>
 
@@ -668,6 +691,45 @@
                                     placeholder="Ej. Se adelantó revisión de hardware; listo para pruebas o entrega..."
                                     class="w-full rounded-md border border-slate-300 px-3 py-2 text-xs text-slate-900 bg-white shadow-xs"
                                 >
+                            </div>
+
+                            <!-- Campos Condicionales si se selecciona "Pendiente por cliente" -->
+                            <div id="bloquePendienteClienteDetalle" style="display: none;" class="p-4 bg-amber-50/80 border border-amber-300 rounded-md space-y-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xl">⏳</span>
+                                    <div>
+                                        <h4 class="text-xs font-bold text-amber-950 uppercase tracking-wider m-0">
+                                            Pausar Conteo de Tiempos: Pendiente por Cliente
+                                        </h4>
+                                        <p class="text-[11px] text-amber-800 m-0">El tiempo transcurrido en este estatus no afectará las métricas ni los reportes de TI.</p>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[11px] font-bold text-amber-900 mb-1">📅 Fecha y hora programada de visita / contacto (Opcional):</label>
+                                    <input 
+                                        type="datetime-local" 
+                                        name="fecha_programada_cliente" 
+                                        id="inputFechaProgramadaDetalle" 
+                                        value="<%= ticket.fecha_programada_cliente || '' %>"
+                                        class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs text-slate-900 bg-white shadow-xs font-bold"
+                                    >
+                                    <span class="text-[10px] text-slate-500 block mt-1">
+                                        Si programas una cita, aparecerá un recordatorio destacado ese día en la barra superior del panel.
+                                    </span>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[11px] font-bold text-amber-900 mb-1">📝 Motivo o breve descripción (Opcional):</label>
+                                    <input 
+                                        type="text" 
+                                        name="motivo_pendiente_cliente" 
+                                        id="inputMotivoClienteDetalle" 
+                                        value="<%= ticket.motivo_pendiente_cliente || '' %>"
+                                        placeholder="Ej. El usuario estará disponible el día 2 de octubre a las 3:00 PM"
+                                        class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs text-slate-900 bg-white shadow-xs"
+                                    >
+                                </div>
                             </div>
 
                             <!-- Campos Condicionales de Resolución si se selecciona "Resuelto" -->
@@ -945,18 +1007,42 @@
             if (modal) modal.style.display = 'none';
         }
 
+        function volverAlPanelPrincipal(e, fallbackUrl) {
+            if (e) e.preventDefault();
+            if (window.opener && !window.opener.closed) {
+                try {
+                    window.opener.focus();
+                } catch(err) {}
+                window.close();
+            } else {
+                window.close();
+            }
+            setTimeout(function() {
+                if (!window.closed) {
+                    window.location.href = fallbackUrl;
+                }
+            }, 250);
+        }
+
         function evaluarEstatusDetalle() {
             const select = document.getElementById('selectEstatusDetalle');
             if (!select) return;
             const bloqueRes = document.getElementById('bloqueResolucionDetalle');
+            const bloqueCli = document.getElementById('bloquePendienteClienteDetalle');
             const inputTecnico = document.getElementById('inputTecnicoDetalle');
 
             if (select.value === 'Resuelto') {
                 if (bloqueRes) bloqueRes.style.display = 'block';
+                if (bloqueCli) bloqueCli.style.display = 'none';
                 if (inputTecnico) inputTecnico.required = true;
                 evaluarReemplazoDetalle();
+            } else if (select.value === 'Pendiente por cliente') {
+                if (bloqueRes) bloqueRes.style.display = 'none';
+                if (bloqueCli) bloqueCli.style.display = 'block';
+                if (inputTecnico) inputTecnico.required = false;
             } else {
                 if (bloqueRes) bloqueRes.style.display = 'none';
+                if (bloqueCli) bloqueCli.style.display = 'none';
                 if (inputTecnico) inputTecnico.required = false;
             }
         }

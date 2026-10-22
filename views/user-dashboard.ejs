@@ -467,7 +467,8 @@
                                         <option value="">📌 Todos los estatus</option>
                                         <option value="nuevo ticket">🆕 Nuevo ticket</option>
                                         <option value="en proceso">⚙️ En proceso</option>
-                                        <option value="pendiente">⏳ Pendiente</option>
+                                        <option value="pendiente">🔴 Pendiente</option>
+                                        <option value="pendiente por cliente">⏳ Pendiente por cliente</option>
                                         <option value="resuelto">✅ Resuelto</option>
                                     </select>
                                 </div>
@@ -530,8 +531,7 @@
                                         <!-- ID del Ticket -->
                                         <td class="py-3.5 px-4 font-bold whitespace-nowrap">
                                             <a 
-                                                href="/tickets/<%= t.id %>" 
-                                                target="_blank" 
+                                                href="/tickets/<%= t.id %>" target="_blank" rel="opener" 
                                                 class="inline-flex items-center gap-1 text-brand-600 hover:text-brand-800 font-extrabold hover:underline"
                                                 title="Abrir ticket completo en pestaña nueva"
                                             >
@@ -624,6 +624,18 @@
                                                         <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                                                         Pendiente
                                                     </span>
+                                                <% } else if (t.estatus === 'Pendiente por cliente') { %>
+                                                    <div class="space-y-1">
+                                                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-bold bg-orange-50 text-orange-800 border border-orange-200">
+                                                            <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                                                            Pendiente por cliente
+                                                        </span>
+                                                        <% if (t.fecha_programada_cliente) { %>
+                                                            <div class="text-[10px] font-bold text-orange-950 bg-orange-50 border border-orange-200 px-1.5 py-0.5 rounded">
+                                                                📅 Cita acordada: <%= t.fecha_programada_cliente %>
+                                                            </div>
+                                                        <% } %>
+                                                    </div>
                                                 <% } else if (t.estatus === 'Resuelto') { %>
                                                     <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>

@@ -434,7 +434,7 @@
             <!-- MÓDULO 1: ATENCIÓN DE TICKETS DE FALLAS (VISIBLE PRINCIPALMENTE) -->
             <section id="modulo-tickets" class="modulo-admin space-y-4">
                 <%
-                    const hoyInicioDia = new Date().toISOString().slice(0, 10);
+                    const hoyInicioDia = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(new Date());
                     const ticketsCitaHoyAdmin = (tickets || []).filter(t => {
                         if (!t.fecha_programada_cliente) return false;
                         const fStr = String(t.fecha_programada_cliente).replace(' ', 'T');
@@ -511,6 +511,10 @@
                                     href="/admin?estatus=Pendiente" 
                                     class="px-3 py-1 rounded text-xs font-bold transition-all <%= filtroActual === 'Pendiente' ? 'bg-brand-600 text-white shadow-2xs' : 'text-slate-600 hover:text-brand-600 hover:bg-slate-50' %>"
                                 >Pendientes</a>
+                                <a 
+                                    href="/admin?estatus=Pendiente por cliente" 
+                                    class="px-3 py-1 rounded text-xs font-bold transition-all <%= filtroActual === 'Pendiente por cliente' ? 'bg-brand-600 text-white shadow-2xs' : 'text-slate-600 hover:text-brand-600 hover:bg-slate-50' %>"
+                                >⏳ Pend. Cliente</a>
                                 <a 
                                     href="/admin?estatus=En proceso" 
                                     class="px-3 py-1 rounded text-xs font-bold transition-all <%= filtroActual === 'En proceso' ? 'bg-brand-600 text-white shadow-2xs' : 'text-slate-600 hover:text-brand-600 hover:bg-slate-50' %>"
@@ -675,8 +679,7 @@
                                         <td class="py-3 px-4 font-bold whitespace-nowrap">
                                             <div class="flex items-center justify-between gap-1.5">
                                                 <a 
-                                                    href="/admin/tickets/<%= t.id %>" 
-                                                    target="_blank" 
+                                                    href="/admin/tickets/<%= t.id %>" target="_blank" rel="opener" 
                                                     class="inline-flex items-center gap-1 text-brand-600 hover:text-brand-800 font-extrabold hover:underline"
                                                     title="Abrir ticket completo en pestaña nueva"
                                                 >
@@ -793,6 +796,22 @@
                                                         <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                                                         Pendiente
                                                     </span>
+                                                <% } else if (t.estatus === 'Pendiente por cliente') { %>
+                                                    <div class="space-y-1">
+                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-800 border border-orange-300 shadow-2xs">
+                                                            ⏳ Pendiente por cliente
+                                                        </span>
+                                                        <% if (t.fecha_programada_cliente) { %>
+                                                            <div class="text-[10px] font-bold text-orange-950 bg-orange-50 border border-orange-200 px-1.5 py-0.5 rounded flex items-center gap-1" title="Cita o contacto acordado con el usuario">
+                                                                📅 <%= t.fecha_programada_cliente %>
+                                                            </div>
+                                                        <% } %>
+                                                        <% if (t.motivo_pendiente_cliente) { %>
+                                                            <div class="text-[10px] text-slate-500 italic max-w-[160px] truncate" title="<%= t.motivo_pendiente_cliente %>">
+                                                                💬 <%= t.motivo_pendiente_cliente %>
+                                                            </div>
+                                                        <% } %>
+                                                    </div>
                                                 <% } else if (t.estatus === 'Resuelto') { %>
                                                     <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
@@ -883,6 +902,8 @@
                                                         claseSelectEstatus = 'bg-sky-50 text-sky-700 border-sky-300';
                                                     } else if (t.estatus === 'Pendiente') {
                                                         claseSelectEstatus = 'bg-rose-50 text-rose-700 border-rose-300';
+                                                    } else if (t.estatus === 'Pendiente por cliente') {
+                                                        claseSelectEstatus = 'bg-orange-50 text-orange-800 border-orange-300';
                                                     } else if (t.estatus === 'En proceso') {
                                                         claseSelectEstatus = 'bg-amber-50 text-amber-700 border-amber-300';
                                                     } else if (t.estatus === 'Resuelto') {
@@ -890,15 +911,18 @@
                                                     }
                                                 %>
                                                 <select 
-                                                    class="select-estatus-ticket w-full max-w-[150px] rounded border <%= claseSelectEstatus %> px-2 py-1 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer transition-all shadow-2xs" 
+                                                    class="select-estatus-ticket w-full max-w-[155px] rounded border <%= claseSelectEstatus %> px-2 py-1 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer transition-all shadow-2xs" 
                                                     data-ticket-id="<%= t.id %>" 
                                                     data-original-status="<%= t.estatus %>" 
                                                     data-atendido-por="<%= t.atendido_por || '' %>"
                                                     data-entregado-por="<%= t.entregado_por || t.tecnico_resolvio || '' %>"
+                                                    data-fecha-programada="<%= t.fecha_programada_cliente || '' %>"
+                                                    data-motivo-pendiente="<%= t.motivo_pendiente_cliente || '' %>"
                                                     onchange="manejarCambioSelectEstatus(this)"
                                                 >
                                                     <option value="Nuevo ticket" class="bg-sky-50 text-sky-800 font-bold" <%= t.estatus === 'Nuevo ticket' ? 'selected' : '' %>>🔵 Nuevo ticket</option>
-                                                    <option value="Pendiente" class="bg-rose-50 text-rose-800 font-bold" <%= t.estatus === 'Pendiente' ? 'selected' : '' %>>🔴 Pendiente</option>
+                                                    <option value="Pendiente" class="bg-rose-50 text-rose-800 font-bold" <%= t.estatus === 'Pendiente' ? 'selected' : '' %>>🔴 Pendiente TI</option>
+                                                    <option value="Pendiente por cliente" class="bg-orange-50 text-orange-800 font-bold" <%= t.estatus === 'Pendiente por cliente' ? 'selected' : '' %>>⏳ Pendiente por cliente</option>
                                                     <option value="En proceso" class="bg-amber-50 text-amber-800 font-bold" <%= t.estatus === 'En proceso' ? 'selected' : '' %>>🟡 En proceso</option>
                                                     <option value="Resuelto" class="bg-emerald-50 text-emerald-800 font-bold" <%= t.estatus === 'Resuelto' ? 'selected' : '' %>>🟢 Resuelto</option>
                                                 </select>
@@ -955,7 +979,9 @@
                                                             return { badge: 'bg-sky-50 text-sky-700 border border-sky-200', dot: 'bg-sky-500' };
                                                         } else if (e === 'Pendiente') {
                                                             return { badge: 'bg-rose-50 text-rose-700 border border-rose-200', dot: 'bg-rose-500' };
-                                                        } else if (e === 'En proceso' || e.startsWith('🛠️')) {
+                                                        } else if (e === 'Pendiente por cliente' || e.includes('cliente')) {
+                                                            return { badge: 'bg-orange-100 text-orange-800 border border-orange-300', dot: 'bg-orange-500' };
+                                                        } else if (e === 'En proceso' || e.startsWith('🟡')) {
                                                             return { badge: 'bg-amber-50 text-amber-700 border border-amber-200', dot: 'bg-amber-500' };
                                                         } else if (e === 'Resuelto') {
                                                             return { badge: 'bg-emerald-50 text-emerald-700 border border-emerald-200', dot: 'bg-emerald-500' };
@@ -4190,6 +4216,20 @@
                 return;
             }
 
+            if (nuevoEstatus === 'Pendiente por cliente') {
+                if (btnFila) btnFila.style.display = 'none';
+                selectEstatusPendiente = select;
+                const inId = document.getElementById('idTicketPendienteCliente');
+                if (inId) inId.value = ticketId;
+                const inFecha = document.getElementById('inputFechaProgramadaCliente');
+                if (inFecha) inFecha.value = select.dataset.fechaProgramada || '';
+                const inMotivo = document.getElementById('inputMotivoPendienteCliente');
+                if (inMotivo) inMotivo.value = select.dataset.motivoPendiente || '';
+                const modal = document.getElementById('modalPendienteCliente');
+                if (modal) modal.style.display = 'block';
+                return;
+            }
+
             if (btnFila) {
                 if (nuevoEstatus !== select.dataset.originalStatus) {
                     btnFila.style.display = 'inline-flex';
@@ -4207,7 +4247,7 @@
             const nuevoEstatus = sel.value;
             if (nuevoEstatus === sel.dataset.originalStatus) return;
 
-            if (nuevoEstatus === 'Resuelto') {
+            if (nuevoEstatus === 'Resuelto' || nuevoEstatus === 'Pendiente por cliente') {
                 manejarCambioSelectEstatus(sel);
                 return;
             }
