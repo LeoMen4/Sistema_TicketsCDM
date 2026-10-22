@@ -981,7 +981,7 @@
                                                             return { badge: 'bg-rose-50 text-rose-700 border border-rose-200', dot: 'bg-rose-500' };
                                                         } else if (e === 'Pendiente por cliente' || e.includes('cliente')) {
                                                             return { badge: 'bg-orange-100 text-orange-800 border border-orange-300', dot: 'bg-orange-500' };
-                                                        } else if (e === 'En proceso' || e.startsWith('🟡')) {
+                                                        } else if (e === 'En proceso') {
                                                             return { badge: 'bg-amber-50 text-amber-700 border border-amber-200', dot: 'bg-amber-500' };
                                                         } else if (e === 'Resuelto') {
                                                             return { badge: 'bg-emerald-50 text-emerald-700 border border-emerald-200', dot: 'bg-emerald-500' };
@@ -1103,7 +1103,7 @@
                     <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
                         <div>
                             <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                                <span>➕</span>
+                                
                                 <span>Levantar Nuevo Ticket para un Usuario (Atención Telefónica / Presencial)</span>
                             </h3>
                             <p class="text-xs text-slate-500 mt-0.5">Genera el reporte a nombre del usuario para que quede en su historial y reciba su correo de confirmación.</p>
@@ -1277,7 +1277,7 @@
                     <div class="flex justify-between items-center pb-3 border-b border-slate-100 flex-wrap gap-3">
                         <div>
                             <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                                <span>🏷️</span>
+                                
                                 <span>Gestión de Tipos de Falla y Áreas Afectadas (Categorías)</span>
                             </h3>
                             <p class="text-xs text-slate-500 mt-0.5">Crea, edita o elimina las categorías y subcategorías para la clasificación de reportes.</p>
@@ -1549,7 +1549,7 @@
                                                 class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-bold <%= equiposDeUsuario.length > 0 ? 'bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-300' : 'bg-slate-50 text-slate-400 border border-slate-200 hover:bg-slate-100' %> transition-colors cursor-pointer"
                                                 title="Ver equipos y periféricos asignados a <%= u.nombre %>"
                                             >
-                                                <span>💻</span>
+                                                
                                                 <span><%= equiposDeUsuario.length %> componente<%= equiposDeUsuario.length === 1 ? '' : 's' %></span>
                                             </button>
                                         </td>
@@ -1702,12 +1702,12 @@
                                         <option value="Teclado">⌨️ Teclado</option>
                                         <option value="Monitor">Monitor</option>
                                         <option value="CPU / PC Torre">CPU / PC Torre</option>
-                                        <option value="PC Ensamblada">⚙️ PC Ensamblada</option>
+                                        <option value="PC Ensamblada">PC Ensamblada</option>
                                         <option value="Laptop">Laptop</option>
                                         <option value="Diadema / Auriculares">Diadema / Auriculares</option>
-                                        <option value="Impresora">🖨️ Impresora / Escáner</option>
+                                        <option value="Impresora">Impresora / Escáner</option>
                                         <option value="UPS / No-Break">UPS / No-Break</option>
-                                        <option value="Otro">📦 Otro componente</option>
+                                        <option value="Otro">Otro componente</option>
                                     </select>
                                 </div>
 
@@ -1803,13 +1803,13 @@
                                                 if (tLower.includes('mouse') || tLower.includes('raton')) icono = 'Mouse';
                                                 else if (tLower.includes('teclado')) icono = '⌨️';
                                                 else if (tLower.includes('monitor') || tLower.includes('pantalla')) icono = 'Monitor';
-                                                else if (tLower.includes('laptop') || tLower.includes('portatil')) icono = '💻';
+                                                else if (tLower.includes('laptop') || tLower.includes('portatil')) icono = 'Laptop';
                                                 else if (tLower.includes('ensamblad')) icono = 'PC';
                                                 else if (tLower.includes('cpu') || tLower.includes('torre') || tLower.includes('computadora')) icono = 'CPU';
                                                 else if (tLower.includes('diadema') || tLower.includes('auricular') || tLower.includes('audifono')) icono = 'Audio';
-                                                else if (tLower.includes('impresora') || tLower.includes('escaner')) icono = '🖨️';
+                                                else if (tLower.includes('impresora') || tLower.includes('escaner')) icono = 'Impresora';
                                                 else if (tLower.includes('ups') || tLower.includes('break') || tLower.includes('regulador')) icono = 'UPS';
-                                                else if (tLower.includes('disco') || tLower.includes('memoria') || tLower.includes('usb')) icono = '💾';
+                                                else if (tLower.includes('disco') || tLower.includes('memoria') || tLower.includes('usb')) icono = 'Almacenamiento';
                                             %>
                                             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200">
                                                 <span><%= icono %></span>
@@ -1919,7 +1919,7 @@
                 <div class="bg-white rounded-md shadow-xs border border-slate-200 p-6 border-t-4 border-t-emerald-600 space-y-4 max-w-2xl">
                     <div class="border-b border-slate-100 pb-3">
                         <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                            <span>👤</span>
+                            
                             <span>Crear Nuevo Usuario</span>
                         </h3>
                         <p class="text-xs text-slate-500 mt-0.5">Ingresa los datos del empleado o técnico a dar de alta.</p>
@@ -2137,7 +2137,7 @@
                                             <td class="py-3 px-4 whitespace-nowrap">
                                                 <% if (t.eliminado_por === 'usuario') { %>
                                                     <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-purple-50 text-purple-700 border border-purple-200 text-[11px] font-bold" title="Cancelado y eliminado directamente por el usuario solicitante">
-                                                        <span>👤</span>
+                                                        
                                                         <span>Usuario: <%= t.eliminado_por_nombre || t.usuario_nombre %></span>
                                                     </span>
                                                 <% } else { %>
@@ -2283,7 +2283,7 @@
                     <div class="border-b border-slate-100 pb-3 flex flex-wrap items-center justify-between gap-2">
                         <div>
                             <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                                <span>📧</span>
+                                
                                 <span>Configuración de Correo Outlook y Plantillas Automáticas</span>
                             </h3>
                             <p class="text-xs text-slate-500 mt-0.5">Control de notificaciones por correo SMTP y personalización de mensajes.</p>
@@ -2591,7 +2591,7 @@
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
                         <div>
                             <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                                <span>📚</span>
+                                
                                 <span>Guías Rápidas y Soluciones Frecuentes (FAQ / Base de Conocimiento)</span>
                             </h3>
                             <p class="text-xs text-slate-500 mt-0.5">
@@ -2642,14 +2642,14 @@
                                     >
                                         <option value="Impresoras">Impresoras y Escáner</option>
                                         <option value="Conectividad e Internet">Conectividad, Red y VPN</option>
-                                        <option value="Correo Outlook">📧 Correo Outlook / Office 365</option>
+                                        <option value="Correo Outlook">Correo Outlook / Office 365</option>
                                         <option value="Lentitud en PC">Lentitud en PC / Windows</option>
-                                        <option value="Periféricos y Audio">🎧 Periféricos, Monitores y Audio</option>
-                                        <option value="Accesos y Contraseñas">🔐 Accesos, Carpetas y Contraseñas</option>
+                                        <option value="Periféricos y Audio">Periféricos, Monitores y Audio</option>
+                                        <option value="Accesos y Contraseñas">Accesos, Carpetas y Contraseñas</option>
                                         <% (categorias || []).forEach(cat => { %>
-                                            <option value="<%= cat.nombre %>">🏷️ <%= cat.nombre %></option>
+                                            <option value="<%= cat.nombre %>"><%= cat.nombre %></option>
                                         <% }) %>
-                                        <option value="General">📌 General</option>
+                                        <option value="General">General</option>
                                     </select>
                                 </div>
                             </div>
@@ -2675,8 +2675,8 @@
                                         name="visible_para" 
                                         class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 bg-white focus:border-brand-600 focus:outline-none shadow-2xs"
                                     >
-                                        <option value="todos">👥 Todos los Usuarios y Sistemas (Pública)</option>
-                                        <option value="admin">🔒 Solo Equipo de Sistemas TI (Uso Interno)</option>
+                                        <option value="todos">Todos los Usuarios y Sistemas (Pública)</option>
+                                        <option value="admin">Solo Equipo de Sistemas TI (Uso Interno)</option>
                                     </select>
                                 </div>
                             </div>
@@ -2733,7 +2733,7 @@
                                     type="submit" 
                                     class="px-5 py-2 rounded text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 transition-colors shadow-xs cursor-pointer"
                                 >
-                                    💾 Publicar Guía
+                                    Publicar Guía
                                 </button>
                             </div>
                         </form>
@@ -2758,7 +2758,7 @@
                                 onchange="filtrarGuiasAdmin()" 
                                 class="rounded-md border border-slate-300 px-3 py-1.5 text-xs text-slate-900 bg-white font-medium focus:border-brand-600 focus:outline-none shadow-2xs"
                             >
-                                <option value="">📂 Todas las categorías</option>
+                                <option value="">Todas las categorías</option>
                                 <% 
                                     const catsGuiasUnicas = [];
                                     (typeof guias !== 'undefined' ? guias : []).forEach(g => {
@@ -2776,8 +2776,8 @@
                                 class="rounded-md border border-slate-300 px-3 py-1.5 text-xs text-slate-900 bg-white font-medium focus:border-brand-600 focus:outline-none shadow-2xs"
                             >
                                 <option value="">Mostrar Visibilidad: Todas</option>
-                                <option value="todos">👥 Públicas (Usuarios y TI)</option>
-                                <option value="admin">🔒 Internas (Solo TI)</option>
+                                <option value="todos">Públicas (Usuarios y TI)</option>
+                                <option value="admin">Internas (Solo TI)</option>
                             </select>
                         </div>
 
@@ -2815,11 +2815,11 @@
                                                 <% } %>
                                                 <% if (g.visible_para === 'admin') { %>
                                                     <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-white">
-                                                        🔒 Solo Sistemas TI
+                                                        Solo Sistemas TI
                                                     </span>
                                                 <% } else { %>
                                                     <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                        👥 Visible a Usuarios
+                                                        Visible a Usuarios
                                                     </span>
                                                 <% } %>
                                             </div>
@@ -2867,7 +2867,7 @@
                                             <div class="pt-1">
                                                 <a href="/uploads/<%= g.imagen %>" target="_blank" class="inline-flex items-center gap-2 text-xs font-bold text-brand-600 hover:underline">
                                                     <img src="/uploads/<%= g.imagen %>" alt="Guía" class="w-16 h-12 object-cover rounded border border-slate-200">
-                                                    <span>🔍 Ver imagen ilustrativa completa</span>
+                                                    <span>Ver imagen ilustrativa completa</span>
                                                 </a>
                                             </div>
                                         <% } %>
@@ -2971,7 +2971,7 @@
     <div id="modalResolucion" class="modal">
         <div class="modal-content" style="max-width: 540px; border-top: 4px solid #059669;">
             <div class="flex items-center gap-2 mb-3 border-b border-slate-100 pb-2.5">
-                <span class="text-xl">✅</span>
+                
                 <div>
                     <h4 class="text-base font-bold text-slate-900 m-0">
                         Detalles de Resolución y Entrega de Ticket
@@ -2988,7 +2988,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3 rounded border border-slate-200">
                     <div>
                         <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
-                            🔧 Diagnosticó / Avanzó (Opcional):
+                            Diagnosticó / Avanzó (Opcional):
                         </label>
                         <input 
                             type="text" 
@@ -3003,7 +3003,7 @@
 
                     <div>
                         <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
-                            ✅ Entrega / Cierra Ticket <span class="text-brand-600">*</span>:
+                            Entrega / Cierra Ticket <span class="text-brand-600">*</span>:
                         </label>
                         <input 
                             type="text" 
@@ -3053,7 +3053,7 @@
                 </div>
 
                 <div id="camposReemplazo" style="display: none;" class="p-3 bg-emerald-50/70 border border-emerald-200 rounded space-y-2">
-                    <span class="text-xs font-bold text-emerald-900 block">📦 Datos del Equipo de Reemplazo:</span>
+                    <span class="text-xs font-bold text-emerald-900 block">Datos del Equipo de Reemplazo:</span>
                     <div>
                         <label class="block text-[11px] font-semibold text-emerald-800">Tipo de equipo nuevo:</label>
                         <input type="text" name="tipo_equipo_nuevo" id="inputTipoNuevo" class="w-full rounded border border-slate-300 px-2 py-1 text-xs">
@@ -3093,7 +3093,7 @@
             <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
                 <div>
                     <h4 class="text-base font-bold text-slate-900 m-0 flex items-center gap-2">
-                        <span>🛠️</span>
+                        
                         <span>Registrar Avance / Intervención por Etapas</span>
                     </h4>
                     <p class="text-xs text-slate-500 mt-0.5" id="subtituloModalAvance">Ticket #</p>
@@ -3142,12 +3142,12 @@
                         name="etapa_accion" 
                         class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 bg-white focus:border-brand-600 focus:outline-none shadow-2xs font-semibold"
                     >
-                        <option value="Diagnóstico y Revisión">🔍 Diagnóstico y Revisión Inicial</option>
-                        <option value="Avance Técnico / Reparación">🔧 Avance Técnico / Reparación</option>
+                        <option value="Diagnóstico y Revisión">Diagnóstico y Revisión Inicial</option>
+                        <option value="Avance Técnico / Reparación">Avance Técnico / Reparación</option>
                         <option value="Soporte Remoto">Soporte Remoto al Usuario</option>
-                        <option value="Pruebas y Validación">✅ Pruebas y Validación de Equipo</option>
+                        <option value="Pruebas y Validación">Pruebas y Validación de Equipo</option>
                         <option value="Espera de Pieza / Proveedor">⏳ Espera de Pieza / Proveedor</option>
-                        <option value="Preparación para Entrega">📦 Preparación para Entrega</option>
+                        <option value="Preparación para Entrega">Preparación para Entrega</option>
                     </select>
                 </div>
 
@@ -3190,7 +3190,7 @@
             <div class="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between">
                 <div>
                     <div class="flex items-center gap-2">
-                        <span class="text-base">💬</span>
+                        
                         <h4 class="text-sm font-extrabold m-0" id="chatAdminTituloTicket">Seguimiento Remoto - Ticket #</h4>
                         <span id="chatAdminEstatusBadge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-700 text-slate-200"></span>
                     </div>
@@ -3203,8 +3203,8 @@
 
             <!-- Barra de Especialistas Participantes en el Ticket -->
             <div id="barraEspecialistasChatAdmin" class="px-5 py-2 bg-slate-100 border-b border-slate-200 text-[11px] text-slate-700 flex flex-wrap items-center gap-3">
-                <span id="chatAdminInfoAtendido">🔧 <strong>Avance TI:</strong> Sin asignar</span>
-                <span id="chatAdminInfoEntregado">✅ <strong>Entrega/Cierre:</strong> Pendiente</span>
+                <span id="chatAdminInfoAtendido"><strong>Avance TI:</strong> Sin asignar</span>
+                <span id="chatAdminInfoEntregado"><strong>Entrega/Cierre:</strong> Pendiente</span>
             </div>
 
             <!-- Contenedor de Mensajes -->
@@ -3224,14 +3224,14 @@
                             class="rounded border border-slate-300 px-2 py-1 text-[11px] font-semibold text-slate-800 bg-white focus:border-brand-600 focus:outline-none"
                         >
                             <option value="comentario">Mensaje / Respuesta al Usuario</option>
-                            <option value="diagnostico">🔍 Nota de Diagnóstico / Revisión</option>
-                            <option value="avance">🔧 Avance Técnico de Sistemas</option>
-                            <option value="entrega">✅ Nota de Entrega / Validación</option>
+                            <option value="diagnostico">Nota de Diagnóstico / Revisión</option>
+                            <option value="avance">Avance Técnico de Sistemas</option>
+                            <option value="entrega">Nota de Entrega / Validación</option>
                         </select>
                     </div>
 
                     <label class="inline-flex items-center gap-1.5 text-[11px] font-bold text-brand-600 hover:text-brand-800 cursor-pointer">
-                        <span>📎 Adjuntar captura/foto</span>
+                        <span>Adjuntar captura o foto</span>
                         <input type="file" id="chatAdminInputImagen" accept="image/*" class="hidden" onchange="manejarSeleccionImagenChatAdmin(event)">
                         <span id="chatAdminNombreImagen" class="text-[10px] text-slate-500 font-normal"></span>
                     </label>
@@ -3268,7 +3268,7 @@
                         id="btnSubmitChatAdmin"
                         class="px-4 py-2 rounded-md text-xs font-extrabold text-white bg-brand-600 hover:bg-brand-700 transition-all shadow-xs cursor-pointer self-end flex items-center gap-1.5"
                     >
-                        <span>Enviar ➤</span>
+                        <span>Enviar</span>
                     </button>
                 </div>
             </form>
@@ -3308,8 +3308,8 @@
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Visibilidad</label>
                         <select name="visible_para" id="editarGuiaVisible" class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 bg-white focus:border-brand-600 focus:outline-none">
-                            <option value="todos">👥 Todos los Usuarios</option>
-                            <option value="admin">🔒 Solo Sistemas TI</option>
+                            <option value="todos">Todos los Usuarios</option>
+                            <option value="admin">Solo Sistemas TI</option>
                         </select>
                     </div>
                 </div>
@@ -3473,7 +3473,7 @@
     <div id="modalEliminar" class="modal">
         <div class="modal-content">
             <div class="flex items-center gap-2 mb-2 text-brand-600">
-                <span class="text-xl">⚠️</span>
+                
                 <h4 class="text-base font-bold text-slate-900 m-0">Confirmar Eliminación de Usuario</h4>
             </div>
             <p class="text-xs text-slate-600 mb-3">
@@ -3516,7 +3516,7 @@
     <div id="modalEliminarHistorial" class="modal">
         <div class="modal-content">
             <div class="flex items-center gap-2 mb-2 text-brand-600">
-                <span class="text-xl">⚠️</span>
+                
                 <h4 class="text-base font-bold text-slate-900 m-0">Confirmar Eliminación de Historial</h4>
             </div>
             <p class="text-xs text-slate-600 mb-3">Esta acción eliminará permanentemente la marca de fecha/estatus seleccionada.</p>
@@ -3607,7 +3607,7 @@
     <div id="modalEliminarUsuarioDefinitivo" class="modal">
         <div class="modal-content" style="max-width: 480px;">
             <div class="flex items-center gap-2 mb-2 text-rose-600">
-                <span class="text-xl">⚠️</span>
+                
                 <h4 class="text-base font-bold text-slate-900 m-0">
                     Eliminar Definitivamente Usuario #<span id="txtIdUsuarioDefinitivo"></span>
                 </h4>
@@ -3657,7 +3657,7 @@
     <div id="modalEliminarTicketDefinitivo" class="modal">
         <div class="modal-content" style="max-width: 480px;">
             <div class="flex items-center gap-2 mb-2 text-rose-600">
-                <span class="text-xl">⚠️</span>
+                
                 <h4 class="text-base font-bold text-slate-900 m-0">
                     Eliminar Definitivamente Ticket #<span id="txtIdTicketDefinitivo"></span>
                 </h4>
@@ -3707,7 +3707,7 @@
     <div id="modalCrearCategoria" class="modal">
         <div class="modal-content">
             <div class="flex items-center gap-2 mb-2 text-brand-600">
-                <span class="text-xl">🏷️</span>
+                
                 <h4 class="text-base font-bold text-slate-900 m-0">Crear Nueva Categoría</h4>
             </div>
             <form action="/admin/categorias/crear" method="POST" class="space-y-3">
@@ -3753,7 +3753,7 @@
     <div id="modalEliminarCategoria" class="modal">
         <div class="modal-content">
             <div class="flex items-center gap-2 mb-2 text-brand-600">
-                <span class="text-xl">⚠️</span>
+                
                 <h4 class="text-base font-bold text-slate-900 m-0">Confirmar Eliminación de Categoría</h4>
             </div>
             <p class="text-xs text-slate-600 mb-1">¿Estás seguro de eliminar la categoría <strong id="nombreCatEliminar" class="text-slate-900"></strong>?</p>
@@ -3772,7 +3772,7 @@
     <div id="modalAgregarSubcat" class="modal">
         <div class="modal-content">
             <div class="flex items-center gap-2 mb-2 text-brand-600">
-                <span class="text-xl">➕</span>
+                
                 <h4 class="text-base font-bold text-slate-900 m-0">Agregar Subcategoría a <span id="nombreCatSubcat"></span></h4>
             </div>
             <form action="/admin/subcategorias/crear" method="POST" class="space-y-3">
@@ -3793,7 +3793,7 @@
     <div id="modalEliminarSubcat" class="modal">
         <div class="modal-content">
             <div class="flex items-center gap-2 mb-2 text-brand-600">
-                <span class="text-xl">⚠️</span>
+                
                 <h4 class="text-base font-bold text-slate-900 m-0">Eliminar Subcategoría</h4>
             </div>
             <p class="text-xs text-slate-600 mb-3">
@@ -3814,7 +3814,7 @@
         <div class="modal-content" style="max-width: 520px;">
             <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
                 <div class="flex items-center gap-2">
-                    <span class="text-xl">💻</span>
+                    
                     <h4 class="text-base font-bold text-slate-900 m-0">Asignar Equipo o Periférico</h4>
                 </div>
                 <button type="button" onclick="cerrarModalCrearEquipo()" class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer">✕</button>
@@ -3824,7 +3824,7 @@
                 <div class="rounded-md bg-slate-50 border border-slate-200 p-3 space-y-2">
                     <div class="flex items-center justify-between gap-2">
                         <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                            👤 Usuario Asignado <span class="text-brand-600">*</span>:
+                            Usuario Asignado <span class="text-brand-600">*</span>:
                         </label>
                         <span id="badgeCrearEquipoUsuarioSelect" class="text-[10px] font-bold px-2 py-0.5 rounded bg-white text-slate-600 border border-slate-200">
                             <%= (usuarios || []).length %> usuario<%= (usuarios || []).length === 1 ? '' : 's' %>
@@ -3868,13 +3868,13 @@
                             <option value="Teclado">⌨️ Teclado</option>
                             <option value="Monitor">Monitor</option>
                             <option value="CPU / PC Torre">CPU / PC Torre</option>
-                            <option value="PC Ensamblada">⚙️ PC Ensamblada</option>
+                            <option value="PC Ensamblada">PC Ensamblada</option>
                             <option value="Laptop">Laptop</option>
                             <option value="Diadema / Auriculares">Diadema / Auriculares</option>
-                            <option value="Impresora / Escáner">🖨️ Impresora / Escáner</option>
+                            <option value="Impresora / Escáner">Impresora / Escáner</option>
                             <option value="UPS / No-Break">UPS / No-Break</option>
-                            <option value="Disco Externo / Memoria">💾 Disco Externo / Memoria</option>
-                            <option value="Otro">📦 Otro componente...</option>
+                            <option value="Disco Externo / Memoria">Disco Externo / Memoria</option>
+                            <option value="Otro">Otro componente...</option>
                         </select>
                     </div>
 
@@ -3952,7 +3952,7 @@
                 <div class="rounded-md bg-slate-50 border border-slate-200 p-3 space-y-2">
                     <div class="flex items-center justify-between gap-2">
                         <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                            👤 Usuario Asignado <span class="text-brand-600">*</span>:
+                            Usuario Asignado <span class="text-brand-600">*</span>:
                         </label>
                         <span id="badgeEditarEquipoUsuarioSelect" class="text-[10px] font-bold px-2 py-0.5 rounded bg-white text-slate-600 border border-slate-200">
                             <%= (usuarios || []).length %> usuario<%= (usuarios || []).length === 1 ? '' : 's' %>
@@ -3995,13 +3995,13 @@
                             <option value="Teclado">⌨️ Teclado</option>
                             <option value="Monitor">Monitor</option>
                             <option value="CPU / PC Torre">CPU / PC Torre</option>
-                            <option value="PC Ensamblada">⚙️ PC Ensamblada</option>
+                            <option value="PC Ensamblada">PC Ensamblada</option>
                             <option value="Laptop">Laptop</option>
                             <option value="Diadema / Auriculares">Diadema / Auriculares</option>
-                            <option value="Impresora / Escáner">🖨️ Impresora / Escáner</option>
+                            <option value="Impresora / Escáner">Impresora / Escáner</option>
                             <option value="UPS / No-Break">UPS / No-Break</option>
-                            <option value="Disco Externo / Memoria">💾 Disco Externo / Memoria</option>
-                            <option value="Otro">📦 Otro componente...</option>
+                            <option value="Disco Externo / Memoria">Disco Externo / Memoria</option>
+                            <option value="Otro">Otro componente...</option>
                         </select>
                     </div>
 
@@ -4683,7 +4683,7 @@
                         btn.className = `w-full text-left px-3 py-1.5 flex items-center justify-between gap-2 hover:bg-brand-50 transition-colors cursor-pointer ${activo ? 'bg-emerald-50 font-bold text-emerald-900' : 'text-slate-700'}`;
                         const spanText = document.createElement('span');
                         spanText.className = 'truncate';
-                        spanText.textContent = '👤 ' + o.text;
+                        spanText.textContent = o.text;
                         const spanBadge = document.createElement('span');
                         spanBadge.className = 'text-[10px] font-bold text-emerald-600 shrink-0';
                         spanBadge.textContent = activo ? '✓ Seleccionado' : 'Elegir';
@@ -4699,7 +4699,7 @@
                 opt.value = '';
                 opt.disabled = true;
                 opt.selected = true;
-                opt.textContent = `⚠️ Sin coincidencias para "${inputEl.value}"`;
+                opt.textContent = `Sin coincidencias para "${inputEl.value}"`;
                 selectEl.appendChild(opt);
 
                 if (badgeEl) {
@@ -4795,7 +4795,7 @@
                 } else {
                     const optVacio = document.createElement('option');
                     optVacio.value = '__ninguno__';
-                    optVacio.textContent = '⚠️ Sin usuarios coincidentes';
+                    optVacio.textContent = 'Sin usuarios coincidentes';
                     selectEl.appendChild(optVacio);
                     selectEl.value = '__ninguno__';
                 }
@@ -5445,8 +5445,8 @@
                 if (data.ticket) {
                     document.getElementById('chatAdminTituloTicket').textContent = `Ticket #${data.ticket.id} — ${data.ticket.titulo || ''}`;
                     document.getElementById('chatAdminEstatusBadge').textContent = data.ticket.estatus || '';
-                    document.getElementById('chatAdminInfoAtendido').innerHTML = `🔧 <strong>Avance TI:</strong> ${escaparHtmlSimple(data.ticket.atendido_por || 'Sin registro previo')}`;
-                    document.getElementById('chatAdminInfoEntregado').innerHTML = `✅ <strong>Entrega/Cierre:</strong> ${escaparHtmlSimple(data.ticket.entregado_por || 'Pendiente')}`;
+                    document.getElementById('chatAdminInfoAtendido').innerHTML = `<strong>Avance TI:</strong> ${escaparHtmlSimple(data.ticket.atendido_por || 'Sin registro previo')}`;
+                    document.getElementById('chatAdminInfoEntregado').innerHTML = `<strong>Entrega/Cierre:</strong> ${escaparHtmlSimple(data.ticket.entregado_por || 'Pendiente')}`;
                 }
 
                 const cont = document.getElementById('contenedorMensajesChatAdmin');
@@ -5456,7 +5456,7 @@
                 if (comentarios.length === 0) {
                     cont.innerHTML = `
                         <div class="text-center py-10 text-slate-400 text-xs">
-                            <div class="text-2xl mb-1">💬</div>
+                            
                             No hay mensajes ni notas de seguimiento en este ticket todavía.<br>
                             Envía el primer mensaje para atender al usuario de forma remota.
                         </div>
@@ -5473,7 +5473,7 @@
                     if (c.tipo_intervencion === 'diagnostico') {
                         etiquetaTipo = '<span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300">DIAGNÓSTICO TI</span>';
                     } else if (c.tipo_intervencion === 'avance') {
-                        etiquetaTipo = '<span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-sky-100 text-sky-800 border border-sky-300">🔧 AVANCE TÉCNICO</span>';
+                        etiquetaTipo = '<span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-sky-100 text-sky-800 border border-sky-300">AVANCE TÉCNICO</span>';
                     } else if (c.tipo_intervencion === 'entrega') {
                         etiquetaTipo = '<span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">ENTREGA / CIERRE</span>';
                     }
@@ -5491,7 +5491,7 @@
                                 <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5 border-b border-slate-200/60 pb-1">
                                     <div class="flex items-center gap-1.5">
                                         <span class="text-[11px] font-extrabold ${esAdmin ? 'text-brand-700' : 'text-slate-900'}">
-                                             ${esAdmin ? '🛠️ ' : '👤 '}${escaparHtmlSimple(c.autor_nombre)}
+                                             ${esAdmin ? '[TI] ' : ''}${escaparHtmlSimple(c.autor_nombre)}
                                         </span>
                                         ${c.autor_puesto ? `<span class="text-[10px] text-slate-500">(${escaparHtmlSimple(c.autor_puesto)})</span>` : ''}
                                         ${etiquetaTipo}
@@ -5717,7 +5717,7 @@
                 enviandoMensajeChatAdmin = false;
                 if (btn) {
                     btn.disabled = false;
-                    btn.innerHTML = '<span>Enviar ➤</span>';
+                    btn.innerHTML = '<span>Enviar</span>';
                     btn.classList.remove('opacity-70', 'cursor-not-allowed');
                 }
             }
@@ -5734,7 +5734,7 @@
         function actualizarBotonSonidoAdminUI() {
             const icono = document.getElementById('iconoSonidoAdmin');
             const texto = document.getElementById('textoSonidoAdmin');
-            if (icono) icono.textContent = sonidoActivoAdmin ? '🔊' : '🔇';
+            if (icono) icono.textContent = sonidoActivoAdmin ? 'Sonido: On' : 'Sonido: Off';
             if (texto) texto.textContent = sonidoActivoAdmin ? 'Sonido Activo' : 'Silenciado';
         }
 
@@ -5796,17 +5796,17 @@
             }
 
             if (Notification.permission === 'granted') {
-                icono.textContent = '🟢';
+                icono.textContent = 'Activo';
                 texto.textContent = 'Alertas Windows Activas';
                 btn.className = 'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-xs font-bold text-emerald-800 transition-colors cursor-pointer';
                 btn.title = 'Las notificaciones de escritorio de Windows están activadas. Le avisarán al llegar nuevos tickets o mensajes aunque esté en otra app o pestaña.';
             } else if (Notification.permission === 'denied') {
-                icono.textContent = '⚠️';
+                icono.textContent = 'Alerta';
                 texto.textContent = 'Alertas Bloqueadas';
                 btn.className = 'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-amber-50 hover:bg-amber-100 border border-amber-300 text-xs font-bold text-amber-800 transition-colors cursor-pointer';
                 btn.title = 'Notificaciones bloqueadas en el navegador. Haga clic para ver instrucciones de desbloqueo en la barra de direcciones.';
             } else {
-                icono.textContent = '🖥️';
+                icono.textContent = 'Escritorio';
                 texto.textContent = 'Activar Alertas Windows';
                 btn.className = 'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-brand-50 hover:bg-brand-100 border border-brand-300 text-xs font-bold text-brand-700 transition-colors cursor-pointer shadow-xs animate-pulse';
                 btn.title = 'Haga clic para activar las notificaciones nativas de Windows en segundo plano.';
@@ -5821,7 +5821,7 @@
 
             if (Notification.permission === 'granted') {
                 try {
-                    const notif = new Notification('✅ Alertas Windows del Sistema Activas', {
+                    const notif = new Notification('Alertas Windows del Sistema Activas', {
                         body: 'Las alertas de tickets y mensajes aparecerán aquí abajo a la derecha.',
                         icon: '/favicon.ico',
                         tag: 'test-sistema-tickets'
@@ -6194,7 +6194,7 @@
                                             target="_blank" 
                                             class="px-2 py-1 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 text-[11px] font-bold inline-flex items-center gap-1 transition-colors"
                                         >
-                                            📂 Abrir
+                                            Abrir
                                         </a>
                                     </div>
                                 </div>
@@ -6213,7 +6213,7 @@
                     if (!htmlItems) {
                         htmlItems = `
                             <div class="p-6 text-center text-slate-400">
-                                <div class="text-2xl mb-1.5">✅</div>
+                                
                                 <div class="font-semibold text-slate-600">Todo al día</div>
                                 <div class="text-[11px] text-slate-400 mt-0.5">No hay alertas ni tickets pendientes en este momento.</div>
                             </div>

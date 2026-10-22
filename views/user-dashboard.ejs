@@ -118,7 +118,7 @@
                         class="relative inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 border border-slate-200 text-xs font-bold text-slate-700 transition-colors cursor-pointer"
                         title="Mensajes de seguimiento de Sistemas TI"
                     >
-                        <span>🔔</span>
+                        
                         <span class="hidden md:inline">Mensajes TI</span>
                         <span 
                             id="badgeNotificacionesUser" 
@@ -938,13 +938,13 @@
                                         if (tLower.includes('mouse') || tLower.includes('raton')) icono = 'Mouse';
                                         else if (tLower.includes('teclado')) icono = '⌨️';
                                         else if (tLower.includes('monitor') || tLower.includes('pantalla')) icono = 'Monitor';
-                                        else if (tLower.includes('laptop') || tLower.includes('portatil')) icono = '💻';
+                                        else if (tLower.includes('laptop') || tLower.includes('portatil')) icono = 'Laptop';
                                         else if (tLower.includes('ensamblad')) icono = 'PC';
                                         else if (tLower.includes('cpu') || tLower.includes('torre') || tLower.includes('computadora')) icono = 'CPU';
                                         else if (tLower.includes('diadema') || tLower.includes('auricular') || tLower.includes('audifono')) icono = 'Audio';
-                                        else if (tLower.includes('impresora') || tLower.includes('escaner')) icono = '🖨️';
+                                        else if (tLower.includes('impresora') || tLower.includes('escaner')) icono = 'Impresora';
                                         else if (tLower.includes('ups') || tLower.includes('break') || tLower.includes('regulador')) icono = 'UPS';
-                                        else if (tLower.includes('disco') || tLower.includes('memoria') || tLower.includes('usb')) icono = '💾';
+                                        else if (tLower.includes('disco') || tLower.includes('memoria') || tLower.includes('usb')) icono = 'Almacenamiento';
                                     %>
                                     <div 
                                         class="tarjeta-mi-equipo rounded-md border border-slate-200 bg-white p-4 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between space-y-3"
@@ -959,23 +959,23 @@
                                                 <% const est = eq.estado || 'Operativo'; %>
                                                 <% if (est === 'Nuevo' || est === 'Excelente') { %>
                                                     <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200">
-                                                        ✨ <%= est %>
+                                                        <%= est %>
                                                     </span>
                                                 <% } else if (est === 'Operativo' || est === 'Bueno') { %>
                                                     <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                        ✓ <%= est %>
+                                                        <%= est %>
                                                     </span>
                                                 <% } else if (est === 'Regular') { %>
                                                     <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                                                        ⚡ <%= est %>
+                                                        <%= est %>
                                                     </span>
                                                 <% } else if (est === 'En revisión' || est === 'Mantenimiento') { %>
                                                     <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
-                                                        🔧 <%= est %>
+                                                        <%= est %>
                                                     </span>
                                                 <% } else { %>
                                                     <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                                                        ⚠️ <%= est %>
+                                                        <%= est %>
                                                     </span>
                                                 <% } %>
                                             </div>
@@ -1878,7 +1878,7 @@
                     const banner = document.getElementById('chatUserBannerEspecialistas');
                     const partes = [];
                     if (data.ticket.atendido_por) partes.push(`<span><strong>Atendido/Avanzado por:</strong> ${escaparHtmlUser(data.ticket.atendido_por)}</span>`);
-                    if (data.ticket.entregado_por) partes.push(`<span>✅ <strong>Entregado/Cerrado por:</strong> ${escaparHtmlUser(data.ticket.entregado_por)}</span>`);
+                    if (data.ticket.entregado_por) partes.push(`<span><strong>Entregado/Cerrado por:</strong> ${escaparHtmlUser(data.ticket.entregado_por)}</span>`);
                     if (partes.length > 0 && banner) {
                         banner.innerHTML = partes.join('<span class="text-amber-400">•</span>');
                         banner.style.display = 'flex';
