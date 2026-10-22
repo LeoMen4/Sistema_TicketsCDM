@@ -157,7 +157,7 @@ function notificarNuevoTicketAdmin(ticketId, datosTicket, opciones = {}) {
             db.get('SELECT * FROM plantillas_correo WHERE clave = "ticket_nuevo" OR clave = "nuevo_ticket_admin"', [], (errPl, plantilla) => {
                 if (!plantilla) {
                     plantilla = {
-                        asunto: '🔔 [Ticket #{id}] Nuevo Ticket Reportado: {titulo}',
+                        asunto: '[Ticket #{id}] Nuevo Ticket Reportado: {titulo}',
                         cuerpo: 'Se ha creado el ticket #{id} por {usuario} ({email_usuario}).\n\nTipo de Falla: {tipo_falla}\nPrioridad: {prioridad}\n\nDescripción:\n{descripcion}'
                     };
                 }
@@ -245,7 +245,7 @@ function notificarTicketCreadoUsuario(ticketId, datosTicket, opciones = {}) {
         db.get('SELECT * FROM plantillas_correo WHERE clave = "ticket_creado_usuario"', [], (errPl, plantilla) => {
             if (!plantilla) {
                 plantilla = {
-                    asunto: '📋 [Ticket #{id}] Se ha registrado tu ticket de soporte: {titulo}',
+                    asunto: '[Ticket #{id}] Se ha registrado tu ticket de soporte: {titulo}',
                     cuerpo: 'Hola {usuario},\n\nTe confirmamos que se ha registrado un nuevo ticket de soporte a tu nombre:\n\n• Número de Ticket: #{id}\n• Título: {titulo}\n• Tipo de Falla: {tipo_falla}\n• Subcategoría / Dispositivo: {subcategoria}\n• Nivel de Prioridad: {prioridad}\n• Estatus: {estatus}\n• Fecha de reporte: {fecha}\n\nDescripción del problema:\n{descripcion}\n\nEl equipo de soporte de sistemas ya tiene conocimiento de tu incidencia.'
                 };
             }
@@ -295,7 +295,7 @@ function notificarTicketCreadoUsuario(ticketId, datosTicket, opciones = {}) {
                 : (datosTicket.creado_por_admin_email ? datosTicket.creado_por_admin_email.trim() : null);
 
             if (adminEmailCreador && adminEmailCreador.toLowerCase() !== (datosTicket.usuario_email || '').trim().toLowerCase()) {
-                const asuntoAdmin = `📋 [Ticket #${ticketId}] Confirmación: Has levantado el ticket para ${datosTicket.usuario_nombre || 'Usuario'}: ${datosTicket.titulo || ''}`;
+                const asuntoAdmin = `[Ticket #${ticketId}] Confirmación: Has levantado el ticket para ${datosTicket.usuario_nombre || 'Usuario'}: ${datosTicket.titulo || ''}`;
                 const cuerpoAdminTexto = `Hola ${opciones.adminRemitente?.nombre || datosTicket.creado_por_admin || 'Administrador'},\n\nTe confirmamos que has levantado exitosamente el ticket de soporte #${ticketId} para el usuario ${datosTicket.usuario_nombre} (${datosTicket.usuario_email}):\n\n• Número de Ticket: #${ticketId}\n• Título: ${datosTicket.titulo}\n• Tipo de Falla: ${datosTicket.tipo_falla}\n• Subcategoría: ${datosTicket.subcategoria || 'Sin subcategoría'}\n• Prioridad: ${datosTicket.prioridad}\n• Estatus: ${datosTicket.estatus || 'Nuevo ticket'}\n• Fecha de reporte: ${fechaFormateada}\n\nDescripción del problema:\n${datosTicket.descripcion}\n\nEl usuario ya ha recibido su notificación automática de confirmación.`;
                 const cuerpoAdminHtml = generarHtml(asuntoAdmin, cuerpoAdminTexto, variables, remitente);
 
@@ -435,19 +435,19 @@ function enviarCorreoPrueba(destinatario, adminRemitente = null, callback = null
             from: `"${remitente.nombre}" <${remitente.email}>`,
             replyTo: remitente.email,
             to: destinatario,
-            subject: `✅ Correo de Prueba - Enviado por ${remitente.nombre}`,
+            subject: `Correo de Prueba - Enviado por ${remitente.nombre}`,
             text: `¡Hola!\n\nEste es un correo de prueba enviado desde tu Sistema de Tickets por el administrador remitente ${remitente.nombre} (${remitente.email}).\nEl servidor de correo (${config.smtp_host}:${config.smtp_port}) está operando correctamente.`,
             html: `
             <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f9;">
                 <div style="background: white; padding: 25px; border-radius: 8px; border-left: 5px solid #10b981; max-width: 500px; margin: auto;">
-                    <h2 style="color: #10b981; margin-top: 0;">✅ Conexión de Correo Exitosa</h2>
+                    <h2 style="color: #10b981; margin-top: 0;">Conexión de Correo Exitosa</h2>
                     <p style="color: #334155; font-size: 14px; line-height: 1.5;">
                         ¡Excelente! El sistema de notificaciones está vinculado y listo para enviar correos automáticos.
                     </p>
                     <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin: 15px 0; font-size: 13px; color: #475569;">
-                        👤 <strong>Administrador Remitente:</strong> ${remitente.nombre}<br>
-                        📧 <strong>Correo Remitente:</strong> ${remitente.email}<br>
-                        🌐 <strong>Servidor:</strong> ${config.smtp_host} (Puerto ${config.smtp_port})
+                        <strong>Administrador Remitente:</strong> ${remitente.nombre}<br>
+                        <strong>Correo Remitente:</strong> ${remitente.email}<br>
+                        <strong>Servidor:</strong> ${config.smtp_host} (Puerto ${config.smtp_port})
                     </div>
                     <p style="font-size: 12px; color: #64748b; margin-top: 10px;">
                         Todos los administradores del sistema están habilitados como remitentes automáticos.

@@ -132,7 +132,7 @@
                 </div>
             </div>
             <span class="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded border border-slate-200">
-                🔒 Portal Corporativo Privado
+                Portal Corporativo Privado
             </span>
         </div>
     </header>
@@ -164,7 +164,7 @@
             <!-- Mensaje de confirmación de sesión cerrada -->
             <% if (typeof query !== 'undefined' && query && query.logout === '1') { %>
                 <div class="mb-5 rounded-md bg-emerald-50 border border-emerald-200 p-3.5 text-xs text-emerald-800 flex items-start gap-2.5">
-                    <span class="text-base leading-none">🔒</span>
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 mt-1"></span>
                     <div>
                         <strong class="font-semibold text-emerald-900">Sesión finalizada:</strong>
                         <p class="mt-0.5 text-emerald-700 leading-relaxed">Has cerrado sesión correctamente. Para volver a entrar ingresa tus credenciales.</p>
@@ -175,7 +175,7 @@
             <!-- Mensaje por inactividad de sesión -->
             <% if (typeof mensajeInactividad !== 'undefined' && mensajeInactividad) { %>
                 <div class="mb-5 rounded-md bg-amber-50 border border-amber-200 p-3.5 text-xs text-amber-800 flex items-start gap-2.5">
-                    <span class="text-base leading-none">⏱️</span>
+                    <span class="w-2 h-2 rounded-full bg-amber-500 mt-1"></span>
                     <div>
                         <strong class="font-semibold text-amber-900">Sesión cerrada por inactividad:</strong>
                         <p class="mt-0.5 text-amber-700 leading-relaxed"><%= mensajeInactividad %></p>
@@ -186,7 +186,7 @@
             <!-- Mensaje de error general -->
             <% if (error) { %>
                 <div class="mb-5 rounded-md bg-brand-50 border border-brand-200 p-3.5 text-xs text-brand-700 flex items-start gap-2.5">
-                    <span class="text-base leading-none text-brand-600">⚠️</span>
+                    <span class="w-2 h-2 rounded-full bg-brand-600 mt-1"></span>
                     <div class="font-medium leading-relaxed">
                         <%= error %>
                     </div>
@@ -275,7 +275,7 @@
 
                 <!-- Aviso cuando las credenciales ya están listas y solo falta el Captcha -->
                 <div id="avisoCredencialesListas" style="display: none;" class="rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 text-[11px] text-emerald-800 flex items-center gap-2">
-                    <span>🔐</span>
+                    
                     <span><strong>Acceso guardado:</strong> Tus datos están listos, solo confirma el <strong>Captcha</strong> para entrar.</span>
                 </div>
 
@@ -365,7 +365,7 @@
         togglePasswordBtn.addEventListener('click', function () {
             const isPassword = passwordInput.getAttribute('type') === 'password';
             passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
-            this.textContent = isPassword ? '🙈' : '👁️';
+            this.textContent = isPassword ? 'Ocultar' : 'Mostrar';
         });
 
         function obtenerCuentasGuardadas() {

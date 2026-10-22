@@ -155,7 +155,7 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    <span>📥 Descargar Reporte General Completo (Excel)</span>
+                    <span>Descargar Reporte General Completo (Excel)</span>
                 </button>
 
                 <!-- Volver a panel de tickets -->
@@ -195,7 +195,7 @@
                 id="btn-dash-general" 
                 class="dash-menu-item active"
             >
-                <span class="text-base">📊</span>
+                
                 <span class="flex-1">Dashboards Principales</span>
             </button>
 
@@ -206,7 +206,7 @@
                 id="btn-dash-todas" 
                 class="dash-menu-item text-slate-700"
             >
-                <span class="text-base">📁</span>
+                
                 <span class="flex-1">Todas las Categorías</span>
                 <span class="text-xs bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded">
                     <%= (categoriasStats || []).length %>
@@ -227,7 +227,7 @@
                         placeholder="Buscar categoría..." 
                         class="w-full rounded-md border border-slate-200 pl-7 pr-6 py-1 text-xs text-slate-900 placeholder-slate-400 bg-slate-50 focus:bg-white focus:border-brand-600 focus:outline-none"
                     >
-                    <span class="absolute left-2 top-1.5 text-slate-400 text-[11px]">🔍</span>
+                    
                     <button 
                         type="button" 
                         id="btnClearMenuCatDash" 
@@ -247,7 +247,7 @@
                         data-search="<%= (cat.nombre || '').toLowerCase() %>"
                         class="dash-menu-item item-menu-cat-dash text-slate-700"
                     >
-                        <span class="text-sm">🏷️</span>
+                        
                         <span class="flex-1 truncate" title="<%= cat.nombre %>"><%= cat.nombre %></span>
                         <span class="text-[10px] bg-slate-100 text-slate-600 font-bold px-1.5 py-0.2 rounded">
                             <%= cat.total %>
@@ -264,7 +264,7 @@
                     href="/admin" 
                     class="dash-menu-item text-slate-600 hover:text-slate-900"
                 >
-                    <span class="text-sm">📋</span>
+                    
                     <span>Ir a Sistema de Tickets</span>
                 </a>
             </div>
@@ -316,13 +316,13 @@
                     </div>
 
                     <div class="bg-white rounded-md shadow-2xs border border-slate-200 p-4 border-t-3 border-t-brand-600 flex flex-col justify-between">
-                        <span class="text-[10px] font-bold uppercase tracking-wider text-brand-700">⏱️ Prom. Resolución</span>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-brand-700">Prom. Resolución</span>
                         <span class="text-lg font-extrabold text-brand-900 mt-1 truncate" title="<%= tiemposGlobalesStats.promGlobalResTexto %>"><%= tiemposGlobalesStats.promGlobalResTexto %></span>
                         <span class="text-[11px] text-slate-400 mt-1"><%= tiemposGlobalesStats.totalResueltos %> resueltos</span>
                     </div>
 
                     <div class="bg-white rounded-md shadow-2xs border border-slate-200 p-4 border-t-3 border-t-emerald-600 flex flex-col justify-between">
-                        <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-700">⚡ 1ra Atención</span>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-700">1ra Atención</span>
                         <span class="text-lg font-extrabold text-emerald-900 mt-1 truncate" title="<%= tiemposGlobalesStats.promGlobalAtenTexto %>"><%= tiemposGlobalesStats.promGlobalAtenTexto %></span>
                         <span class="text-[11px] text-slate-400 mt-1">Inicio atención</span>
                     </div>
@@ -333,7 +333,7 @@
                 <section class="bg-white rounded-md shadow-2xs border border-slate-200 p-4 border-l-4 border-l-brand-600 flex flex-wrap items-center justify-between gap-4">
                     <div class="space-y-1 max-w-2xl">
                         <div class="flex items-center gap-2">
-                            <span class="text-base">🎯</span>
+                            
                             <strong class="text-sm font-bold text-slate-900">
                                 Metas de Tiempo de Atención y Velocidad (SLA)
                             </strong>
@@ -342,7 +342,7 @@
                             Configura el margen porcentual de tolerancia para considerar las atenciones dentro del tiempo meta.
                         </p>
                         <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold bg-brand-50 text-brand-700 border border-brand-200">
-                            <span>🚫 Días Domingo no laborables:</span>
+                            <span>Días Domingo no laborables:</span>
                             <span class="font-normal text-brand-800">Totalmente excluidos (0 hrs) de todos los cálculos y métricas.</span>
                         </div>
                     </div>
@@ -371,7 +371,7 @@
                                 onclick="guardarToleranciaGlobal()" 
                                 class="px-2.5 py-1 rounded text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 transition-colors cursor-pointer"
                             >
-                                💾 Guardar %
+                                Guardar %
                             </button>
 
                             <button 
@@ -381,14 +381,14 @@
                                 class="px-3 py-1 rounded text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 transition-colors cursor-pointer ml-1 inline-flex items-center gap-1"
                                 title="Descargar en Excel únicamente los 3 dashboards principales y tabla de categorías"
                             >
-                                <span>📊 Descargar Dashboards Principales (Excel)</span>
+                                <span>Descargar Dashboards Principales (Excel)</span>
                             </button>
                         </div>
 
                         <div class="flex items-center gap-1.5 text-[10px] flex-wrap">
-                            <span class="badge-perf badge-perf-fast">⚡ Rápido: ≤ Meta</span>
-                            <span class="badge-perf badge-perf-med">🟡 En límite: ≤ +<span id="label-tolerancia-med"><%= toleranciaPct %></span>%</span>
-                            <span class="badge-perf badge-perf-slow">🔴 A mejorar: &gt; +<span id="label-tolerancia-slow"><%= toleranciaPct %></span>%</span>
+                            <span class="badge-perf badge-perf-fast">Óptimo: ≤ Meta</span>
+                            <span class="badge-perf badge-perf-med">En límite: ≤ +<span id="label-tolerancia-med"><%= toleranciaPct %></span>%</span>
+                            <span class="badge-perf badge-perf-slow">Excedido: &gt; +<span id="label-tolerancia-slow"><%= toleranciaPct %></span>%</span>
                         </div>
                     </div>
                 </section>
@@ -401,12 +401,12 @@
                         <div>
                             <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100 gap-2">
                                 <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
-                                    <span>📋</span>
+                                    
                                     <span>Tickets por Estatus</span>
                                 </h3>
                                 <div class="bg-slate-100 p-0.5 rounded border border-slate-200 inline-flex" id="toggle-group-estatus">
-                                    <button type="button" class="btn-toggle-view active" onclick="cambiarTipoGrafica('estatus', 'pie', this)">🥧 Pastel</button>
-                                    <button type="button" class="btn-toggle-view" onclick="cambiarTipoGrafica('estatus', 'bar', this)">📊 Barras</button>
+                                    <button type="button" class="btn-toggle-view active" onclick="cambiarTipoGrafica('estatus', 'pie', this)">Circular</button>
+                                    <button type="button" class="btn-toggle-view" onclick="cambiarTipoGrafica('estatus', 'bar', this)">Barras</button>
                                 </div>
                             </div>
 
@@ -415,7 +415,7 @@
                             </div>
 
                             <div class="mt-4 mb-2">
-                                <span class="text-xs font-bold uppercase text-slate-600 block">📊 Desglose de Datos:</span>
+                                <span class="text-xs font-bold uppercase text-slate-600 block">Desglose de Datos:</span>
                             </div>
 
                             <div class="overflow-x-auto rounded border border-slate-200 text-xs">
@@ -463,12 +463,12 @@
                         <div>
                             <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100 gap-2">
                                 <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
-                                    <span>⚡</span>
+                                    
                                     <span>Tickets por Prioridad</span>
                                 </h3>
                                 <div class="bg-slate-100 p-0.5 rounded border border-slate-200 inline-flex" id="toggle-group-prioridad">
-                                    <button type="button" class="btn-toggle-view active" onclick="cambiarTipoGrafica('prioridad', 'pie', this)">🥧 Pastel</button>
-                                    <button type="button" class="btn-toggle-view" onclick="cambiarTipoGrafica('prioridad', 'bar', this)">📊 Barras</button>
+                                    <button type="button" class="btn-toggle-view active" onclick="cambiarTipoGrafica('prioridad', 'pie', this)">Circular</button>
+                                    <button type="button" class="btn-toggle-view" onclick="cambiarTipoGrafica('prioridad', 'bar', this)">Barras</button>
                                 </div>
                             </div>
 
@@ -477,7 +477,7 @@
                             </div>
 
                             <div class="mt-4 mb-2">
-                                <span class="text-xs font-bold uppercase text-slate-600 block">⚡ Desglose por Nivel:</span>
+                                <span class="text-xs font-bold uppercase text-slate-600 block">Desglose por Nivel:</span>
                             </div>
 
                             <div class="overflow-x-auto rounded border border-slate-200 text-xs">
@@ -527,15 +527,15 @@
                                     <span>Tiempos por Categoría</span>
                                 </h3>
                                 <div class="bg-slate-100 p-0.5 rounded border border-slate-200 inline-flex" id="toggle-group-tiempos-resolucion">
-                                    <button type="button" class="btn-toggle-view active" onclick="cambiarTipoGrafica('tiempos-resolucion', 'bar', this)">📊 Barras</button>
-                                    <button type="button" class="btn-toggle-view" onclick="cambiarTipoGrafica('tiempos-resolucion', 'pie', this)">🥧 Pastel</button>
+                                    <button type="button" class="btn-toggle-view active" onclick="cambiarTipoGrafica('tiempos-resolucion', 'bar', this)">Barras</button>
+                                    <button type="button" class="btn-toggle-view" onclick="cambiarTipoGrafica('tiempos-resolucion', 'pie', this)">Circular</button>
                                 </div>
                             </div>
 
                             <!-- Highlight banners -->
                             <div class="grid grid-cols-1 gap-2 mb-3">
                                 <div class="rounded bg-emerald-50 border border-emerald-200 p-2 text-xs text-emerald-900">
-                                    <span class="font-extrabold text-[10px] uppercase tracking-wider block text-emerald-700">🚀 Categoría Más Rápida:</span>
+                                    <span class="font-extrabold text-[10px] uppercase tracking-wider block text-emerald-700">Categoría Más Rápida:</span>
                                     <% if (tiemposGlobalesStats.categoriaMasRapida) { %>
                                         <div class="font-bold text-emerald-950 mt-0.5"><%= tiemposGlobalesStats.categoriaMasRapida.nombre %></div>
                                         <div class="text-[11px] text-emerald-800"><%= tiemposGlobalesStats.categoriaMasRapida.tiempoTexto %> prom. (Meta: <%= tiemposGlobalesStats.categoriaMasRapida.tiempoBaseHoras %>h)</div>
@@ -545,7 +545,7 @@
                                 </div>
 
                                 <div class="rounded bg-rose-50 border border-rose-200 p-2 text-xs text-rose-900">
-                                    <span class="font-extrabold text-[10px] uppercase tracking-wider block text-rose-700">⚠️ A Mejorar Tiempos:</span>
+                                    <span class="font-extrabold text-[10px] uppercase tracking-wider block text-rose-700">A Mejorar Tiempos:</span>
                                     <% if (tiemposGlobalesStats.categoriaAMejorar) { %>
                                         <div class="font-bold text-rose-950 mt-0.5"><%= tiemposGlobalesStats.categoriaAMejorar.nombre %></div>
                                         <div class="text-[11px] text-rose-800">
@@ -576,7 +576,7 @@
                                         placeholder="Buscar categoría..." 
                                         class="w-full rounded border border-slate-200 pl-6 pr-5 py-1 text-[11px] text-slate-900 placeholder-slate-400 bg-slate-50 focus:bg-white focus:border-brand-600 focus:outline-none"
                                     >
-                                    <span class="absolute left-1.5 top-1 text-slate-400 text-[10px]">🔍</span>
+                                    
                                 </div>
                             </div>
 
@@ -614,11 +614,11 @@
                                                     <% if (catItem.resueltosCount === 0) { %>
                                                         <span class="badge-perf badge-perf-na">En atención</span>
                                                     <% } else if (catItem.velocidadEstatus === 'rapido') { %>
-                                                        <span class="badge-perf badge-perf-fast">⚡ Rápido</span>
+                                                        <span class="badge-perf badge-perf-fast">Óptimo</span>
                                                     <% } else if (catItem.velocidadEstatus === 'limite') { %>
-                                                        <span class="badge-perf badge-perf-med">🟡 En límite</span>
+                                                        <span class="badge-perf badge-perf-med">En límite</span>
                                                     <% } else { %>
-                                                        <span class="badge-perf badge-perf-slow">🔴 A mejorar</span>
+                                                        <span class="badge-perf badge-perf-slow">Excedido</span>
                                                     <% } %>
                                                 </td>
                                             </tr>
@@ -641,7 +641,7 @@
                     <div class="bg-white rounded-md border border-slate-200 p-5 border-l-4 border-l-brand-600 shadow-2xs flex flex-wrap items-center justify-between gap-4">
                         <div>
                             <div class="flex items-center gap-2">
-                                <span class="text-xl">🏷️</span>
+                                
                                 <h3 class="text-lg font-bold text-slate-900"><%= cat.nombre %></h3>
                                 <span class="text-xs bg-brand-50 text-brand-700 border border-brand-200 font-bold px-2.5 py-0.5 rounded">
                                     <%= cat.total %> ticket<%= cat.total === 1 ? '' : 's' %>
@@ -659,7 +659,7 @@
                                 class="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3.5 py-2 rounded text-xs shadow-xs transition-colors cursor-pointer"
                                 title="Descargar reporte en Excel para <%= cat.nombre %>"
                             >
-                                <span>📥 Descargar Excel de <%= cat.nombre %></span>
+                                <span>Descargar Excel de <%= cat.nombre %></span>
                             </button>
                         </div>
                     </div>
@@ -671,12 +671,12 @@
                         <div class="bg-white rounded-md border border-slate-200 p-5 shadow-2xs space-y-4">
                             <div class="flex items-center justify-between pb-3 border-b border-slate-100 gap-2">
                                 <div>
-                                    <strong class="text-sm font-bold text-slate-900 block">📁 Volumen por Subcategoría</strong>
+                                    <strong class="text-sm font-bold text-slate-900 block">Volumen por Subcategoría</strong>
                                     <span class="text-[11px] text-slate-400">Distribución de tickets registrados</span>
                                 </div>
                                 <div class="bg-slate-100 p-0.5 rounded border border-slate-200 inline-flex" id="toggle-group-cat-<%= cat.id %>">
-                                    <button type="button" class="btn-toggle-view active" onclick="cambiarTipoGrafica('cat-<%= cat.id %>', 'pie', this)">🥧 Pastel</button>
-                                    <button type="button" class="btn-toggle-view" onclick="cambiarTipoGrafica('cat-<%= cat.id %>', 'bar', this)">📊 Barras</button>
+                                    <button type="button" class="btn-toggle-view active" onclick="cambiarTipoGrafica('cat-<%= cat.id %>', 'pie', this)">Circular</button>
+                                    <button type="button" class="btn-toggle-view" onclick="cambiarTipoGrafica('cat-<%= cat.id %>', 'bar', this)">Barras</button>
                                 </div>
                             </div>
 
@@ -737,8 +737,8 @@
                                     <span class="text-[11px] text-slate-400">Monitoreo de tiempos y velocidad de atención</span>
                                 </div>
                                 <div class="bg-slate-100 p-0.5 rounded border border-slate-200 inline-flex" id="toggle-group-cat-tiempo-<%= cat.id %>">
-                                    <button type="button" class="btn-toggle-view active" onclick="cambiarTipoGrafica('cat-tiempo-<%= cat.id %>', 'bar', this)">📊 Barras</button>
-                                    <button type="button" class="btn-toggle-view" onclick="cambiarTipoGrafica('cat-tiempo-<%= cat.id %>', 'pie', this)">🥧 Pastel</button>
+                                    <button type="button" class="btn-toggle-view active" onclick="cambiarTipoGrafica('cat-tiempo-<%= cat.id %>', 'bar', this)">Barras</button>
+                                    <button type="button" class="btn-toggle-view" onclick="cambiarTipoGrafica('cat-tiempo-<%= cat.id %>', 'pie', this)">Circular</button>
                                 </div>
                             </div>
 
@@ -774,14 +774,14 @@
                                                 placeholder="Buscar subcategoría..." 
                                                 class="w-full rounded border border-slate-200 pl-6 pr-2 py-0.5 text-[11px] text-slate-900 placeholder-slate-400 bg-slate-50 focus:bg-white focus:border-brand-600 focus:outline-none"
                                             >
-                                            <span class="absolute left-1.5 top-1 text-slate-400 text-[10px]">🔍</span>
+                                            
                                         </div>
                                         <button 
                                             type="button" 
                                             onclick="guardarTodosSubcategorias('<%= cat.id %>')"
                                             class="px-2.5 py-1 rounded text-[11px] font-bold text-white bg-brand-600 hover:bg-brand-700 shadow-2xs transition-colors cursor-pointer"
                                         >
-                                            💾 Guardar todos
+                                            Guardar todos
                                         </button>
                                     <% } %>
                                 </div>
@@ -840,7 +840,7 @@
                                                                 onclick="guardarTiempoBaseSub('<%= sub.id %>', this)"
                                                                 title="Guardar tiempo base de <%= sub.nombre %>" 
                                                                 class="bg-brand-600 hover:bg-brand-700 text-white rounded p-1 text-xs cursor-pointer transition-colors"
-                                                            >💾</button>
+                                                            >Guardar</button>
                                                         </div>
                                                     <% } else { %>
                                                         <span class="text-slate-400 text-xs"><%= sub.tiempoBaseHoras %> hrs</span>
@@ -850,11 +850,11 @@
                                                     <% if (sub.resueltosCount === 0) { %>
                                                         <span class="badge-perf badge-perf-na">En atención</span>
                                                     <% } else if (sub.velocidadEstatus === 'rapido') { %>
-                                                        <span class="badge-perf badge-perf-fast">⚡ Rápido</span>
+                                                        <span class="badge-perf badge-perf-fast">Óptimo</span>
                                                     <% } else if (sub.velocidadEstatus === 'limite') { %>
-                                                        <span class="badge-perf badge-perf-med">🟡 En límite</span>
+                                                        <span class="badge-perf badge-perf-med">En límite</span>
                                                     <% } else { %>
-                                                        <span class="badge-perf badge-perf-slow">🔴 A mejorar</span>
+                                                        <span class="badge-perf badge-perf-slow">Excedido</span>
                                                     <% } %>
                                                 </td>
                                             </tr>
@@ -873,7 +873,7 @@
             <div id="vista-dash-todas" class="vista-dashboard space-y-6" style="display: none;">
                 <div class="bg-white rounded-md border border-slate-200 p-4 border-l-4 border-l-brand-600 shadow-2xs flex flex-wrap items-center justify-between gap-3">
                     <div>
-                        <h3 class="text-base font-bold text-slate-900">📁 Vista General de Todas las Categorías</h3>
+                        <h3 class="text-base font-bold text-slate-900">Vista General de Todas las Categorías</h3>
                         <p class="text-xs text-slate-500 mt-0.5">Explora todas las métricas de todas las categorías en pantalla completa.</p>
                     </div>
                     <div class="relative min-w-[260px]">
@@ -884,7 +884,7 @@
                             placeholder="Buscar categoría o subcategoría..." 
                             class="w-full rounded-md border border-slate-300 pl-8 pr-7 py-1.5 text-xs text-slate-900 placeholder-slate-400 bg-white focus:border-brand-600 focus:outline-none shadow-2xs"
                         >
-                        <span class="absolute left-2.5 top-2 text-slate-400 text-xs">🔍</span>
+                        
                         <button 
                             type="button" 
                             id="btnClearDashTodasCat" 
@@ -904,7 +904,7 @@
                         >
                             <div class="flex items-center justify-between border-b border-slate-100 pb-3 flex-wrap gap-2">
                                 <div class="flex items-center gap-2 flex-wrap">
-                                    <span class="text-base">🏷️</span>
+                                    <span class="w-2 h-2 rounded-full bg-slate-400"></span>
                                     <h4 class="text-sm font-bold text-slate-900"><%= cat.nombre %></h4>
                                     <span class="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-bold"><%= cat.total %> tickets</span>
                                     <span class="text-xs text-brand-700 font-bold ml-2">Promedio: <%= cat.promResolucionTexto %></span>
@@ -930,7 +930,7 @@
                         </div>
                     <% }) %>
                     <div id="sinCoincidenciasDashTodasCat" style="display: none;" class="bg-white rounded-md border border-slate-200 p-8 text-center text-slate-400 italic text-xs">
-                        🔍 No se encontraron categorías o subcategorías que coincidan con tu búsqueda.
+                        No se encontraron categorías o subcategorías que coincidan con tu búsqueda.
                     </div>
                 </div>
             </div>
@@ -940,7 +940,7 @@
 
     <!-- Toast de Notificación Flotante -->
     <div id="toast-notificacion" class="fixed bottom-6 right-6 bg-slate-900 text-white px-4 py-3 rounded text-xs font-bold shadow-xl flex items-center gap-2 z-50 transition-opacity duration-300" style="display: none; opacity: 0;">
-        <span id="toast-icono" class="text-base">✅</span>
+        <span id="toast-icono" class="w-2 h-2 rounded-full bg-emerald-500"></span>
         <span id="toast-mensaje">Notificación</span>
     </div>
 
@@ -1269,7 +1269,7 @@
             } catch(e){}
         }
 
-        function mostrarToast(mensaje, icono = '✅') {
+        function mostrarToast(mensaje, icono = '') {
             const toast = document.getElementById('toast-notificacion');
             const msg = document.getElementById('toast-mensaje');
             const ico = document.getElementById('toast-icono');
@@ -1294,11 +1294,11 @@
             }
             const factor = 1 + (TOLERANCIA_GLOBAL_PCT / 100);
             if (promHoras <= nuevoBase) {
-                celda.innerHTML = '<span class="badge-perf badge-perf-fast">⚡ Rápido</span>';
+                celda.innerHTML = '<span class="badge-perf badge-perf-fast">Óptimo</span>';
             } else if (promHoras <= nuevoBase * factor) {
-                celda.innerHTML = '<span class="badge-perf badge-perf-med">🟡 En límite</span>';
+                celda.innerHTML = '<span class="badge-perf badge-perf-med">En límite</span>';
             } else {
-                celda.innerHTML = '<span class="badge-perf badge-perf-slow">🔴 A mejorar</span>';
+                celda.innerHTML = '<span class="badge-perf badge-perf-slow">Excedido</span>';
             }
         }
 
@@ -1329,11 +1329,11 @@
 
                 const factor = 1 + (TOLERANCIA_GLOBAL_PCT / 100);
                 if (cat.promResolucionHoras <= cat.tiempoBaseHoras) {
-                    celdaCat.innerHTML = '<span class="badge-perf badge-perf-fast">⚡ Rápido</span>';
+                    celdaCat.innerHTML = '<span class="badge-perf badge-perf-fast">Óptimo</span>';
                 } else if (cat.promResolucionHoras <= cat.tiempoBaseHoras * factor) {
-                    celdaCat.innerHTML = '<span class="badge-perf badge-perf-med">🟡 En límite</span>';
+                    celdaCat.innerHTML = '<span class="badge-perf badge-perf-med">En límite</span>';
                 } else {
-                    celdaCat.innerHTML = '<span class="badge-perf badge-perf-slow">🔴 A mejorar</span>';
+                    celdaCat.innerHTML = '<span class="badge-perf badge-perf-slow">Excedido</span>';
                 }
             });
         }
@@ -1343,7 +1343,7 @@
             if (!inp) return;
             const val = parseFloat(inp.value);
             if (isNaN(val) || val < 0 || val > 500) {
-                mostrarToast('Introduce un porcentaje válido entre 0% y 500%', '⚠️');
+                mostrarToast('Introduce un porcentaje válido entre 0% y 500%', '');
                 return;
             }
 
@@ -1361,8 +1361,8 @@
                 });
 
                 if (res.status === 401) {
-                    mostrarToast('Sesión expirada. Por favor recarga e inicia sesión.', '⚠️');
-                    if (btn) btn.textContent = '💾 Guardar %';
+                    mostrarToast('Sesión expirada. Por favor recarga e inicia sesión.', '');
+                    if (btn) btn.textContent = 'Guardar %';
                     return;
                 }
 
@@ -1370,16 +1370,16 @@
                 if (data.ok) {
                     TOLERANCIA_GLOBAL_PCT = val;
                     recalcularTodasLasAlertas();
-                    if (btn) btn.textContent = '✅';
-                    mostrarToast(`Margen de alerta actualizado al ${val}%`, '✅');
-                    setTimeout(() => { if (btn) btn.textContent = '💾 Guardar %'; }, 1500);
+                    if (btn) btn.textContent = 'Guardado';
+                    mostrarToast(`Margen de alerta actualizado al ${val}%`, '');
+                    setTimeout(() => { if (btn) btn.textContent = 'Guardar %'; }, 1500);
                 } else {
-                    if (btn) btn.textContent = '💾 Guardar %';
-                    mostrarToast(data.error || 'Error al guardar', '❌');
+                    if (btn) btn.textContent = 'Guardar %';
+                    mostrarToast(data.error || 'Error al guardar', '');
                 }
             } catch (err) {
-                if (btn) btn.textContent = '💾 Guardar %';
-                mostrarToast('Error de conexión con el servidor', '❌');
+                if (btn) btn.textContent = 'Guardar %';
+                mostrarToast('Error de conexión con el servidor', '');
             }
         }
 
@@ -1476,7 +1476,7 @@
                 if (!resp.ok) {
                     let errorMsg = 'Error al generar el reporte en Excel';
                     try { const j = await resp.json(); if (j.error) errorMsg = j.error; } catch(e){}
-                    mostrarToast(errorMsg, '❌');
+                    mostrarToast(errorMsg, '');
                     if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
                     return;
                 }
@@ -1494,10 +1494,10 @@
                 document.body.removeChild(a);
                 window.URL.revokeObjectURL(url);
 
-                mostrarToast('¡Reporte General Completo descargado con éxito!', '📥');
+                mostrarToast('¡Reporte General Completo descargado con éxito!', '');
             } catch (err) {
                 console.error('Error exportando Excel general:', err);
-                mostrarToast('Error al procesar la exportación a Excel', '❌');
+                mostrarToast('Error al procesar la exportación a Excel', '');
             } finally {
                 if (btn) {
                     btn.disabled = false;
@@ -1539,7 +1539,7 @@
                 if (!resp.ok) {
                     let errorMsg = 'Error al generar el reporte de dashboards principales';
                     try { const j = await resp.json(); if (j.error) errorMsg = j.error; } catch(e){}
-                    mostrarToast(errorMsg, '❌');
+                    mostrarToast(errorMsg, '');
                     if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
                     return;
                 }
@@ -1557,10 +1557,10 @@
                 document.body.removeChild(a);
                 window.URL.revokeObjectURL(url);
 
-                mostrarToast('¡Dashboards Principales descargados en Excel!', '📥');
+                mostrarToast('¡Dashboards Principales descargados en Excel!', '');
             } catch (err) {
                 console.error('Error exportando dashboards principales:', err);
-                mostrarToast('Error al procesar el archivo Excel', '❌');
+                mostrarToast('Error al procesar el archivo Excel', '');
             } finally {
                 if (btn) {
                     btn.disabled = false;
@@ -1583,7 +1583,7 @@
 
             const cat = categoriasData.find(c => String(c.id) === String(catId));
             if (!cat) {
-                mostrarToast('Categoría no encontrada', '⚠️');
+                mostrarToast('Categoría no encontrada', '');
                 if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
                 return;
             }
@@ -1616,7 +1616,7 @@
                 if (!resp.ok) {
                     let errorMsg = 'Error al exportar la categoría';
                     try { const j = await resp.json(); if (j.error) errorMsg = j.error; } catch(e){}
-                    mostrarToast(errorMsg, '❌');
+                    mostrarToast(errorMsg, '');
                     if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
                     return;
                 }
@@ -1634,10 +1634,10 @@
                 document.body.removeChild(a);
                 window.URL.revokeObjectURL(url);
 
-                mostrarToast(`¡Reporte de "${cat.nombre}" descargado!`, '📥');
+                mostrarToast(`¡Reporte de "${cat.nombre}" descargado!`, '');
             } catch (err) {
                 console.error('Error exportando categoría a Excel:', err);
-                mostrarToast('Error al procesar el archivo Excel', '❌');
+                mostrarToast('Error al procesar el archivo Excel', '');
             } finally {
                 if (btn) {
                     btn.disabled = false;
@@ -1651,7 +1651,7 @@
             if (!input) return;
             const nuevoValor = parseFloat(input.value);
             if (isNaN(nuevoValor) || nuevoValor <= 0) {
-                mostrarToast('Por favor introduce un número mayor a 0', '⚠️');
+                mostrarToast('Por favor introduce un número mayor a 0', '');
                 return;
             }
 
@@ -1672,26 +1672,26 @@
                 });
 
                 if (res.status === 401) {
-                    mostrarToast('Sesión expirada. Por favor recarga e inicia sesión.', '⚠️');
-                    if (btn) btn.textContent = '💾';
+                    mostrarToast('Sesión expirada. Por favor recarga e inicia sesión.', '');
+                    if (btn) btn.textContent = 'Guardar';
                     return;
                 }
 
                 const data = await res.json();
                 if (data.ok) {
-                    if (btn) btn.textContent = '✅';
+                    if (btn) btn.textContent = 'Guardado';
                     const promHoras = parseFloat(input.getAttribute('data-prom-horas') || 0);
                     const resueltos = parseInt(input.getAttribute('data-resueltos') || 0, 10);
                     actualizarBadgeAlerta(subId, nuevoValor, promHoras, resueltos);
-                    mostrarToast(`Tiempo base actualizado a ${nuevoValor} hrs`, '✅');
-                    setTimeout(() => { if (btn) btn.textContent = '💾'; }, 1500);
+                    mostrarToast(`Tiempo base actualizado a ${nuevoValor} hrs`, '');
+                    setTimeout(() => { if (btn) btn.textContent = 'Guardar'; }, 1500);
                 } else {
-                    if (btn) btn.textContent = '💾';
-                    mostrarToast(data.error || 'Error al guardar', '❌');
+                    if (btn) btn.textContent = 'Guardar';
+                    mostrarToast(data.error || 'Error al guardar', '');
                 }
             } catch (err) {
-                if (btn) btn.textContent = '💾';
-                mostrarToast('Error al conectar con el servidor', '❌');
+                if (btn) btn.textContent = 'Guardar';
+                mostrarToast('Error al conectar con el servidor', '');
             }
         }
 
@@ -1709,7 +1709,7 @@
             });
 
             if (items.length === 0) {
-                mostrarToast('No hay tiempos válidos para guardar', '⚠️');
+                mostrarToast('No hay tiempos válidos para guardar', '');
                 return;
             }
 
@@ -1724,7 +1724,7 @@
                 });
 
                 if (res.status === 401) {
-                    mostrarToast('Sesión expirada. Por favor recarga e inicia sesión.', '⚠️');
+                    mostrarToast('Sesión expirada. Por favor recarga e inicia sesión.', '');
                     return;
                 }
 
@@ -1738,17 +1738,17 @@
                             actualizarBadgeAlerta(item.id, item.tiempo_base_horas, promHoras, resueltos);
                             const btn = document.getElementById('btn-save-' + item.id);
                             if (btn) {
-                                btn.textContent = '✅';
-                                setTimeout(() => { btn.textContent = '💾'; }, 1500);
+                                btn.textContent = 'Guardado';
+                                setTimeout(() => { btn.textContent = 'Guardar'; }, 1500);
                             }
                         }
                     });
-                    mostrarToast('¡Tiempos base guardados exitosamente!', '✅');
+                    mostrarToast('¡Tiempos base guardados exitosamente!', '');
                 } else {
-                    mostrarToast(data.error || 'Error al guardar', '❌');
+                    mostrarToast(data.error || 'Error al guardar', '');
                 }
             } catch (err) {
-                mostrarToast('Error al conectar con el servidor', '❌');
+                mostrarToast('Error al conectar con el servidor', '');
             }
         }
 

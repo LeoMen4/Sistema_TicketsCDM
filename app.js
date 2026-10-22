@@ -813,13 +813,13 @@ function calcularMetricasDashboards(callback) {
                                 if (subBase.resueltosCount > 0 && subBase.promResolucionHoras !== null) {
                                     if (subBase.promResolucionHoras <= tiempoBaseHoras) {
                                         velocidadEstatus = 'rapido';
-                                        velocidadTexto = '⚡ Rápido';
+                                        velocidadTexto = 'Óptimo';
                                     } else if (subBase.promResolucionHoras <= tiempoBaseHoras * factorTolerancia) {
                                         velocidadEstatus = 'limite';
-                                        velocidadTexto = '🟡 En límite';
+                                        velocidadTexto = 'En límite';
                                     } else {
                                         velocidadEstatus = 'lento';
-                                        velocidadTexto = '🔴 A mejorar';
+                                        velocidadTexto = 'Excedido';
                                     }
                                 }
 
@@ -849,13 +849,13 @@ function calcularMetricasDashboards(callback) {
                             if (baseStats.resueltosCount > 0 && baseStats.promResolucionHoras !== null) {
                                 if (baseStats.promResolucionHoras <= catTiempoBase) {
                                     catVelocidadEstatus = 'rapido';
-                                    catVelocidadTexto = '⚡ Rápido';
+                                    catVelocidadTexto = 'Óptimo';
                                 } else if (baseStats.promResolucionHoras <= catTiempoBase * factorTolerancia) {
                                     catVelocidadEstatus = 'limite';
-                                    catVelocidadTexto = '🟡 En límite';
+                                    catVelocidadTexto = 'En límite';
                                 } else {
                                     catVelocidadEstatus = 'lento';
-                                    catVelocidadTexto = '🔴 A mejorar';
+                                    catVelocidadTexto = 'Excedido';
                                 }
                             }
 
@@ -1778,8 +1778,8 @@ app.post('/admin/tickets/cambiar-estatus', esAdmin, (req, res) => {
             db.run(insertHistorial, [ticket_id, estatus, adminActualNombre, adminActualPuesto, detalleHist], function(errHist) {
                 if (estatus === 'Pendiente por cliente') {
                     let msgNota = 'Estatus cambiado a: Pendiente por cliente (tiempo pausado).';
-                    if (fechaCli) msgNota += ' 📅 Cita programada: ' + fechaCli + '.';
-                    if (motivoCli) msgNota += ' 💬 Motivo: ' + motivoCli + '.';
+                    if (fechaCli) msgNota += ' [Cita: ' + fechaCli + '.';
+                    if (motivoCli) msgNota += ' Motivo: ' + motivoCli + '.';
                     db.run(
                         `INSERT INTO ticket_comentarios (ticket_id, usuario_id, autor_nombre, autor_rol, autor_puesto, mensaje, tipo_intervencion, leido_admin, leido_usuario, fecha)
                          VALUES (?, ?, ?, 'admin', ?, ?, 'avance', 1, 0, datetime('now', '-6 hours'))`,
@@ -2049,7 +2049,7 @@ app.post('/api/tickets/:id/comentarios', upload.single('imagen'), (req, res) => 
             return res.status(403).json({ ok: false, error: 'No autorizado' });
         }
 
-        const msgFinal = mensajeTexto || '📷 Imagen adjunta de seguimiento';
+        const msgFinal = mensajeTexto || 'Archivo adjunto de seguimiento';
         const leidoAdmin = esAdminUser ? 1 : 0;
         const leidoUsuario = esAdminUser ? 0 : 1;
         const autorPuesto = usuarioActual.puesto || (esAdminUser ? 'Especialista en Sistemas' : '');

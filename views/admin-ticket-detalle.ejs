@@ -189,7 +189,7 @@
         <% if (mensaje) { %>
             <div id="alertaMensajeDetalle" class="rounded-md bg-emerald-50 border border-emerald-200 p-3.5 text-sm text-emerald-800 flex items-start justify-between gap-3 shadow-xs transition-opacity duration-300">
                 <div class="flex items-start gap-2.5">
-                    <span class="text-base leading-none text-emerald-600 mt-0.5">✅</span>
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 mt-1"></span>
                     <div class="font-medium text-xs sm:text-sm leading-snug"><%= mensaje %></div>
                 </div>
                 <button type="button" onclick="const a=document.getElementById('alertaMensajeDetalle'); if(a) a.remove();" class="text-emerald-500 hover:text-emerald-800 hover:bg-emerald-100 p-1 rounded transition-colors text-xs font-bold leading-none cursor-pointer flex-shrink-0" title="Cerrar notificación">
@@ -200,7 +200,7 @@
         <% if (error) { %>
             <div id="alertaErrorDetalle" class="rounded-md bg-rose-50 border border-rose-200 p-3.5 text-sm text-rose-800 flex items-start justify-between gap-3 shadow-xs transition-opacity duration-300">
                 <div class="flex items-start gap-2.5">
-                    <span class="text-base leading-none text-rose-600 mt-0.5">⚠️</span>
+                    <span class="w-2 h-2 rounded-full bg-rose-500 mt-1"></span>
                     <div class="font-medium text-xs sm:text-sm leading-snug"><%= error %></div>
                 </div>
                 <button type="button" onclick="const a=document.getElementById('alertaErrorDetalle'); if(a) a.remove();" class="text-rose-500 hover:text-rose-800 hover:bg-rose-100 p-1 rounded transition-colors text-xs font-bold leading-none cursor-pointer flex-shrink-0" title="Cerrar notificación">
@@ -219,12 +219,12 @@
                     <div class="flex flex-wrap items-center gap-2 text-xs">
                         <% if (ticket.atendido_por) { %>
                             <span class="px-2.5 py-1 rounded-md bg-amber-50 text-amber-800 border border-amber-200 font-bold">
-                                🔧 Diagnóstico / Avance TI: <%= ticket.atendido_por %>
+                                Diagnóstico / Avance TI: <%= ticket.atendido_por %>
                             </span>
                         <% } %>
                         <% if (ticket.entregado_por || ticket.tecnico_resolvio) { %>
                             <span class="px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold">
-                                ✅ Entrega / Cierre: <%= ticket.entregado_por || ticket.tecnico_resolvio %>
+                                Entrega / Cierre: <%= ticket.entregado_por || ticket.tecnico_resolvio %>
                             </span>
                         <% } %>
                     </div>
@@ -237,7 +237,7 @@
                 </h1>
                 <% if (ticket.editado) { %>
                     <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs" title="Modificado por el usuario solicitante <%= ticket.editado_at ? 'el ' + new Date(ticket.editado_at).toLocaleString('es-ES') : '' %>">
-                        <span>✏️</span>
+                        
                         <span>Editado por el usuario</span>
                     </span>
                 <% } %>
@@ -263,7 +263,7 @@
                 <% } else if (ticket.estatus === 'Pendiente por cliente') { %>
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-orange-100 text-orange-800 border border-orange-300 shadow-2xs">
                         <span class="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
-                        ⏳ <%= ticket.estatus %>
+                        <%= ticket.estatus %>
                     </span>
                 <% } else if (ticket.estatus === 'Resuelto') { %>
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -275,36 +275,36 @@
                 <% if (ticket.estatus === 'Pendiente por cliente' && (ticket.fecha_programada_cliente || ticket.motivo_pendiente_cliente)) { %>
                     <div class="w-full bg-amber-50 border border-amber-300 rounded-md p-3 text-xs text-amber-950 mt-2 space-y-1">
                         <div class="font-bold flex items-center gap-1.5 text-amber-900">
-                            <span>⏳ Detalle de Espera por Disponibilidad del Cliente:</span>
+                            <span>Detalle de Espera por Disponibilidad del Cliente:</span>
                         </div>
                         <% if (ticket.fecha_programada_cliente) { %>
-                            <div><strong>📅 Cita / Contacto acordado:</strong> <%= ticket.fecha_programada_cliente %></div>
+                            <div><strong>Cita / Contacto acordado:</strong> <%= ticket.fecha_programada_cliente %></div>
                         <% } %>
                         <% if (ticket.motivo_pendiente_cliente) { %>
-                            <div><strong>📝 Motivo:</strong> <%= ticket.motivo_pendiente_cliente %></div>
+                            <div><strong>Motivo:</strong> <%= ticket.motivo_pendiente_cliente %></div>
                         <% } %>
-                        <div class="text-[10px] text-amber-700 italic">⏱️ El conteo de tiempo para mediciones y reportes de TI se encuentra pausado.</div>
+                        <div class="text-[10px] text-amber-700 italic">El conteo de tiempo para mediciones y reportes de TI se encuentra pausado.</div>
                     </div>
                 <% } %>
 
                 <!-- Prioridad -->
                 <% if (ticket.prioridad === 'Alta') { %>
                     <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-brand-50 text-brand-700 border border-brand-200">
-                        ⚡ Prioridad: Alta
+                        Prioridad: Alta
                     </span>
                 <% } else if (ticket.prioridad === 'Media') { %>
                     <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                        ⚡ Prioridad: Media
+                        Prioridad: Media
                     </span>
                 <% } else { %>
                     <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        ⚡ Prioridad: Baja
+                        Prioridad: Baja
                     </span>
                 <% } %>
 
                 <!-- Categoría / Subcategoría -->
                 <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                    📍 <%= ticket.tipo_falla %>
+                    <%= ticket.tipo_falla %>
                     <% if (ticket.subcategoria) { %>
                         <strong class="text-brand-600 ml-1">› <%= ticket.subcategoria %></strong>
                     <% } %>
@@ -312,13 +312,13 @@
 
                 <!-- Fecha y hora -->
                 <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs text-slate-500 bg-slate-50 border border-slate-200">
-                    📅 <%= new Date(ticket.fecha).toLocaleDateString('es-ES') %> ⏰ <%= new Date(ticket.fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) %>
+                    <%= new Date(ticket.fecha).toLocaleDateString('es-ES') %> - <%= new Date(ticket.fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) %>
                 </span>
 
                 <!-- Creado por admin -->
                 <% if (ticket.creado_por_admin) { %>
                     <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
-                        ✍️ Levantado por Admin: <strong><%= ticket.creado_por_admin %></strong>
+                        Levantado por Admin: <strong><%= ticket.creado_por_admin %></strong>
                     </span>
                 <% } %>
             </div>
@@ -333,7 +333,7 @@
                 <!-- DESCRIPCIÓN DETALLADA -->
                 <div class="bg-white rounded-md shadow-xs border border-slate-200 p-6 space-y-3">
                     <h3 class="text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                        <span>📝</span>
+                        
                         <span>Descripción Detallada del Problema</span>
                     </h3>
                     <div class="bg-slate-50 border border-slate-200 rounded-md p-4 text-sm text-slate-800 leading-relaxed whitespace-pre-wrap font-sans">
@@ -344,7 +344,7 @@
                 <!-- EVIDENCIA FOTOGRÁFICA -->
                 <div class="bg-white rounded-md shadow-xs border border-slate-200 p-6 space-y-4">
                     <h3 class="text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                        <span>🖼️</span>
+                        
                         <span>Evidencia Fotográfica / Captura de Pantalla</span>
                     </h3>
 
@@ -363,7 +363,7 @@
                                     target="_blank" 
                                     class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 shadow-xs"
                                 >
-                                    🔍 Abrir en Pestaña Nueva
+                                    Abrir en Pestaña Nueva
                                 </a>
                                 <a 
                                     href="/uploads/<%= ticket.imagen %>" 
@@ -376,7 +376,7 @@
                         </div>
                     <% } else { %>
                         <div class="rounded-md border border-dashed border-slate-300 p-8 text-center text-slate-400 text-xs italic bg-slate-50/50">
-                            📷 No se adjuntó archivo de imagen de evidencia para este reporte.
+                            No se adjuntó archivo de imagen de evidencia para este reporte.
                         </div>
                     <% } %>
                 </div>
@@ -386,7 +386,7 @@
                     <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                         <div>
                             <h3 class="text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2">
-                                <span>💬</span>
+                                
                                 <span>Chat y Seguimiento Remoto (Usuario ↔ Sistemas TI)</span>
                             </h3>
                             <p class="text-xs text-slate-500 mt-0.5">
@@ -415,17 +415,17 @@
                                         <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5 border-b border-slate-200/60 pb-1">
                                             <div class="flex items-center gap-1.5">
                                                 <span class="text-xs font-extrabold <%= esAutorAdmin ? 'text-brand-700' : 'text-slate-900' %>">
-                                                    <%= esAutorAdmin ? '🛠️ ' : '👤 ' %><%= c.autor_nombre %>
+                                                    <%= esAutorAdmin ? '[TI] ' : '' %><%= c.autor_nombre %>
                                                 </span>
                                                 <% if (c.autor_puesto) { %>
                                                     <span class="text-[10px] text-slate-500">(<%= c.autor_puesto %>)</span>
                                                 <% } %>
                                                 <% if (c.tipo_intervencion === 'diagnostico') { %>
-                                                    <span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-amber-100 text-amber-800">🔍 DIAGNÓSTICO</span>
+                                                    <span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-amber-100 text-amber-800">DIAGNÓSTICO</span>
                                                 <% } else if (c.tipo_intervencion === 'avance') { %>
-                                                    <span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-sky-100 text-sky-800">🔧 AVANCE TI</span>
+                                                    <span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-sky-100 text-sky-800">AVANCE TI</span>
                                                 <% } else if (c.tipo_intervencion === 'entrega') { %>
-                                                    <span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-emerald-100 text-emerald-800">✅ ENTREGA</span>
+                                                    <span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-emerald-100 text-emerald-800">ENTREGA</span>
                                                 <% } %>
                                             </div>
                                             <div class="flex items-center gap-1.5">
@@ -439,7 +439,7 @@
                                                         class="text-[10px] text-slate-400 hover:text-brand-600 px-1 py-0.5 rounded hover:bg-slate-200 transition-colors cursor-pointer"
                                                         title="Editar este mensaje (disponible durante 5 min)"
                                                     >
-                                                        ✏️
+                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                                                     </button>
                                                 <% } %>
                                                 <% if (puedeEliminarDetalle) { %>
@@ -449,7 +449,7 @@
                                                         class="text-[10px] text-slate-400 hover:text-red-600 px-1 py-0.5 rounded hover:bg-red-50 transition-colors cursor-pointer"
                                                         title="Eliminar este mensaje"
                                                     >
-                                                        🗑️
+                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                                     </button>
                                                 <% } %>
                                             </div>
@@ -461,7 +461,7 @@
                                             <% } %>
                                             <% if (c.editado == 1) { %>
                                                 <div class="flex items-center gap-1 text-[10px] text-slate-400 mt-1 italic select-none">
-                                                    <span>✏️</span>
+                                                    
                                                     <span>editado</span>
                                                 </div>
                                             <% } %>
@@ -491,7 +491,7 @@
                                                         onclick="guardarEdicionMensajeDetalle(<%= c.id %>)" 
                                                         class="px-2.5 py-1 rounded text-[11px] font-bold text-white bg-brand-600 hover:bg-brand-700 shadow-2xs cursor-pointer"
                                                     >
-                                                        💾 Guardar
+                                                        Guardar
                                                     </button>
                                                 </div>
                                             </div>
@@ -516,14 +516,14 @@
                                 <div class="flex items-center gap-2">
                                     <label class="text-xs font-bold text-slate-700">Tipo de nota:</label>
                                     <select id="detalleChatTipo" class="rounded border border-slate-300 px-2.5 py-1 text-xs bg-white font-semibold">
-                                        <option value="comentario">💬 Mensaje al Usuario</option>
-                                        <option value="diagnostico">🔍 Diagnóstico Inicial</option>
-                                        <option value="avance">🔧 Avance Técnico</option>
-                                        <option value="entrega">✅ Nota de Entrega</option>
+                                        <option value="comentario">Mensaje al Usuario</option>
+                                        <option value="diagnostico">Diagnóstico Inicial</option>
+                                        <option value="avance">Avance Técnico</option>
+                                        <option value="entrega">Nota de Entrega</option>
                                     </select>
                                 </div>
                                 <label class="inline-flex items-center gap-1.5 text-xs font-bold text-brand-600 hover:text-brand-800 cursor-pointer">
-                                    <span>📎 Adjuntar captura o foto</span>
+                                    <span>Adjuntar captura o foto</span>
                                     <input type="file" id="detalleChatImagen" accept="image/*" class="hidden" onchange="manejarSeleccionImagenDetalle(event)">
                                     <span id="detalleNombreArchivo" class="text-[11px] text-slate-500 font-normal"></span>
                                 </label>
@@ -531,7 +531,7 @@
                         <% } else { %>
                             <div class="flex justify-end">
                                 <label class="inline-flex items-center gap-1.5 text-xs font-bold text-brand-600 hover:text-brand-800 cursor-pointer">
-                                    <span>📎 Adjuntar captura o foto</span>
+                                    <span>Adjuntar captura o foto</span>
                                     <input type="file" id="detalleChatImagen" accept="image/*" class="hidden" onchange="manejarSeleccionImagenDetalle(event)">
                                     <span id="detalleNombreArchivo" class="text-[11px] text-slate-500 font-normal"></span>
                                 </label>
@@ -569,7 +569,7 @@
                                 id="btnEnviarChatDetalle"
                                 class="px-4 py-2 rounded-md text-xs font-extrabold text-white bg-brand-600 hover:bg-brand-700 shadow-xs cursor-pointer self-end flex items-center gap-1.5"
                             >
-                                <span>Enviar ➤</span>
+                                <span>Enviar Mensaje</span>
                             </button>
                         </div>
                     </form>
@@ -579,34 +579,34 @@
                 <% if (ticket.estatus === 'Resuelto') { %>
                     <div class="bg-emerald-50/60 rounded-md shadow-xs border border-emerald-200 p-6 border-l-6 border-l-emerald-600 space-y-4">
                         <h3 class="text-sm font-bold uppercase tracking-wider text-emerald-900 flex items-center gap-2 border-b border-emerald-200/80 pb-3">
-                            <span>✅</span>
+                            
                             <span>Solución y Cierre del Ticket (Bitácora por Etapas)</span>
                         </h3>
 
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div>
-                                <span class="text-xs font-bold uppercase text-emerald-800 block">🔧 Diagnóstico / Avance TI:</span>
+                                <span class="text-xs font-bold uppercase text-emerald-800 block">Diagnóstico / Avance TI:</span>
                                 <span class="text-sm font-bold text-emerald-950"><%= ticket.atendido_por || ticket.tecnico_resolvio || 'No especificado' %></span>
                             </div>
                             <div>
-                                <span class="text-xs font-bold uppercase text-emerald-800 block">✅ Entrega / Cierre:</span>
+                                <span class="text-xs font-bold uppercase text-emerald-800 block">Entrega / Cierre:</span>
                                 <span class="text-sm font-bold text-emerald-950"><%= ticket.entregado_por || ticket.tecnico_resolvio || 'No especificado' %></span>
                             </div>
                             <div>
-                                <span class="text-xs font-bold uppercase text-emerald-800 block">📌 Tipo de Resolución:</span>
+                                <span class="text-xs font-bold uppercase text-emerald-800 block">Tipo de Resolución:</span>
                                 <span class="text-sm font-bold text-emerald-950"><%= ticket.categoria_resolucion || 'Mantenimiento' %></span>
                             </div>
                         </div>
 
                         <% if (ticket.participantes_ti) { %>
                             <div class="text-xs text-emerald-900 bg-white/80 px-3 py-2 rounded border border-emerald-200">
-                                <strong>👥 Especialistas TI que intervinieron en el ticket:</strong> <%= ticket.participantes_ti %>
+                                <strong>Especialistas TI que intervinieron en el ticket:</strong> <%= ticket.participantes_ti %>
                             </div>
                         <% } %>
 
                         <% if (ticket.comentario_resolucion) { %>
                             <div class="space-y-1">
-                                <span class="text-xs font-bold uppercase text-emerald-800 block">💬 Comentarios de Cierre:</span>
+                                <span class="text-xs font-bold uppercase text-emerald-800 block">Comentarios de Cierre:</span>
                                 <div class="bg-white border border-emerald-200 rounded-md p-3.5 text-xs text-emerald-900 leading-relaxed shadow-xs">
                                     <%= ticket.comentario_resolucion %>
                                 </div>
@@ -615,18 +615,18 @@
 
                         <% if (ticket.categoria_resolucion === 'Reemplazo') { %>
                             <div class="bg-white border border-emerald-200 rounded-md p-4 space-y-3">
-                                <strong class="text-xs font-bold uppercase text-emerald-900 block">📦 Datos del Equipo Nuevo Asignado:</strong>
+                                <strong class="text-xs font-bold uppercase text-emerald-900 block">Datos del Equipo Nuevo Asignado:</strong>
                                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                                     <div>
-                                        <span class="text-slate-500 font-medium block">💻 Tipo de Equipo:</span>
+                                        <span class="text-slate-500 font-medium block">Tipo de Equipo:</span>
                                         <span class="font-bold text-slate-800"><%= ticket.tipo_equipo_nuevo || 'N/A' %></span>
                                     </div>
                                     <div>
-                                        <span class="text-slate-500 font-medium block">🏷️ Modelo:</span>
+                                        <span class="text-slate-500 font-medium block">Modelo:</span>
                                         <span class="font-bold text-slate-800"><%= ticket.modelo_nuevo || 'N/A' %></span>
                                     </div>
                                     <div>
-                                        <span class="text-slate-500 font-medium block">🔢 Número de Serie:</span>
+                                        <span class="text-slate-500 font-medium block">Número de Serie:</span>
                                         <span class="font-bold text-slate-800"><%= ticket.numero_serie_nuevo || 'N/A' %></span>
                                     </div>
                                 </div>
@@ -639,7 +639,7 @@
                 <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
                     <div class="bg-white rounded-md shadow-xs border border-slate-200 p-6 space-y-4 no-print" id="seccionCambiarEstatus">
                         <h3 class="text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                            <span>⚙️</span>
+                            
                             <span>Actualizar Estatus y Participación TI</span>
                         </h3>
 
@@ -659,17 +659,17 @@
                                         required
                                         class="w-full rounded-md border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 bg-white shadow-xs font-bold"
                                     >
-                                        <option value="Nuevo ticket" <%= ticket.estatus === 'Nuevo ticket' ? 'selected' : '' %>>🔵 Nuevo ticket</option>
-                                        <option value="En proceso" <%= ticket.estatus === 'En proceso' ? 'selected' : '' %>>🟡 En proceso</option>
-                                        <option value="Pendiente" <%= ticket.estatus === 'Pendiente' ? 'selected' : '' %>>🔴 Pendiente TI</option>
-                                        <option value="Pendiente por cliente" <%= ticket.estatus === 'Pendiente por cliente' ? 'selected' : '' %>>⏳ Pendiente por cliente</option>
-                                        <option value="Resuelto" <%= ticket.estatus === 'Resuelto' ? 'selected' : '' %>>🟢 Resuelto</option>
+                                        <option value="Nuevo ticket" <%= ticket.estatus === 'Nuevo ticket' ? 'selected' : '' %>>Nuevo ticket</option>
+                                        <option value="En proceso" <%= ticket.estatus === 'En proceso' ? 'selected' : '' %>>En proceso</option>
+                                        <option value="Pendiente" <%= ticket.estatus === 'Pendiente' ? 'selected' : '' %>>Pendiente TI</option>
+                                        <option value="Pendiente por cliente" <%= ticket.estatus === 'Pendiente por cliente' ? 'selected' : '' %>>Pendiente por cliente</option>
+                                        <option value="Resuelto" <%= ticket.estatus === 'Resuelto' ? 'selected' : '' %>>Resuelto</option>
                                     </select>
                                 </div>
 
                                 <div>
                                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                                        🔧 Especialista(s) en Diagnóstico / Avance:
+                                        Especialista(s) en Diagnóstico / Avance:
                                     </label>
                                     <input 
                                         type="text" 
@@ -696,7 +696,7 @@
                             <!-- Campos Condicionales si se selecciona "Pendiente por cliente" -->
                             <div id="bloquePendienteClienteDetalle" style="display: none;" class="p-4 bg-amber-50/80 border border-amber-300 rounded-md space-y-3">
                                 <div class="flex items-center gap-2">
-                                    <span class="text-xl">⏳</span>
+                                    
                                     <div>
                                         <h4 class="text-xs font-bold text-amber-950 uppercase tracking-wider m-0">
                                             Pausar Conteo de Tiempos: Pendiente por Cliente
@@ -706,7 +706,7 @@
                                 </div>
 
                                 <div>
-                                    <label class="block text-[11px] font-bold text-amber-900 mb-1">📅 Fecha y hora programada de visita / contacto (Opcional):</label>
+                                    <label class="block text-[11px] font-bold text-amber-900 mb-1">Fecha y hora programada de visita / contacto (Opcional):</label>
                                     <input 
                                         type="datetime-local" 
                                         name="fecha_programada_cliente" 
@@ -720,7 +720,7 @@
                                 </div>
 
                                 <div>
-                                    <label class="block text-[11px] font-bold text-amber-900 mb-1">📝 Motivo o breve descripción (Opcional):</label>
+                                    <label class="block text-[11px] font-bold text-amber-900 mb-1">Motivo o breve descripción (Opcional):</label>
                                     <input 
                                         type="text" 
                                         name="motivo_pendiente_cliente" 
@@ -735,11 +735,11 @@
                             <!-- Campos Condicionales de Resolución si se selecciona "Resuelto" -->
                             <div id="bloqueResolucionDetalle" style="display: none;" class="p-4 bg-emerald-50/70 border border-emerald-200 rounded-md space-y-3">
                                 <h4 class="text-xs font-bold text-emerald-900 uppercase tracking-wider">
-                                    📝 Datos de Entrega y Cierre Final:
+                                    Datos de Entrega y Cierre Final:
                                 </h4>
 
                                 <div>
-                                    <label class="block text-[11px] font-bold text-emerald-800 mb-1">✅ Especialista que Entrega / Cierra el Ticket <span class="text-brand-600">*</span>:</label>
+                                    <label class="block text-[11px] font-bold text-emerald-800 mb-1">Especialista que Entrega / Cierra el Ticket <span class="text-brand-600">*</span>:</label>
                                     <input 
                                         type="text" 
                                         name="tecnico_resolvio" 
@@ -777,7 +777,7 @@
 
                                 <!-- Bloque Reemplazo -->
                                 <div id="bloqueReemplazoDetalle" style="display: none;" class="bg-white border border-emerald-200 rounded-md p-3 space-y-2 shadow-xs">
-                                    <strong class="text-xs font-bold text-emerald-900 block">💻 Datos del Nuevo Equipo:</strong>
+                                    <strong class="text-xs font-bold text-emerald-900 block">Datos del Nuevo Equipo:</strong>
                                     <div>
                                         <label class="block text-[10px] text-slate-500">Tipo de Equipo Nuevo:</label>
                                         <input type="text" name="tipo_equipo_nuevo" value="<%= ticket.tipo_equipo_nuevo || '' %>" placeholder="Ej. Laptop / Monitor / Impresora" class="w-full rounded-md border border-slate-300 px-2.5 py-1 text-xs">
@@ -797,7 +797,7 @@
                                 type="submit" 
                                 class="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 shadow-xs transition-all cursor-pointer"
                             >
-                                💾 Guardar y Actualizar Estatus
+                                Guardar y Actualizar Estatus
                             </button>
                         </form>
                     </div>
@@ -811,7 +811,7 @@
                 <!-- DATOS DEL USUARIO SOLICITANTE -->
                 <div class="bg-white rounded-md shadow-xs border border-slate-200 p-6 space-y-4">
                     <h3 class="text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                        <span>👤</span>
+                        
                         <span>Datos del Solicitante</span>
                     </h3>
 
@@ -831,11 +831,11 @@
 
                     <div class="text-xs space-y-2 pt-2 border-t border-slate-100">
                         <div>
-                            <strong class="text-slate-500 block">💼 Puesto / Cargo:</strong>
+                            <strong class="text-slate-500 block">Puesto / Cargo:</strong>
                             <span class="font-semibold text-slate-800"><%= ticket.usuario_puesto || 'Sin especificar' %></span>
                         </div>
                         <div>
-                            <strong class="text-slate-500 block">📧 Correo Electrónico:</strong>
+                            <strong class="text-slate-500 block">Correo Electrónico:</strong>
                             <a href="mailto:<%= ticket.usuario_email %>" class="text-brand-600 hover:text-brand-800 font-semibold break-all">
                                 <%= ticket.usuario_email %>
                             </a>
@@ -850,21 +850,21 @@
                 <!-- BITÁCORA DE INTERVENCIÓN MULTI-ESPECIALISTA -->
                 <div class="bg-white rounded-md shadow-xs border border-slate-200 p-6 space-y-3">
                     <h3 class="text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                        <span>🛠️</span>
+                        
                         <span>Especialistas de Sistemas TI</span>
                     </h3>
                     <div class="text-xs space-y-2">
                         <div>
-                            <span class="text-slate-500 font-semibold block">🔧 Diagnóstico / Avance Técnico:</span>
+                            <span class="text-slate-500 font-semibold block">Diagnóstico / Avance Técnico:</span>
                             <span class="font-bold text-slate-800"><%= ticket.atendido_por || 'En espera / Sin registro' %></span>
                         </div>
                         <div>
-                            <span class="text-slate-500 font-semibold block">✅ Entrega / Cierre Final:</span>
+                            <span class="text-slate-500 font-semibold block">Entrega / Cierre Final:</span>
                             <span class="font-bold text-emerald-700"><%= ticket.entregado_por || ticket.tecnico_resolvio || 'Pendiente de cierre' %></span>
                         </div>
                         <% if (ticket.participantes_ti) { %>
                             <div>
-                                <span class="text-slate-500 font-semibold block">👥 Todos los participantes TI:</span>
+                                <span class="text-slate-500 font-semibold block">Participantes TI:</span>
                                 <span class="font-semibold text-slate-700"><%= ticket.participantes_ti %></span>
                             </div>
                         <% } %>
@@ -896,7 +896,7 @@
                                         </div>
                                         <% if (h.usuario_nombre) { %>
                                             <div class="text-[11px] font-bold text-slate-700">
-                                                👤 <%= h.usuario_nombre %>
+                                                <%= h.usuario_nombre %>
                                                 <% if (h.usuario_puesto) { %>
                                                     <span class="text-[10px] font-normal text-slate-500">(<%= h.usuario_puesto %>)</span>
                                                 <% } %>
@@ -908,7 +908,7 @@
                                             </div>
                                         <% } %>
                                         <div class="text-[10px] text-slate-500">
-                                             📅 <%= new Date(h.fecha).toLocaleDateString('es-ES') %> ⏰ <%= new Date(h.fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) %>
+                                             <%= new Date(h.fecha).toLocaleDateString('es-ES') %> - <%= new Date(h.fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) %>
                                         </div>
                                     </div>
                                 </div>
@@ -925,7 +925,7 @@
                         onclick="window.print()" 
                         class="w-full inline-flex items-center justify-center gap-1.5 py-2 px-4 rounded-md text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 shadow-xs transition-colors cursor-pointer"
                     >
-                        🖨️ Imprimir Ticket / Exportar PDF
+                        Imprimir Ticket / Exportar PDF
                     </button>
                 </div>
 
@@ -940,7 +940,7 @@
     <div id="modalEliminarTicketDetalle" class="modal">
         <div class="modal-content">
             <div class="flex items-center gap-2 mb-2 text-brand-600">
-                <span class="text-xl">🗑️</span>
+                
                 <h4 class="text-base font-bold text-slate-900 m-0">Confirmar Envío a Papelera - Ticket #<%= ticket.id %></h4>
             </div>
             <p class="text-xs text-slate-600 mb-1">¿Deseas enviar este ticket a la papelera de reciclaje?</p>
@@ -973,7 +973,7 @@
                             title="Mostrar / Ocultar contraseña"
                             class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 focus:outline-none text-sm cursor-pointer"
                         >
-                            👁️
+                            Mostrar
                         </button>
                     </div>
                 </div>
@@ -993,7 +993,7 @@
             const isPass = input.type === 'password';
             input.type = isPass ? 'text' : 'password';
             if (btn) {
-                btn.textContent = isPass ? '🙈' : '👁️';
+                btn.textContent = isPass ? 'Ocultar' : 'Mostrar';
                 btn.title = isPass ? 'Ocultar contraseña' : 'Ver contraseña';
             }
         }
@@ -1221,7 +1221,7 @@
                 enviandoComentarioDetalle = false;
                 if (btn) {
                     btn.disabled = false;
-                    btn.innerHTML = '<span>Enviar ➤</span>';
+                    btn.innerHTML = '<span>Enviar Mensaje</span>';
                     btn.classList.remove('opacity-70', 'cursor-not-allowed');
                 }
             }

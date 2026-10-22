@@ -137,7 +137,7 @@
                     >
                         <div class="px-4 py-2.5 bg-slate-900 text-white flex items-center justify-between">
                             <span class="text-xs font-bold flex items-center gap-1.5">
-                                <span>💬</span>
+                                
                                 <span>Respuestas de Sistemas TI</span>
                             </span>
                             <span class="text-[10px] text-slate-300">En tiempo real</span>
@@ -183,7 +183,7 @@
                             class="sidebar-btn active w-full flex items-center justify-between px-3 py-2.5 rounded-md text-xs text-slate-700 hover:bg-slate-50 cursor-pointer text-left"
                         >
                             <span class="flex items-center gap-2.5">
-                                <span>🎫</span>
+                                
                                 <span>Levantar y Mis Tickets</span>
                             </span>
                             <span class="px-2 py-0.5 text-[10px] rounded bg-slate-100 text-slate-700 font-bold border border-slate-200">
@@ -198,7 +198,7 @@
                             class="sidebar-btn w-full flex items-center justify-between px-3 py-2.5 rounded-md text-xs text-slate-700 hover:bg-slate-50 cursor-pointer text-left"
                         >
                             <span class="flex items-center gap-2.5">
-                                <span>📚</span>
+                                
                                 <span>Guías y Soluciones (FAQ)</span>
                             </span>
                             <span class="px-2 py-0.5 text-[10px] rounded bg-brand-50 text-brand-700 font-bold border border-brand-200">
@@ -213,7 +213,7 @@
                             class="sidebar-btn w-full flex items-center justify-between px-3 py-2.5 rounded-md text-xs text-slate-700 hover:bg-slate-50 cursor-pointer text-left"
                         >
                             <span class="flex items-center gap-2.5">
-                                <span>💻</span>
+                                
                                 <span>Mi Equipo Asignado</span>
                             </span>
                             <span class="px-2 py-0.5 text-[10px] rounded bg-slate-100 text-slate-700 font-bold border border-slate-200">
@@ -226,18 +226,18 @@
                 <!-- Tarjeta de Ayuda Rápida -->
                 <div class="rounded-md bg-slate-50 border border-slate-200 p-3 text-xs space-y-2">
                     <div class="font-bold text-slate-800 flex items-center gap-1.5">
-                        <span>💡</span>
+                        
                         <span>¿Tienes un problema común?</span>
                     </div>
                     <p class="text-[11px] text-slate-500 leading-relaxed">
-                        Consulta nuestras <strong>Guías Rápidas</strong> para resolver detalles de impresora, red u Outlook al instante, o usa el botón <strong>💬 Seguimiento</strong> en tu ticket para chatear con Sistemas.
+                        Consulta nuestras <strong>Guías Rápidas</strong> para resolver detalles de impresora, red u Outlook al instante, o usa el botón <strong>Seguimiento</strong> en tu ticket para chatear con Sistemas.
                     </p>
                     <button 
                         type="button" 
                         onclick="cambiarModuloUsuario('guias')" 
                         class="w-full py-1.5 px-2.5 rounded bg-white hover:bg-brand-50 text-brand-600 border border-brand-200 font-bold text-[11px] transition-colors cursor-pointer"
                     >
-                        📚 Ver Guías Rápidas (<%= listaGuias.length %>)
+                        Ver Guías Rápidas (<%= listaGuias.length %>)
                     </button>
                 </div>
             </div>
@@ -250,7 +250,7 @@
             <% if (mensaje) { %>
                 <div id="alertaMensajeUser" class="rounded-md bg-emerald-50 border border-emerald-200 p-3.5 text-sm text-emerald-800 flex items-start justify-between gap-3 shadow-xs transition-opacity duration-300">
                     <div class="flex items-start gap-2.5">
-                        <span class="text-base leading-none text-emerald-600 mt-0.5">✅</span>
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 mt-1"></span>
                         <div class="font-medium text-xs sm:text-sm leading-snug"><%= mensaje %></div>
                     </div>
                     <button type="button" onclick="const a=document.getElementById('alertaMensajeUser'); if(a) a.remove();" class="text-emerald-500 hover:text-emerald-800 hover:bg-emerald-100 p-1 rounded transition-colors text-xs font-bold leading-none cursor-pointer flex-shrink-0" title="Cerrar notificación">
@@ -261,7 +261,7 @@
             <% if (error) { %>
                 <div id="alertaErrorUser" class="rounded-md bg-rose-50 border border-rose-200 p-3.5 text-sm text-rose-800 flex items-start justify-between gap-3 shadow-xs transition-opacity duration-300">
                     <div class="flex items-start gap-2.5">
-                        <span class="text-base leading-none text-rose-600 mt-0.5">⚠️</span>
+                        <span class="w-2 h-2 rounded-full bg-rose-500 mt-1"></span>
                         <div class="font-medium text-xs sm:text-sm leading-snug"><%= error %></div>
                     </div>
                     <button type="button" onclick="const a=document.getElementById('alertaErrorUser'); if(a) a.remove();" class="text-rose-500 hover:text-rose-800 hover:bg-rose-100 p-1 rounded transition-colors text-xs font-bold leading-none cursor-pointer flex-shrink-0" title="Cerrar notificación">
@@ -289,7 +289,7 @@
                             onclick="cambiarModuloUsuario('guias')" 
                             class="text-xs font-bold text-brand-600 hover:text-brand-800 bg-brand-50 border border-brand-200 px-3 py-1 rounded-md transition-colors cursor-pointer"
                         >
-                            📚 ¿Ya revisaste las Guías de Solución Rápida?
+                            ¿Ya revisaste las Guías de Solución Rápida?
                         </button>
                     </div>
 
@@ -448,7 +448,7 @@
                                         placeholder="Buscar en mis tickets por #ID, título, tipo de falla o descripción..." 
                                         class="w-full rounded-md border border-slate-300 pl-8 pr-7 py-1.5 text-xs text-slate-900 placeholder-slate-400 bg-white focus:border-brand-600 focus:outline-none shadow-2xs"
                                     >
-                                    <span class="absolute left-2.5 top-2 text-slate-400 text-xs">🔍</span>
+                                    
                                     <button 
                                         type="button" 
                                         id="btnClearBuscarMisTickets" 
@@ -464,12 +464,12 @@
                                         onchange="filtrarMisTickets()" 
                                         class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-xs text-slate-900 bg-white font-medium focus:border-brand-600 focus:outline-none shadow-2xs"
                                     >
-                                        <option value="">📌 Todos los estatus</option>
-                                        <option value="nuevo ticket">🆕 Nuevo ticket</option>
-                                        <option value="en proceso">⚙️ En proceso</option>
-                                        <option value="pendiente">🔴 Pendiente</option>
-                                        <option value="pendiente por cliente">⏳ Pendiente por cliente</option>
-                                        <option value="resuelto">✅ Resuelto</option>
+                                        <option value="">Todos los estatus</option>
+                                        <option value="nuevo ticket">Nuevo ticket</option>
+                                        <option value="en proceso">En proceso</option>
+                                        <option value="pendiente">Pendiente</option>
+                                        <option value="pendiente por cliente">Pendiente por cliente</option>
+                                        <option value="resuelto">Resuelto</option>
                                     </select>
                                 </div>
 
@@ -479,10 +479,10 @@
                                         onchange="filtrarMisTickets()" 
                                         class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-xs text-slate-900 bg-white font-medium focus:border-brand-600 focus:outline-none shadow-2xs"
                                     >
-                                        <option value="">⚡ Todas las prioridades</option>
-                                        <option value="alta">🔴 Alta</option>
-                                        <option value="media">🟡 Media</option>
-                                        <option value="baja">🟢 Baja</option>
+                                        <option value="">Todas las prioridades</option>
+                                        <option value="alta">Alta</option>
+                                        <option value="media">Media</option>
+                                        <option value="baja">Baja</option>
                                     </select>
                                 </div>
 
@@ -516,7 +516,7 @@
                                 <% if (tickets.length === 0) { %>
                                     <tr>
                                         <td colspan="9" class="py-12 text-center text-slate-400 italic">
-                                            <div class="text-3xl mb-2">📋</div>
+                                            <div class="w-8 h-8 mx-auto mb-2 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xs">--</div>
                                             Aún no has registrado ningún ticket de soporte.
                                         </td>
                                     </tr>
@@ -548,12 +548,12 @@
                                                 <span><%= t.titulo %></span>
                                                 <% if (t.editado) { %>
                                                     <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs" title="Modificado el <%= t.editado_at ? new Date(t.editado_at).toLocaleString('es-ES') : '' %>">
-                                                        ✏️ Editado
+                                                        Editado
                                                     </span>
                                                 <% } %>
                                             </div>
                                             <div class="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1">
-                                                <span>📍 <%= t.tipo_falla %></span>
+                                                <span><%= t.tipo_falla %></span>
                                                 <% if (t.subcategoria) { %>
                                                     <span class="text-brand-600 font-bold">› <%= t.subcategoria %></span>
                                                 <% } %>
@@ -561,7 +561,7 @@
                                             <% if (t.creado_por_admin) { %>
                                                 <div class="mt-1">
                                                     <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">
-                                                        ✍️ Levantado por Admin: <%= t.creado_por_admin %>
+                                                        Levantado por Admin: <%= t.creado_por_admin %>
                                                     </span>
                                                 </div>
                                             <% } %>
@@ -571,15 +571,15 @@
                                         <td class="py-3.5 px-4 whitespace-nowrap">
                                             <% if (t.prioridad === 'Alta') { %>
                                                 <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-brand-50 text-brand-700 border border-brand-200">
-                                                    ⚡ Alta
+                                                    Alta
                                                 </span>
                                             <% } else if (t.prioridad === 'Media') { %>
                                                 <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                                                    ⚡ Media
+                                                    Media
                                                 </span>
                                             <% } else { %>
                                                 <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                    ⚡ Baja
+                                                    Baja
                                                 </span>
                                             <% } %>
                                         </td>
@@ -632,7 +632,7 @@
                                                         </span>
                                                         <% if (t.fecha_programada_cliente) { %>
                                                             <div class="text-[10px] font-bold text-orange-950 bg-orange-50 border border-orange-200 px-1.5 py-0.5 rounded">
-                                                                📅 Cita acordada: <%= t.fecha_programada_cliente %>
+                                                                Cita acordada: <%= t.fecha_programada_cliente %>
                                                             </div>
                                                         <% } %>
                                                     </div>
@@ -650,7 +650,7 @@
                                             <% if (t.fecha_programada_cliente) { %>
                                                 <% const dProg = new Date(String(t.fecha_programada_cliente).replace(' ', 'T')); %>
                                                 <div class="mt-1 text-[10px] font-bold text-amber-900 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded flex items-center gap-1">
-                                                    <span>📅</span>
+                                                    
                                                     <span>Cita acordada: <%= !isNaN(dProg.getTime()) ? dProg.toLocaleString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : t.fecha_programada_cliente %> hrs</span>
                                                 </div>
                                             <% } %>
@@ -662,12 +662,12 @@
                                             <% if (t.atendido_por || t.entregado_por || t.tecnico_resolvio) { %>
                                                 <div class="mt-1.5 text-[10px] text-slate-600 space-y-0.5 bg-slate-50 p-1.5 rounded border border-slate-200/80">
                                                     <% if (t.atendido_por) { %>
-                                                        <div>🔧 <strong>Avance TI:</strong> <%= t.atendido_por %></div>
+                                                        <div><strong>Avance TI:</strong> <%= t.atendido_por %></div>
                                                     <% } %>
                                                     <% if (t.entregado_por) { %>
-                                                        <div>✅ <strong>Entrega/Cierre:</strong> <%= t.entregado_por %></div>
+                                                        <div><strong>Entrega/Cierre:</strong> <%= t.entregado_por %></div>
                                                     <% } else if (!t.atendido_por && t.tecnico_resolvio) { %>
-                                                        <div>👨‍💻 <strong>TI:</strong> <%= t.tecnico_resolvio %></div>
+                                                        <div><strong>TI:</strong> <%= t.tecnico_resolvio %></div>
                                                     <% } %>
                                                 </div>
                                             <% } %>
@@ -681,7 +681,7 @@
                                                 class="relative inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold bg-slate-100 hover:bg-brand-50 text-slate-700 hover:text-brand-700 border border-slate-200 hover:border-brand-300 transition-colors cursor-pointer"
                                                 title="Abrir chat de seguimiento con Sistemas TI"
                                             >
-                                                <span>💬</span>
+                                                
                                                 <span>Seguimiento</span>
                                                 <span 
                                                     id="badge-total-com-user-<%= t.id %>" 
@@ -702,7 +702,7 @@
                                         <!-- Fecha de Registro -->
                                         <td class="py-3.5 px-4 whitespace-nowrap text-slate-500 text-[11px]">
                                             <div class="font-medium text-slate-700">
-                                                📅 <%= new Date(t.fecha).toLocaleDateString('es-ES') %>
+                                                <%= new Date(t.fecha).toLocaleDateString('es-ES') %>
                                             </div>
                                             <div class="text-slate-400">
                                                 ⏰ <%= new Date(t.fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) %>
@@ -720,7 +720,7 @@
                                                         class="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-bold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 transition-colors cursor-pointer"
                                                         title="Modificar los datos de este ticket"
                                                     >
-                                                        <span>✏️</span>
+                                                        
                                                         <span>Modificar</span>
                                                     </button>
                                                     <button 
@@ -729,13 +729,13 @@
                                                         class="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors cursor-pointer"
                                                         title="Cancelar y eliminar este ticket"
                                                     >
-                                                        <span>🗑️</span>
+                                                        
                                                         <span>Eliminar</span>
                                                     </button>
                                                 </div>
                                             <% } else { %>
                                                 <span class="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold bg-slate-100 text-slate-500 border border-slate-200" title="El ticket ya cambió a <%= t.estatus %> y se encuentra en atención por TI. Una vez cambiado el estatus ya no puede ser editado ni eliminado.">
-                                                    <span>🔒</span>
+                                                    
                                                     <span>Bloqueado (<%= t.estatus %>)</span>
                                                 </span>
                                             <% } %>
@@ -744,7 +744,7 @@
                                 <% }) %>
                                 <tr id="filaSinCoincidenciasMisTickets" style="display: none;">
                                     <td colspan="9" class="py-10 text-center text-slate-400 italic text-xs">
-                                        🔍 No se encontraron tickets que coincidan con tu búsqueda o filtros seleccionados.
+                                        No se encontraron tickets que coincidan con tu búsqueda o filtros seleccionados.
                                     </td>
                                 </tr>
                             </tbody>
@@ -762,7 +762,7 @@
                         <div class="flex flex-wrap items-center justify-between gap-3">
                             <div>
                                 <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                                    <span>📚</span>
+                                    
                                     <span>Guías Rápidas y Soluciones Frecuentes (FAQ)</span>
                                 </h2>
                                 <p class="text-xs text-slate-500 mt-0.5">
@@ -784,7 +784,7 @@
                                     placeholder="Buscar guía por problema (ej. impresora, internet, Outlook, lento)..." 
                                     class="w-full rounded-md border border-slate-300 pl-8 pr-7 py-2 text-xs text-slate-900 placeholder-slate-400 bg-white focus:border-brand-600 focus:outline-none shadow-2xs"
                                 >
-                                <span class="absolute left-2.5 top-2.5 text-slate-400 text-xs">🔍</span>
+                                
                                 <button 
                                     type="button" 
                                     id="btnClearBuscarGuiasUser" 
@@ -800,7 +800,7 @@
                                     onchange="filtrarGuiasUsuario()" 
                                     class="w-full rounded-md border border-slate-300 px-3 py-2 text-xs text-slate-900 bg-white font-medium focus:border-brand-600 focus:outline-none shadow-2xs"
                                 >
-                                    <option value="">🏷️ Todas las categorías</option>
+                                    <option value="">Todas las categorías</option>
                                     <% 
                                         const catsGuiasUser = Array.from(new Set(listaGuias.map(g => g.categoria).filter(Boolean)));
                                         catsGuiasUser.forEach(catNom => { 
@@ -815,7 +815,7 @@
                     <div class="p-6">
                         <% if (listaGuias.length === 0) { %>
                             <div class="text-center py-10 text-slate-400">
-                                <div class="text-3xl mb-2">📖</div>
+                                <div class="w-8 h-8 mx-auto mb-2 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xs">--</div>
                                 <p class="text-xs font-medium text-slate-600">Aún no hay guías rápidas publicadas.</p>
                             </div>
                         <% } else { %>
@@ -829,7 +829,7 @@
                                         <div class="space-y-2.5">
                                             <div class="flex items-center justify-between gap-2 flex-wrap">
                                                 <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                                                    🏷️ <%= g.categoria %>
+                                                    <%= g.categoria %>
                                                 </span>
                                                 <% if (g.destacada) { %>
                                                     <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-brand-600 text-white">
@@ -866,14 +866,14 @@
                                         </div>
 
                                         <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-                                            <span>✍️ Por: <strong class="text-slate-600"><%= g.autor_nombre || 'Sistemas TI' %></strong></span>
-                                            <span>📅 <%= new Date(g.fecha_actualizacion || g.fecha_creacion).toLocaleDateString('es-ES') %></span>
+                                            <span>Por: <strong class="text-slate-600"><%= g.autor_nombre || 'Sistemas TI' %></strong></span>
+                                            <span><%= new Date(g.fecha_actualizacion || g.fecha_creacion).toLocaleDateString('es-ES') %></span>
                                         </div>
                                     </div>
                                 <% }) %>
                             </div>
                             <div id="sinCoincidenciasGuiasUser" style="display: none;" class="text-center py-8 text-slate-400 italic text-xs">
-                                🔍 No se encontraron guías con ese término. Si tu problema persiste, puedes levantar un ticket en el menú lateral.
+                                No se encontraron guías con ese término. Si tu problema persiste, puedes levantar un ticket en el menú lateral.
                             </div>
                         <% } %>
                     </div>
@@ -890,7 +890,7 @@
                             <span class="w-2.5 h-2.5 rounded-full bg-brand-600"></span>
                             <div>
                                 <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                                    <span>💻</span>
+                                    
                                     <span>Mi Equipo de Cómputo y Periféricos Asignados</span>
                                 </h2>
                                 <p class="text-xs text-slate-500 mt-0.5">Componentes y dispositivos registrados a tu nombre por el departamento de TI</p>
@@ -906,7 +906,7 @@
                                         placeholder="Buscar por componente, marca, modelo o serie..." 
                                         class="w-full rounded-md border border-slate-300 pl-8 pr-7 py-1.5 text-xs text-slate-900 placeholder-slate-400 bg-white focus:border-brand-600 focus:outline-none shadow-2xs"
                                     >
-                                    <span class="absolute left-2.5 top-2 text-slate-400 text-xs">🔍</span>
+                                    
                                     <button 
                                         type="button" 
                                         id="btnClearBuscarMisEquipos" 
@@ -925,7 +925,7 @@
                     <div class="p-6">
                         <% if (totalEquipos === 0) { %>
                             <div class="text-center py-8 text-slate-400">
-                                <div class="text-3xl mb-2">🖥️</div>
+                                <div class="w-8 h-8 mx-auto mb-2 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xs">TI</div>
                                 <p class="text-xs font-medium text-slate-600">No tienes equipos o periféricos registrados a tu nombre todavía.</p>
                                 <p class="text-[11px] text-slate-400 mt-1">El personal de TI registrará aquí tu equipo de cómputo, monitor, mouse y demás accesorios.</p>
                             </div>
@@ -934,16 +934,16 @@
                                 <% equipos.forEach(eq => { %>
                                     <% 
                                         const tLower = (eq.tipo || '').toLowerCase();
-                                        let icono = '📦';
-                                        if (tLower.includes('mouse') || tLower.includes('raton')) icono = '🖱️';
+                                        let icono = 'Equipo';
+                                        if (tLower.includes('mouse') || tLower.includes('raton')) icono = 'Mouse';
                                         else if (tLower.includes('teclado')) icono = '⌨️';
-                                        else if (tLower.includes('monitor') || tLower.includes('pantalla')) icono = '🖥️';
+                                        else if (tLower.includes('monitor') || tLower.includes('pantalla')) icono = 'Monitor';
                                         else if (tLower.includes('laptop') || tLower.includes('portatil')) icono = '💻';
-                                        else if (tLower.includes('ensamblad')) icono = '⚙️';
-                                        else if (tLower.includes('cpu') || tLower.includes('torre') || tLower.includes('computadora')) icono = '🖲️';
-                                        else if (tLower.includes('diadema') || tLower.includes('auricular') || tLower.includes('audifono')) icono = '🎧';
+                                        else if (tLower.includes('ensamblad')) icono = 'PC';
+                                        else if (tLower.includes('cpu') || tLower.includes('torre') || tLower.includes('computadora')) icono = 'CPU';
+                                        else if (tLower.includes('diadema') || tLower.includes('auricular') || tLower.includes('audifono')) icono = 'Audio';
                                         else if (tLower.includes('impresora') || tLower.includes('escaner')) icono = '🖨️';
-                                        else if (tLower.includes('ups') || tLower.includes('break') || tLower.includes('regulador')) icono = '🔌';
+                                        else if (tLower.includes('ups') || tLower.includes('break') || tLower.includes('regulador')) icono = 'UPS';
                                         else if (tLower.includes('disco') || tLower.includes('memoria') || tLower.includes('usb')) icono = '💾';
                                     %>
                                     <div 
@@ -999,7 +999,7 @@
 
                                             <% if (eq.detalles) { %>
                                                 <div class="mt-2.5 p-2 rounded bg-slate-50 border border-slate-100 text-[11px] text-slate-600 leading-relaxed">
-                                                    <strong class="text-slate-700 block font-semibold mb-0.5">⚙️ Especificaciones:</strong>
+                                                    <strong class="text-slate-700 block font-semibold mb-0.5">Especificaciones:</strong>
                                                     <%= eq.detalles %>
                                                 </div>
                                             <% } %>
@@ -1007,13 +1007,13 @@
 
                                         <div class="pt-2 border-t border-slate-100 text-[10px] text-slate-400 flex items-center justify-between">
                                             <span>Asignado el:</span>
-                                            <span>📅 <%= new Date(eq.fecha_registro).toLocaleDateString('es-ES') %></span>
+                                            <span><%= new Date(eq.fecha_registro).toLocaleDateString('es-ES') %></span>
                                         </div>
                                     </div>
                                 <% }) %>
                             </div>
                             <div id="sinCoincidenciasMisEquipos" style="display: none;" class="text-center py-8 text-slate-400 italic text-xs">
-                                🔍 No se encontraron equipos o componentes que coincidan con tu búsqueda.
+                                No se encontraron equipos o componentes que coincidan con tu búsqueda.
                             </div>
                         <% } %>
                     </div>
@@ -1029,7 +1029,7 @@
             <div class="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
                 <div>
                     <h4 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                        <span>💬</span>
+                        
                         <span id="chatUserTituloModal">Seguimiento de Ticket</span>
                     </h4>
                     <p id="chatUserSubtituloModal" class="text-[11px] text-slate-500 mt-0.5">Comunicación directa en tiempo real con el área de Sistemas TI</p>
@@ -1079,7 +1079,7 @@
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <div class="flex items-center gap-2">
                         <label class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-slate-300 bg-slate-50 hover:bg-slate-100 text-[11px] font-semibold text-slate-700 cursor-pointer">
-                            <span>📷 Adjuntar captura</span>
+                            <span>Adjuntar captura</span>
                             <input type="file" id="chatUserImagenInput" accept="image/*" class="hidden" onchange="manejarSeleccionImagenChatUser(event)">
                         </label>
                         <span id="chatUserArchivoNombre" class="text-[11px] text-slate-500 truncate max-w-[180px]"></span>
@@ -1089,7 +1089,7 @@
                             Cerrar
                         </button>
                         <button type="submit" id="btnEnviarChatUser" class="px-4 py-1.5 rounded text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 shadow-xs cursor-pointer flex items-center gap-1.5">
-                            <span>📤 Enviar Mensaje</span>
+                            <span>Enviar Mensaje</span>
                         </button>
                     </div>
                 </div>
@@ -1103,7 +1103,7 @@
             <div class="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
                 <div>
                     <h4 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                        <span>✏️</span>
+                        
                         <span>Modificar Ticket #<span id="editTicketIdSpan"></span></span>
                     </h4>
                     <p class="text-[11px] text-slate-500 mt-0.5">Puedes corregir o actualizar tu reporte mientras su estatus sea "Nuevo ticket".</p>
@@ -1220,7 +1220,7 @@
                         type="submit" 
                         class="px-4 py-1.5 rounded text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 shadow-xs transition-colors cursor-pointer flex items-center gap-1"
                     >
-                        <span>💾</span>
+                        
                         <span>Guardar Cambios</span>
                     </button>
                 </div>
@@ -1233,7 +1233,7 @@
         <div class="bg-white rounded-md shadow-xl border border-slate-200 border-t-4 border-t-rose-600 max-w-md w-full mx-auto my-12 overflow-hidden flex flex-col">
             <div class="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
                 <div class="flex items-center gap-2">
-                    <span class="text-xl">🗑️</span>
+                    <span class="text-xl">Eliminar</span>
                     <h4 class="text-sm font-extrabold text-slate-900">
                         Cancelar Ticket #<span id="delTicketIdSpan"></span>
                     </h4>
@@ -1278,7 +1278,7 @@
                         type="submit" 
                         class="px-3.5 py-1.5 rounded text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-xs transition-colors cursor-pointer flex items-center gap-1"
                     >
-                        <span>🗑️</span>
+                        
                         <span>Sí, Cancelar Ticket</span>
                     </button>
                 </div>
@@ -1587,7 +1587,7 @@
 
         function actualizarIconoSonidoUser() {
             const btn = document.getElementById('btnToggleSonidoUser');
-            if (btn) btn.textContent = sonidoActivoUser ? '🔊' : '🔇';
+            if (btn) btn.textContent = sonidoActivoUser ? 'Sonido: On' : 'Sonido: Off';
         }
         actualizarIconoSonidoUser();
 
@@ -1624,7 +1624,7 @@
             toast.innerHTML = `
                 <div class="space-y-1">
                     <div class="font-extrabold text-slate-900 flex items-center gap-1.5">
-                        <span>💬</span>
+                        
                         <span>${titulo}</span>
                     </div>
                     <p class="text-slate-600 line-clamp-2">${texto}</p>
@@ -1659,7 +1659,7 @@
             if (!comentarios || comentarios.length === 0) {
                 contenedor.innerHTML = `
                     <div class="text-center py-10 text-slate-400 text-xs">
-                        <div class="text-2xl mb-1.5">💬</div>
+                        <div class="w-8 h-8 mx-auto mb-2 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xs">TI</div>
                         <p class="font-semibold text-slate-600">Aún no hay mensajes de seguimiento en este ticket.</p>
                         <p class="text-[11px] text-slate-400 mt-0.5">Escribe abajo si deseas agregar información o enviar una captura a Sistemas.</p>
                     </div>
@@ -1689,7 +1689,7 @@
                         }">
                             <div class="flex items-center justify-between gap-3 text-[10px] ${esAdminMsg ? 'text-slate-500' : 'text-brand-100'} mb-1 border-b ${esAdminMsg ? 'border-slate-100' : 'border-brand-500/40'} pb-1">
                                 <span class="font-bold ${esAdminMsg ? 'text-brand-700' : 'text-white'}">
-                                    ${esAdminMsg ? '🛠️ ' : '👤 '}${escaparHtmlUser(c.autor_nombre)}${c.autor_puesto ? ' (' + escaparHtmlUser(c.autor_puesto) + ')' : ''}
+                                    ${esAdminMsg ? '[TI] ' : ''}${escaparHtmlUser(c.autor_nombre)}${c.autor_puesto ? ' (' + escaparHtmlUser(c.autor_puesto) + ')' : ''}
                                 </span>
                                 <div class="flex items-center gap-1.5">
                                     <span>${fechaStr}</span>
@@ -1700,7 +1700,7 @@
                                             class="text-[10px] text-white hover:text-amber-200 px-1 py-0.2 rounded hover:bg-brand-700 transition-colors cursor-pointer"
                                             title="Editar mensaje (disponible durante 5 min)"
                                         >
-                                            ✏️
+                                            Editar
                                         </button>
                                     ` : ''}
                                     ${puedeEliminar ? `
@@ -1710,7 +1710,7 @@
                                             class="text-[10px] text-white hover:text-red-200 px-1 py-0.2 rounded hover:bg-brand-700 transition-colors cursor-pointer"
                                             title="Eliminar este mensaje"
                                         >
-                                            🗑️
+                                            Eliminar
                                         </button>
                                     ` : ''}
                                 </div>
@@ -1721,7 +1721,7 @@
                             </div>
                             ${c.editado == 1 ? `
                                 <div class="flex items-center gap-1 text-[10px] ${esMio ? 'text-brand-200' : 'text-slate-400'} mt-1 italic select-none">
-                                    <span>✏️</span>
+                                    
                                     <span>editado</span>
                                 </div>
                             ` : ''}
@@ -1750,7 +1750,7 @@
                                             onclick="guardarEdicionMensajeUser(${c.id})" 
                                             class="px-2.5 py-1 rounded text-[11px] font-bold text-white bg-brand-600 hover:bg-brand-700 shadow-2xs cursor-pointer"
                                         >
-                                            💾 Guardar
+                                            Guardar
                                         </button>
                                     </div>
                                 </div>
@@ -1877,7 +1877,7 @@
                     document.getElementById('chatUserTituloModal').textContent = `Ticket #${data.ticket.id} — ${data.ticket.titulo}`;
                     const banner = document.getElementById('chatUserBannerEspecialistas');
                     const partes = [];
-                    if (data.ticket.atendido_por) partes.push(`<span>🔧 <strong>Atendido/Avanzado por:</strong> ${escaparHtmlUser(data.ticket.atendido_por)}</span>`);
+                    if (data.ticket.atendido_por) partes.push(`<span><strong>Atendido/Avanzado por:</strong> ${escaparHtmlUser(data.ticket.atendido_por)}</span>`);
                     if (data.ticket.entregado_por) partes.push(`<span>✅ <strong>Entregado/Cerrado por:</strong> ${escaparHtmlUser(data.ticket.entregado_por)}</span>`);
                     if (partes.length > 0 && banner) {
                         banner.innerHTML = partes.join('<span class="text-amber-400">•</span>');
@@ -1994,7 +1994,7 @@
                 enviandoMensajeChatUser = false;
                 if (btn) {
                     btn.disabled = false;
-                    btn.innerHTML = '<span>📤 Enviar Mensaje</span>';
+                    btn.innerHTML = '<span>Enviar Mensaje</span>';
                     btn.classList.remove('opacity-70', 'cursor-not-allowed');
                 }
             }
@@ -2016,7 +2016,7 @@
                     if (totalNoLeidos > 0) {
                         badge.style.display = '';
                         badge.textContent = totalNoLeidos;
-                        document.title = `(${totalNoLeidos}) 🔔 Mensaje de TI - Sistema de Tickets`;
+                        document.title = `(${totalNoLeidos}) Mensaje de TI - Sistema de Tickets`;
                     } else {
                         badge.style.display = 'none';
                         document.title = 'Panel de Usuario - Sistema de Tickets';
