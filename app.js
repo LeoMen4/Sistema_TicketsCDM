@@ -1375,6 +1375,7 @@ function obtenerDatosAdmin(req, res, mensaje = null, error = null) {
                                                             guias: guias || [],
                                                             configCorreo: configCorreo || {},
                                                             plantillasCorreo: plantillasCorreo || [],
+                                                            discordInfo: discordBot.obtenerEstadoBot(),
                                                             filtroActual: filtroEstatus,
                                                             mensaje: mensajeFinal,
                                                             error: errorFinal
