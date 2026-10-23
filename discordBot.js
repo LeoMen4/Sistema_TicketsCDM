@@ -114,8 +114,53 @@ function inicializarDiscord(io, db, uploadsDir) {
                 return;
             }
 
-            // Solo procesar si el mensaje proviene de un Hilo (Thread)
-            if (!message.channel.isThread()) return;
+            // Si el mensaje se envió en el canal principal #tickets-soporte (fuera de un hilo)
+            if (!message.channel.isThread()) {
+                if (canalTicketsBase && message.channel.id === canalTicketsBase.id) {
+                    try { await message.delete(); } catch(e) {}
+
+                    const autorDiscordId = message.author.id;
+                    const autorUsername = message.author.username;
+
+                    dbInstance.all(
+                        `SELECT t.id, t.titulo, t.estatus, t.prioridad, t.fecha, t.discord_thread_id
+                         FROM tickets t
+                         JOIN usuarios u ON t.usuario_id = u.id
+                         WHERE u.discord_user_id = ? OR LOWER(u.email) LIKE LOWER(?)
+                         ORDER BY t.id DESC LIMIT 10`,
+                        [autorDiscordId, `%${autorUsername}%`],
+                        async (errH, misTickets) => {
+                            try {
+                                if (!errH && misTickets && misTickets.length > 0) {
+                                    const embedHistorial = new EmbedBuilder()
+                                        .setTitle('📋 Tu Historial de Tickets - Grupo CDM')
+                                        .setColor(0x2563eb)
+                                        .setDescription('Aquí tienes tus tickets de soporte. Por confidencialidad, cada ticket cuenta con un canal privado exclusivo contigo y el equipo de TI:')
+                                        .setFooter({ text: 'Sistema de Tickets TI • Grupo CDM' })
+                                        .setTimestamp();
+
+                                    misTickets.forEach(tk => {
+                                        const enlace = tk.discord_thread_id 
+                                            ? ` [Abrir Hilo Privado](https://discord.com/channels/${DISCORD_GUILD_ID}/${tk.discord_thread_id})` 
+                                            : '';
+                                        embedHistorial.addFields({
+                                            name: `Ticket #${tk.id}: ${tk.titulo}`,
+                                            value: `• **Estatus:** \`${tk.estatus}\` | **Prioridad:** ${tk.prioridad}${enlace}`
+                                        });
+                                    });
+
+                                    await message.author.send({ embeds: [embedHistorial] });
+                                } else {
+                                    await message.author.send('👋 Hola! Por privacidad en Grupo CDM, el canal `#tickets-soporte` utiliza **Hilos Privados**. Para levantar un reporte ingresa a la plataforma web de tickets o consulta el botón **Hilos** en la parte superior del canal.');
+                                }
+                            } catch (eDM) {
+                                console.warn('[Discord Bot] No se pudo enviar DM al usuario:', eDM.message);
+                            }
+                        }
+                    );
+                }
+                return;
+            }
 
             // Extraer ID del ticket (ya sea del título del hilo ticket-XX-... o de la base de datos)
             const threadId = message.channel.id;
@@ -370,8 +415,10 @@ async function obtenerOCrearHiloTicket(ticketId, ticketData = null, usuarioData 
 
         const nuevoHilo = await canalTicketsBase.threads.create({
             name: nombreHilo,
+            type: ChannelType.PrivateThread,
+            invitable: false,
             autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek || 10080,
-            reason: `Seguimiento de Ticket #${ticket.id}: ${ticket.titulo}`
+            reason: `Seguimiento confidencial de Ticket #${ticket.id}: ${ticket.titulo}`
         });
 
         // Guardar ID del hilo en la base de datos de Turso
