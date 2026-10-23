@@ -12,6 +12,7 @@ const ExcelJS = require('exceljs');
 const { generarExcelDashboards } = require('./excelReporter');
 const http = require('http');
 const { Server } = require('socket.io');
+const discordBot = require('./discordBot');
 
 const app = express();
 const server = http.createServer(app);
@@ -76,6 +77,13 @@ try {
     }
 } catch (e) {}
 app.use('/uploads', express.static(uploadsDir));
+
+// Inicialización del Bot de Discord para chat y soporte bidireccional
+try {
+    discordBot.inicializarDiscord(io, db, uploadsDir);
+} catch (eDiscord) {
+    console.error('Error al inicializar el Bot de Discord:', eDiscord);
+}
 
 // Configuración de Multer para la subida de imágenes
 const storage = multer.diskStorage({
@@ -412,6 +420,13 @@ app.post('/tickets/crear', esUsuario, upload.single('imagen'), (req, res) => {
 
                             // Notificar confirmación al usuario solicitante
                             mailer.notificarTicketCreadoUsuario(ticketId, datosTicket);
+
+                            // Notificar y crear Hilo de soporte exclusivo en Discord
+                            try {
+                                discordBot.notificarNuevoTicket(ticketId, datosTicket, req.session.usuario);
+                            } catch (eDisc) {
+                                console.error('Error al notificar nuevo ticket en Discord:', eDisc);
+                            }
 
                             // Redirección segura PRG (Post/Redirect/Get) para evitar reenvío al recargar
                             req.session.mensajeFlash = '¡Ticket reportado exitosamente!';
@@ -1713,6 +1728,13 @@ app.post('/admin/tickets/crear', esAdmin, upload.single('imagen'), (req, res) =>
                                 // Notificar al usuario a su correo Outlook
                                 mailer.notificarTicketCreadoUsuario(ticketId, datosTicket, { adminRemitente: req.session.usuario });
 
+                                // Notificar y crear Hilo de soporte exclusivo en Discord
+                                try {
+                                    discordBot.notificarNuevoTicket(ticketId, datosTicket, usuarioDestino);
+                                } catch (eDisc) {
+                                    console.error('Error al notificar nuevo ticket en Discord:', eDisc);
+                                }
+
                                 req.session.mensajeFlash = `¡Ticket #${ticketId} levantado exitosamente para el usuario ${usuarioDestino.nombre}!`;
                                 return res.redirect('/admin');
                             }
@@ -1867,6 +1889,18 @@ app.post('/admin/tickets/cambiar-estatus', esAdmin, (req, res) => {
                     entregado_por: nuevoEntregadoPor,
                     adminActualNombre: adminActualNombre
                 });
+
+                // Notificar cambio de estatus en Discord (actualiza la tarjeta del hilo)
+                try {
+                    discordBot.notificarCambioEstatusDiscord(ticket_id, estatus, {
+                        motivo_pendiente_cliente: motivoCli,
+                        fecha_programada_cliente: fechaCli,
+                        tecnico_resolvio: tecResumen,
+                        comentario_resolucion: com
+                    });
+                } catch (eDisc) {
+                    console.error('Error al notificar estatus en Discord:', eDisc);
+                }
 
                 const quiereJson = req.xhr || 
                     (req.headers.accept && req.headers.accept.includes('json')) || 
@@ -2187,6 +2221,21 @@ app.post('/api/tickets/:id/comentarios', upload.single('imagen'), (req, res) => 
                             autor_puesto: autorPuesto,
                             esAdminUser: esAdminUser
                         });
+                    }
+
+                    // Enviar mensaje hacia el Hilo del ticket en Discord
+                    try {
+                        discordBot.enviarMensajeDesdeWeb({
+                            ticketId: Number(ticketId),
+                            autorNombre: autorPersonalizado,
+                            autorRol: usuarioActual.rol,
+                            autorPuesto: autorPuesto,
+                            mensaje: msgFinal,
+                            imagenFilename: imagenNombre,
+                            tipoIntervencion: tipoIntervencion
+                        });
+                    } catch (eDisc) {
+                        console.error('Error enviando mensaje a Discord:', eDisc);
                     }
 
                     if (quiereJson) {

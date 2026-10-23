@@ -138,6 +138,8 @@ db.serialize(() => {
 
     db.run(`ALTER TABLE usuarios ADD COLUMN deleted_at DATETIME DEFAULT NULL`, (err) => {});
     db.run(`ALTER TABLE usuarios ADD COLUMN puesto TEXT DEFAULT ''`, (err) => {});
+    db.run(`ALTER TABLE usuarios ADD COLUMN discord_user_id TEXT DEFAULT NULL`, (err) => {});
+    db.run(`ALTER TABLE usuarios ADD COLUMN discord_username TEXT DEFAULT NULL`, (err) => {});
 
     // Tabla de tickets sin requerir el campo obsoleto 'periferico'
     db.run(`
@@ -194,6 +196,7 @@ db.serialize(() => {
     db.run(`ALTER TABLE tickets ADD COLUMN eliminado_por_nombre TEXT DEFAULT NULL`, (err) => {});
     db.run(`ALTER TABLE tickets ADD COLUMN motivo_pendiente_cliente TEXT DEFAULT NULL`, (err) => {});
     db.run(`ALTER TABLE tickets ADD COLUMN fecha_programada_cliente TEXT DEFAULT NULL`, (err) => {});
+    db.run(`ALTER TABLE tickets ADD COLUMN discord_thread_id TEXT DEFAULT NULL`, (err) => {});
     db.run(`CREATE INDEX IF NOT EXISTS idx_tickets_deleted_at ON tickets(deleted_at)`, (err) => {});
 
     // Migración para eliminar la restricción del campo obsoleto 'periferico' si aún existe
