@@ -242,7 +242,7 @@
                 <% } %>
             </div>
 
-            <div class="flex flex-wrap items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2" id="contenedorBadgeEstatusDetalle">
                 <!-- Estatus Actual -->
                 <% if (ticket.estatus === 'Nuevo ticket') { %>
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-sky-50 text-sky-700 border border-sky-200">
@@ -1364,6 +1364,36 @@
                 if (data && data.ticketId == '<%= ticket.id %>') {
                     const bloque = document.getElementById('bloqueComentarioDetalle-' + data.comentarioId);
                     if (bloque) bloque.remove();
+                }
+            });
+
+            socketTicket.on('ticket:estatus_cambiado', function(data) {
+                if (data && Number(data.ticket_id) === Number('<%= ticket.id %>')) {
+                    const sel = document.getElementById('selectEstatusDetalle');
+                    if (sel) {
+                        sel.value = data.estatus;
+                        if (typeof evaluarEstatusDetalle === 'function') evaluarEstatusDetalle();
+                    }
+
+                    const contBadge = document.getElementById('contenedorBadgeEstatusDetalle');
+                    if (contBadge) {
+                        let html = '';
+                        const est = data.estatus;
+                        if (est === 'Nuevo ticket') {
+                            html = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-sky-50 text-sky-700 border border-sky-200"><span class="w-2 h-2 rounded-full bg-sky-500"></span>Nuevo ticket</span>`;
+                        } else if (est === 'En proceso') {
+                            html = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200"><span class="w-2 h-2 rounded-full bg-amber-500"></span>En proceso</span>`;
+                        } else if (est === 'Pendiente') {
+                            html = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200"><span class="w-2 h-2 rounded-full bg-rose-500"></span>Pendiente</span>`;
+                        } else if (est === 'Pendiente por cliente') {
+                            html = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-orange-100 text-orange-800 border border-orange-300 shadow-2xs">Pendiente por cliente</span>`;
+                        } else if (est === 'Resuelto') {
+                            html = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Resuelto</span>`;
+                        } else {
+                            html = `<span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-700">${escaparHtmlSimple(est)}</span>`;
+                        }
+                        contBadge.innerHTML = html;
+                    }
                 }
             });
         }

@@ -662,6 +662,7 @@
                                 <% } %>
                                 <% tickets.forEach(t => { %>
                                     <tr 
+                                        id="filaTicket-<%= t.id %>"
                                         class="fila-ticket-admin hover:bg-slate-50 transition-colors"
                                         data-usuario-id="<%= t.usuario_id || '' %>"
                                         data-categoria="<%= (t.tipo_falla || '').toLowerCase() %>"
@@ -772,7 +773,7 @@
                                         </td>
 
                                         <!-- Estatus Actual, Intervención TI y Detalles de Resolución -->
-                                        <td class="py-3 px-4 whitespace-nowrap">
+                                        <td class="py-3 px-4 whitespace-nowrap" id="celdaEstatusTicket-<%= t.id %>">
                                             <div class="flex items-center gap-1.5">
                                                 <% if (t.estatus === 'Nuevo ticket') { %>
                                                     <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200">
@@ -904,6 +905,7 @@
                                                     }
                                                 %>
                                                 <select 
+                                                    id="selectEstatusFila-<%= t.id %>"
                                                     class="select-estatus-ticket w-full max-w-[155px] rounded border <%= claseSelectEstatus %> px-2 py-1 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer transition-all shadow-2xs" 
                                                     data-ticket-id="<%= t.id %>" 
                                                     data-original-status="<%= t.estatus %>" 
@@ -2898,7 +2900,7 @@
                 </div>
             </div>
             
-            <form action="/admin/tickets/cambiar-estatus" method="POST" class="space-y-4">
+            <form action="/admin/tickets/cambiar-estatus" method="POST" id="formModalPendienteCliente" class="space-y-4">
                 <input type="hidden" name="ticket_id" id="idTicketPendienteCliente">
                 <input type="hidden" name="estatus" value="Pendiente por cliente">
 
@@ -2973,7 +2975,7 @@
                 </div>
             </div>
             
-            <form action="/admin/tickets/cambiar-estatus" method="POST" class="space-y-3.5">
+            <form action="/admin/tickets/cambiar-estatus" method="POST" id="formModalResolucion" class="space-y-3.5">
                 <input type="hidden" name="ticket_id" id="idTicketResolucion">
                 <input type="hidden" name="estatus" value="Resuelto">
 
@@ -4250,25 +4252,36 @@
                 btnFila.innerHTML = '<span>⏳ Guardando...</span>';
             }
 
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '/admin/tickets/cambiar-estatus';
-            form.style.display = 'none';
+            const params = new URLSearchParams();
+            params.append('ticket_id', ticketId);
+            params.append('estatus', nuevoEstatus);
+            params.append('formato', 'json');
 
-            const inId = document.createElement('input');
-            inId.type = 'hidden';
-            inId.name = 'ticket_id';
-            inId.value = ticketId;
-
-            const inEst = document.createElement('input');
-            inEst.type = 'hidden';
-            inEst.name = 'estatus';
-            inEst.value = nuevoEstatus;
-
-            form.appendChild(inId);
-            form.appendChild(inEst);
-            document.body.appendChild(form);
-            form.submit();
+            fetch('/admin/tickets/cambiar-estatus', {
+                method: 'POST',
+                headers: { 'Accept': 'application/json' },
+                body: params
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (btnFila) {
+                    btnFila.disabled = false;
+                    btnFila.innerHTML = '<span>Guardar</span>';
+                    btnFila.style.display = 'none';
+                }
+                if (data && data.ok) {
+                    actualizarEstatusTicketEnTabla(data);
+                } else {
+                    alert(data?.error || 'Error al actualizar el estatus');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                if (btnFila) {
+                    btnFila.disabled = false;
+                    btnFila.innerHTML = '<span>Guardar</span>';
+                }
+            });
         }
 
         function evaluarCategoriaResolucion() {
@@ -5845,14 +5858,34 @@
             }
         }
 
+        // Candado global para evitar duplicar alertas entre pestañas y entre socket/polling
+        function yaFueNotificadoRecientemente(clave, ttlMs = 8000) {
+            try {
+                const ahora = Date.now();
+                const lockKey = 'notif_lock_' + clave;
+                const ultimo = parseInt(localStorage.getItem(lockKey) || '0', 10);
+                if (ahora - ultimo < ttlMs) {
+                    return true;
+                }
+                localStorage.setItem(lockKey, String(ahora));
+                return false;
+            } catch(e) {
+                return false;
+            }
+        }
+
         function dispararNotificacionEscritorioAdmin(titulo, cuerpo, ticketId, tipo) {
             if (!('Notification' in window) || Notification.permission !== 'granted') return;
+            const claveNotif = ticketId + '_' + (tipo || 'alerta');
+            if (yaFueNotificadoRecientemente('escritorio_' + claveNotif, 8000)) {
+                return;
+            }
             try {
                 const notif = new Notification(titulo, {
                     body: cuerpo,
                     icon: '/favicon.ico',
-                    tag: 'ticket-' + ticketId + '-' + (tipo || 'alerta') + '-' + Date.now(),
-                    requireInteraction: true // Notificación persistente en Windows hasta interactuar
+                    tag: 'ticket-' + ticketId + '-' + (tipo || 'alerta'), // Tag limpio para deduplicación nativa de Windows
+                    requireInteraction: false
                 });
 
                 notif.onclick = function() {
@@ -5860,6 +5893,10 @@
                     window.open('/admin/tickets/' + ticketId, '_blank');
                     this.close();
                 };
+
+                setTimeout(() => {
+                    try { notif.close(); } catch(e) {}
+                }, 8000);
             } catch (e) {
                 console.error('Error lanzando notificación nativa:', e);
             }
@@ -6182,12 +6219,13 @@
                 const ultimoTk = data.ultimoTicket ? data.ultimoTicket.id : 0;
                 const ultimoCom = data.ultimoComentarioUsuario ? data.ultimoComentarioUsuario.id : 0;
 
-                // Alerta sonora y visual al recibir nuevo ticket
+                // Alerta sonora y visual al recibir nuevo ticket (solo si WebSockets estuviese desconectado)
                 if (ultimoTicketIdConocido === null) {
                     ultimoTicketIdConocido = ultimoTk;
                 } else if (ultimoTk > ultimoTicketIdConocido) {
                     ultimoTicketIdConocido = ultimoTk;
-                    if (!descartados.includes(Number(ultimoTk))) {
+                    const wsConectado = (socketAdmin && socketAdmin.connected);
+                    if (!wsConectado && !descartados.includes(Number(ultimoTk))) {
                         reproducirSonidoAlertaAdmin('ticket');
                         const t = data.ultimoTicket;
                         const titToast = `Ticket #${t.id}: ${t.titulo}`;
@@ -6195,7 +6233,7 @@
 
                         mostrarToastNotificacionAdmin(titToast, subToast, t.id, 'ticket');
                         dispararNotificacionEscritorioAdmin(
-                            ` Nuevo Ticket #${t.id} - ${t.prioridad}`,
+                            `Nuevo Ticket #${t.id} - ${t.prioridad}`,
                             `${t.usuario_nombre || 'Usuario'}: ${t.titulo}`,
                             t.id,
                             'ticket'
@@ -6203,23 +6241,26 @@
                     }
                 }
 
-                // Alerta sonora y visual al recibir nuevo mensaje de chat
+                // Alerta sonora y visual al recibir nuevo mensaje de chat (solo si WebSockets estuviese desconectado)
                 if (ultimoComentarioIdConocido === null) {
                     ultimoComentarioIdConocido = ultimoCom;
                 } else if (ultimoCom > ultimoComentarioIdConocido) {
                     ultimoComentarioIdConocido = ultimoCom;
-                    reproducirSonidoAlertaAdmin('chat');
-                    const c = data.ultimoComentarioUsuario;
-                    const titToast = `Ticket #${c.ticket_id} — ${c.autor_nombre}`;
-                    const subToast = c.mensaje || 'Envió un archivo o evidencia adjunta';
+                    const wsConectado = (socketAdmin && socketAdmin.connected);
+                    if (!wsConectado) {
+                        reproducirSonidoAlertaAdmin('chat');
+                        const c = data.ultimoComentarioUsuario;
+                        const titToast = `Ticket #${c.ticket_id} — ${c.autor_nombre}`;
+                        const subToast = c.mensaje || 'Envió un archivo o evidencia adjunta';
 
-                    mostrarToastNotificacionAdmin(titToast, subToast, c.ticket_id, 'chat');
-                    dispararNotificacionEscritorioAdmin(
-                        `Nuevo mensaje en Ticket #${c.ticket_id}`,
-                        `${c.autor_nombre}: ${c.mensaje || 'Envió un adjunto'}`,
-                        c.ticket_id,
-                        'chat'
-                    );
+                        mostrarToastNotificacionAdmin(titToast, subToast, c.ticket_id, 'chat');
+                        dispararNotificacionEscritorioAdmin(
+                            `Nuevo mensaje en Ticket #${c.ticket_id}`,
+                            `${c.autor_nombre}: ${c.mensaje || 'Envió un adjunto'}`,
+                            c.ticket_id,
+                            'chat'
+                        );
+                    }
 
                     const badgeFila = document.getElementById('badgeChatAdminTicket-' + c.ticket_id);
                     if (badgeFila) {
@@ -6367,6 +6408,65 @@
         // ==========================================
         // COMUNICACIÓN EN TIEMPO REAL CON WEBSOCKETS (SOCKET.IO)
         // ==========================================
+        function actualizarEstatusTicketEnTabla(data) {
+            if (!data || !data.ticket_id) return;
+            const ticketId = data.ticket_id;
+            const nuevoEst = data.estatus;
+
+            // 1. Actualizar celda de estatus
+            const celda = document.getElementById('celdaEstatusTicket-' + ticketId);
+            if (celda) {
+                let badgeHtml = '';
+                if (nuevoEst === 'Nuevo ticket') {
+                    badgeHtml = '<div class="flex items-center gap-1.5"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200"><span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span>Nuevo ticket</span></div>';
+                } else if (nuevoEst === 'En proceso') {
+                    badgeHtml = '<div class="flex items-center gap-1.5"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>En proceso</span></div>';
+                } else if (nuevoEst === 'Pendiente') {
+                    badgeHtml = '<div class="flex items-center gap-1.5"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>Pendiente</span></div>';
+                } else if (nuevoEst === 'Pendiente por cliente') {
+                    let infoExtra = '';
+                    if (data.fecha_programada_cliente) {
+                        infoExtra += `<div class="text-[10px] font-bold text-orange-950 bg-orange-50 border border-orange-200 px-1.5 py-0.5 rounded flex items-center gap-1 mt-1"><span>Cita:</span> ${data.fecha_programada_cliente}</div>`;
+                    }
+                    if (data.motivo_pendiente_cliente) {
+                        infoExtra += `<div class="text-[10px] text-slate-500 italic max-w-[160px] truncate mt-0.5" title="${escaparHtmlSimple(data.motivo_pendiente_cliente)}">"${escaparHtmlSimple(data.motivo_pendiente_cliente)}"</div>`;
+                    }
+                    badgeHtml = `<div class="space-y-1"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-800 border border-orange-300 shadow-2xs">Pendiente por cliente</span>${infoExtra}</div>`;
+                } else if (nuevoEst === 'Resuelto') {
+                    badgeHtml = '<div class="flex items-center gap-1.5"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Resuelto</span></div>';
+                } else {
+                    badgeHtml = `<div class="flex items-center gap-1.5"><span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">${escaparHtmlSimple(nuevoEst)}</span></div>`;
+                }
+                celda.innerHTML = badgeHtml;
+            }
+
+            // 2. Actualizar el selector <select> de la fila
+            const sel = document.getElementById('selectEstatusFila-' + ticketId) || document.querySelector(`.select-estatus-ticket[data-ticket-id="${ticketId}"]`);
+            if (sel) {
+                sel.value = nuevoEst;
+                sel.dataset.originalStatus = nuevoEst;
+                if (data.fecha_programada_cliente) sel.dataset.fechaProgramada = data.fecha_programada_cliente;
+                if (data.motivo_pendiente_cliente) sel.dataset.motivoPendiente = data.motivo_pendiente_cliente;
+
+                sel.className = 'select-estatus-ticket w-full max-w-[155px] rounded border px-2 py-1 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer transition-all shadow-2xs ' +
+                    (nuevoEst === 'Nuevo ticket' ? 'bg-sky-50 text-sky-700 border-sky-300' :
+                     nuevoEst === 'Pendiente' ? 'bg-rose-50 text-rose-700 border-rose-300' :
+                     nuevoEst === 'Pendiente por cliente' ? 'bg-orange-50 text-orange-800 border-orange-300' :
+                     nuevoEst === 'En proceso' ? 'bg-amber-50 text-amber-700 border-amber-300' :
+                     nuevoEst === 'Resuelto' ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-white text-slate-800 border-slate-300');
+            }
+
+            // 3. Efecto flash visual en la fila
+            const fila = document.getElementById('filaTicket-' + ticketId);
+            if (fila) {
+                fila.classList.add('bg-amber-100/60');
+                setTimeout(() => fila.classList.remove('bg-amber-100/60'), 2500);
+            }
+
+            // 4. Refrescar widget de citas programadas
+            verificarNotificacionesLiveAdmin();
+        }
+
         let socketAdmin = null;
         function inicializarSocketsAdmin() {
             if (typeof io === 'undefined') return;
@@ -6380,19 +6480,23 @@
                     const descartados = obtenerTicketsDescartados();
                     if (descartados.includes(Number(t.id))) return;
 
-                    reproducirSonidoAlertaAdmin('ticket');
-                    mostrarToastNotificacionAdmin(
-                        `Ticket #${t.id}: ${t.titulo}`,
-                        `Solicitante: ${t.usuario_nombre || 'Usuario'} (${t.prioridad || 'Media'})`,
-                        t.id,
-                        'ticket'
-                    );
-                    dispararNotificacionEscritorioAdmin(
-                        `Nuevo Ticket #${t.id} - ${t.prioridad || 'Media'}`,
-                        `${t.usuario_nombre || 'Usuario'}: ${t.titulo}`,
-                        t.id,
-                        'ticket'
-                    );
+                    ultimoTicketIdConocido = Number(t.id);
+
+                    if (!yaFueNotificadoRecientemente('ticket_nuevo_' + t.id, 8000)) {
+                        reproducirSonidoAlertaAdmin('ticket');
+                        mostrarToastNotificacionAdmin(
+                            `Ticket #${t.id}: ${t.titulo}`,
+                            `Solicitante: ${t.usuario_nombre || 'Usuario'} (${t.prioridad || 'Media'})`,
+                            t.id,
+                            'ticket'
+                        );
+                        dispararNotificacionEscritorioAdmin(
+                            `Nuevo Ticket #${t.id} - ${t.prioridad || 'Media'}`,
+                            `${t.usuario_nombre || 'Usuario'}: ${t.titulo}`,
+                            t.id,
+                            'ticket'
+                        );
+                    }
 
                     verificarNotificacionesLiveAdmin();
                 });
@@ -6403,6 +6507,8 @@
                     const c = data.comentario;
                     const tId = data.ticketId;
 
+                    ultimoComentarioIdConocido = Number(c.id);
+
                     // Si este ticket está abierto en el modal de chat, recargar inmediatamente
                     if (chatAdminTicketActivo && Number(chatAdminTicketActivo) === Number(tId)) {
                         cargarMensajesChatAdmin(tId, false);
@@ -6410,19 +6516,21 @@
 
                     // Si fue enviado por un usuario solicitante, alertar con sonido y notificación
                     if (c.autor_rol !== 'admin') {
-                        reproducirSonidoAlertaAdmin('chat');
-                        mostrarToastNotificacionAdmin(
-                            `Ticket #${tId} — ${c.autor_nombre}`,
-                            c.mensaje || 'Envió un archivo o evidencia adjunta',
-                            tId,
-                            'chat'
-                        );
-                        dispararNotificacionEscritorioAdmin(
-                            `Nuevo mensaje en Ticket #${tId}`,
-                            `${c.autor_nombre}: ${c.mensaje || 'Envió un adjunto'}`,
-                            tId,
-                            'chat'
-                        );
+                        if (!yaFueNotificadoRecientemente('chat_msg_' + c.id, 8000)) {
+                            reproducirSonidoAlertaAdmin('chat');
+                            mostrarToastNotificacionAdmin(
+                                `Ticket #${tId} — ${c.autor_nombre}`,
+                                c.mensaje || 'Envió un archivo o evidencia adjunta',
+                                tId,
+                                'chat'
+                            );
+                            dispararNotificacionEscritorioAdmin(
+                                `Nuevo mensaje en Ticket #${tId}`,
+                                `${c.autor_nombre}: ${c.mensaje || 'Envió un adjunto'}`,
+                                tId,
+                                'chat'
+                            );
+                        }
 
                         // Actualizar badge en la fila
                         const badgeFila = document.getElementById('badgeChatAdminTicket-' + tId);
@@ -6439,7 +6547,7 @@
                 // 3. CAMBIO DE ESTATUS EN TIEMPO REAL
                 socketAdmin.on('ticket:estatus_cambiado', function(data) {
                     if (!data) return;
-                    verificarNotificacionesLiveAdmin();
+                    actualizarEstatusTicketEnTabla(data);
                 });
 
                 // 4. EDICIÓN O ELIMINACIÓN DE COMENTARIOS EN TIEMPO REAL
@@ -6457,6 +6565,53 @@
                 console.warn('Error inicializando WebSocket Admin:', e);
             }
         }
+
+        // Interceptar formularios de modales para actualizar estatus sin recargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            const fPendiente = document.getElementById('formModalPendienteCliente');
+            if (fPendiente) {
+                fPendiente.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const fd = new FormData(fPendiente);
+                    fd.append('formato', 'json');
+                    fetch('/admin/tickets/cambiar-estatus', {
+                        method: 'POST',
+                        headers: { 'Accept': 'application/json' },
+                        body: fd
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        cerrarModalPendienteCliente();
+                        if (data && data.ok) {
+                            actualizarEstatusTicketEnTabla(data);
+                        }
+                    })
+                    .catch(() => fPendiente.submit());
+                });
+            }
+
+            const fResolucion = document.getElementById('formModalResolucion');
+            if (fResolucion) {
+                fResolucion.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const fd = new FormData(fResolucion);
+                    fd.append('formato', 'json');
+                    fetch('/admin/tickets/cambiar-estatus', {
+                        method: 'POST',
+                        headers: { 'Accept': 'application/json' },
+                        body: fd
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        cerrarModalResolucion();
+                        if (data && data.ok) {
+                            actualizarEstatusTicketEnTabla(data);
+                        }
+                    })
+                    .catch(() => fResolucion.submit());
+                });
+            }
+        });
 
         function iniciarMonitoreoNotificacionesAdmin() {
             actualizarBotonSonidoAdminUI();

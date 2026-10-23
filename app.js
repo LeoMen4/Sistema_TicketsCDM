@@ -1868,6 +1868,21 @@ app.post('/admin/tickets/cambiar-estatus', esAdmin, (req, res) => {
                     adminActualNombre: adminActualNombre
                 });
 
+                const quiereJson = req.xhr || 
+                    (req.headers.accept && req.headers.accept.includes('json')) || 
+                    req.body.formato === 'json' ||
+                    req.headers['sec-fetch-dest'] === 'empty';
+
+                if (quiereJson) {
+                    return res.json({
+                        ok: true,
+                        ticket_id: Number(ticket_id),
+                        estatus: estatus,
+                        motivo_pendiente_cliente: motivoCli,
+                        fecha_programada_cliente: fechaCli
+                    });
+                }
+
                 if (req.body.origen === 'detalle') {
                     req.session.mensajeFlash = `Estatus del Ticket #${ticket_id} actualizado a "${estatus}" correctamente.`;
                     return res.redirect(`/admin/tickets/${ticket_id}`);
