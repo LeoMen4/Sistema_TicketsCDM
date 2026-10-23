@@ -10,8 +10,24 @@ const db = require('./database');
 const mailer = require('./mailer');
 const ExcelJS = require('exceljs');
 const { generarExcelDashboards } = require('./excelReporter');
+const http = require('http');
+const { Server } = require('socket.io');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: { origin: '*' }
+});
+
+// Manejo de conexiones WebSocket para actualización instantánea
+io.on('connection', (socket) => {
+    socket.on('unirse_ticket', (ticketId) => {
+        if (ticketId) socket.join('ticket_' + ticketId);
+    });
+    socket.on('salir_ticket', (ticketId) => {
+        if (ticketId) socket.leave('ticket_' + ticketId);
+    });
+});
 
 app.set('view engine', 'ejs');
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -372,6 +388,24 @@ app.post('/tickets/crear', esUsuario, upload.single('imagen'), (req, res) => {
                                 usuario_nombre: req.session.usuario.nombre,
                                 usuario_email: req.session.usuario.email
                             };
+
+                            // Emitir evento en tiempo real vía WebSockets a todos los administradores conectados
+                            io.emit('ticket:nuevo', {
+                                ticket: {
+                                    id: ticketId,
+                                    titulo: tituloFinal,
+                                    tipo_falla: tipoFallaFinal,
+                                    subcategoria: subcatFinal,
+                                    prioridad: prioFinal,
+                                    descripcion: descFinal,
+                                    estatus: 'Nuevo ticket',
+                                    fecha: new Date().toISOString(),
+                                    usuario_id: usuarioId,
+                                    usuario_nombre: req.session.usuario.nombre,
+                                    usuario_email: req.session.usuario.email,
+                                    usuario_puesto: req.session.usuario.puesto || ''
+                                }
+                            });
 
                             // Notificar a administradores por correo
                             mailer.notificarNuevoTicketAdmin(ticketId, datosTicket);
@@ -1654,6 +1688,25 @@ app.post('/admin/tickets/crear', esAdmin, upload.single('imagen'), (req, res) =>
                                     creado_por_admin_email: (req.session && req.session.usuario) ? req.session.usuario.email : null
                                 };
 
+                                // Emitir evento en tiempo real vía WebSockets
+                                io.emit('ticket:nuevo', {
+                                    ticket: {
+                                        id: ticketId,
+                                        titulo: tituloFinal,
+                                        tipo_falla: tipoFallaFinal,
+                                        subcategoria: subcatFinal,
+                                        prioridad: prioFinal,
+                                        descripcion: descFinal,
+                                        estatus: 'Nuevo ticket',
+                                        fecha: new Date().toISOString(),
+                                        usuario_id: usuarioDestino.id,
+                                        usuario_nombre: usuarioDestino.nombre,
+                                        usuario_email: usuarioDestino.email,
+                                        usuario_puesto: usuarioDestino.puesto || '',
+                                        creado_por_admin: adminNombre
+                                    }
+                                });
+
                                 // Notificar a los administradores
                                 mailer.notificarNuevoTicketAdmin(ticketId, datosTicket, { adminRemitente: req.session.usuario });
 
@@ -1802,6 +1855,18 @@ app.post('/admin/tickets/cambiar-estatus', esAdmin, (req, res) => {
                     modelo_nuevo: mod,
                     numero_serie_nuevo: ser
                 }, { adminRemitente: req.session.usuario });
+
+                // Emitir cambio de estatus en tiempo real vía WebSockets
+                io.emit('ticket:estatus_cambiado', {
+                    ticket_id: Number(ticket_id),
+                    estatus: estatus,
+                    motivo_pendiente_cliente: motivoCli,
+                    fecha_programada_cliente: fechaCli,
+                    tecnico_resolvio: tecResumen,
+                    atendido_por: nuevoAtendidoPor,
+                    entregado_por: nuevoEntregadoPor,
+                    adminActualNombre: adminActualNombre
+                });
 
                 if (req.body.origen === 'detalle') {
                     req.session.mensajeFlash = `Estatus del Ticket #${ticket_id} actualizado a "${estatus}" correctamente.`;
@@ -2096,14 +2161,26 @@ app.post('/api/tickets/:id/comentarios', upload.single('imagen'), (req, res) => 
                     !req.body.origen ||
                     req.path.startsWith('/api/');
 
-                if (quiereJson) {
-                    db.get('SELECT * FROM ticket_comentarios WHERE id = ?', [comentarioId], (errGet, nuevoCom) => {
+                db.get('SELECT * FROM ticket_comentarios WHERE id = ?', [comentarioId], (errGet, nuevoCom) => {
+                    if (nuevoCom) {
+                        io.emit('comentario:nuevo', {
+                            ticketId: Number(ticketId),
+                            ticket_titulo: ticket.titulo,
+                            comentario: nuevoCom,
+                            autor_rol: usuarioActual.rol,
+                            autor_nombre: autorPersonalizado,
+                            autor_puesto: autorPuesto,
+                            esAdminUser: esAdminUser
+                        });
+                    }
+
+                    if (quiereJson) {
                         return res.json({ ok: true, comentario: nuevoCom });
-                    });
-                } else {
-                    req.session.mensajeFlash = 'Mensaje enviado correctamente.';
-                    return res.redirect(req.body.origen === 'detalle' ? `/tickets/${ticketId}` : (esAdminUser ? '/admin' : '/usuario'));
-                }
+                    } else {
+                        req.session.mensajeFlash = 'Mensaje enviado correctamente.';
+                        return res.redirect(req.body.origen === 'detalle' ? `/tickets/${ticketId}` : (esAdminUser ? '/admin' : '/usuario'));
+                    }
+                });
             }
         );
     });
@@ -2153,6 +2230,11 @@ app.post('/api/tickets/comentarios/:id/editar', (req, res) => {
                 if (errUp) {
                     return res.status(500).json({ ok: false, error: 'Error al actualizar el mensaje: ' + errUp.message });
                 }
+                io.emit('comentario:editado', {
+                    ticketId: Number(comentario.ticket_id),
+                    comentarioId: Number(comentarioId),
+                    mensaje: nuevoMensaje
+                });
                 return res.json({ ok: true, comentarioId: comentarioId, mensaje: nuevoMensaje, editado: 1 });
             }
         );
@@ -2189,6 +2271,10 @@ app.post('/api/tickets/comentarios/:id/eliminar', (req, res) => {
             if (errDel) {
                 return res.status(500).json({ ok: false, error: 'Error al eliminar: ' + errDel.message });
             }
+            io.emit('comentario:eliminado', {
+                ticketId: Number(comentario.ticket_id),
+                comentarioId: Number(comentarioId)
+            });
             return res.json({ ok: true, comentarioId: comentarioId, ticketId: comentario.ticket_id });
         });
     });
@@ -2859,7 +2945,7 @@ module.exports = app;
 
 if (!process.env.VERCEL) {
     const PORT = process.env.PORT || 3000;
-    app.listen(PORT, '0.0.0.0', () => {
+    server.listen(PORT, '0.0.0.0', () => {
         console.log(`Servidor corriendo en el puerto ${PORT}`);
     });
 }

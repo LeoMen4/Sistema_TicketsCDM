@@ -2076,8 +2076,48 @@
             } catch (e) {}
         }
 
+        // Inicialización de WebSockets para comunicación instantánea de Usuario
+        if (typeof io !== 'undefined') {
+            try {
+                const socketUser = io();
+
+                socketUser.on('comentario:nuevo', function(data) {
+                    if (!data || !data.comentario) return;
+                    const modal = document.getElementById('modalChatUsuario');
+                    const inputTId = document.getElementById('chatUserTicketId');
+                    if (modal && modal.style.display !== 'none' && inputTId && Number(inputTId.value) === Number(data.ticketId)) {
+                        abrirModalChatUsuario(data.ticketId, false);
+                    }
+                    verificarNotificacionesVivoUsuario();
+                });
+
+                socketUser.on('ticket:estatus_cambiado', function(data) {
+                    if (!data) return;
+                    verificarNotificacionesVivoUsuario();
+                });
+
+                socketUser.on('comentario:editado', function(data) {
+                    const modal = document.getElementById('modalChatUsuario');
+                    const inputTId = document.getElementById('chatUserTicketId');
+                    if (modal && modal.style.display !== 'none' && inputTId && Number(inputTId.value) === Number(data.ticketId)) {
+                        abrirModalChatUsuario(data.ticketId, false);
+                    }
+                });
+
+                socketUser.on('comentario:eliminado', function(data) {
+                    const modal = document.getElementById('modalChatUsuario');
+                    const inputTId = document.getElementById('chatUserTicketId');
+                    if (modal && modal.style.display !== 'none' && inputTId && Number(inputTId.value) === Number(data.ticketId)) {
+                        abrirModalChatUsuario(data.ticketId, false);
+                    }
+                });
+            } catch(e) {
+                console.warn('Error inicializando WebSocket Usuario:', e);
+            }
+        }
+
         verificarNotificacionesVivoUsuario();
-        setInterval(verificarNotificacionesVivoUsuario, 12000);
+        setInterval(verificarNotificacionesVivoUsuario, 25000);
 
         // Control de tiempo de inactividad de 5 minutos para usuarios
         (function() {
@@ -2115,5 +2155,6 @@
             reiniciarContadorInactividad();
         })();
     </script>
+    <script src="/socket.io/socket.io.js"></script>
 </body>
 </html>

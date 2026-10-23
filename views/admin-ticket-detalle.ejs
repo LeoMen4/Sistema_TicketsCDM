@@ -1209,7 +1209,9 @@
                 });
                 const data = await resp.json();
                 if (data.ok) {
-                    window.location.reload();
+                    msgInput.value = '';
+                    quitarImagenAdjuntaDetalle();
+                    // Con WebSockets el mensaje se agrega en tiempo real sin recargar la página
                 } else {
                     alert(data.error || 'Error al enviar el mensaje');
                 }
@@ -1226,12 +1228,153 @@
             }
         }
 
+        // ==========================================
+        // COMUNICACIÓN EN TIEMPO REAL CON WEBSOCKETS (SOCKET.IO)
+        // ==========================================
+        const miUsuarioId = <%= (typeof usuarioActual !== 'undefined' && usuarioActual) ? usuarioActual.id : 0 %>;
+
+        function sonarChimeChat() {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                const ctx = new AudioCtx();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                const now = ctx.currentTime;
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(659.25, now);
+                osc.frequency.exponentialRampToValueAtTime(880, now + 0.1);
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            } catch(e) {}
+        }
+
+        function agregarComentarioDetalleEnVivo(c) {
+            if (!c || document.getElementById('bloqueComentarioDetalle-' + c.id)) return;
+            const cont = document.getElementById('contenedorChatDetalle');
+            if (!cont) return;
+
+            const placeholder = cont.querySelector('.text-center.py-8');
+            if (placeholder) placeholder.remove();
+
+            const esAutorAdmin = c.autor_rol === 'admin';
+            const esMio = (miUsuarioId && c.usuario_id === miUsuarioId);
+
+            const wrapper = document.createElement('div');
+            wrapper.className = `flex ${esAutorAdmin ? 'justify-end' : 'justify-start'} transition-all duration-300 transform translate-y-1`;
+            wrapper.id = 'bloqueComentarioDetalle-' + c.id;
+
+            const fechaObj = new Date(String(c.fecha).replace(' ', 'T'));
+            const fechaStr = !isNaN(fechaObj.getTime())
+                ? fechaObj.toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+                : c.fecha;
+
+            let tagIntervencion = '';
+            if (c.tipo_intervencion === 'diagnostico') {
+                tagIntervencion = '<span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-amber-100 text-amber-800">DIAGNÓSTICO</span>';
+            } else if (c.tipo_intervencion === 'avance') {
+                tagIntervencion = '<span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-sky-100 text-sky-800">AVANCE TI</span>';
+            } else if (c.tipo_intervencion === 'entrega') {
+                tagIntervencion = '<span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-emerald-100 text-emerald-800">ENTREGA</span>';
+            }
+
+            let imagenHtml = '';
+            if (c.imagen) {
+                imagenHtml = `
+                    <div class="mt-2 pt-2 border-t border-slate-200/50">
+                        <a href="/uploads/${c.imagen}" target="_blank" class="block group relative overflow-hidden rounded border border-slate-200">
+                            <img src="/uploads/${c.imagen}" alt="Adjunto" class="max-h-48 rounded object-cover group-hover:scale-105 transition-transform" />
+                        </a>
+                    </div>
+                `;
+            }
+
+            let botonesAccion = '';
+            if (esMio) {
+                const jsonMensaje = JSON.stringify(c.mensaje || "").replace(/'/g, "&#39;");
+                botonesAccion = `
+                    <button type="button" onclick='iniciarEdicionMensajeDetalle(${c.id}, ${jsonMensaje})' class="text-[10px] text-slate-400 hover:text-brand-600 px-1 py-0.5 rounded hover:bg-slate-200 transition-colors cursor-pointer" title="Editar este mensaje">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                    </button>
+                    <button type="button" onclick="eliminarMensajeDetalle(${c.id})" class="text-[10px] text-slate-400 hover:text-red-600 px-1 py-0.5 rounded hover:bg-red-50 transition-colors cursor-pointer" title="Eliminar este mensaje">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                `;
+            }
+
+            wrapper.innerHTML = `
+                <div class="max-w-[85%] rounded-md p-3 shadow-2xs border ${esAutorAdmin ? 'bg-brand-50/80 border-brand-200 text-slate-900' : 'bg-white border-slate-200 text-slate-800'}">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5 border-b border-slate-200/60 pb-1">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs font-extrabold ${esAutorAdmin ? 'text-brand-700' : 'text-slate-900'}">
+                                ${esAutorAdmin ? '[TI] ' : ''}${escaparHtmlSimple(c.autor_nombre)}
+                            </span>
+                            ${c.autor_puesto ? `<span class="text-[10px] text-slate-500">(${escaparHtmlSimple(c.autor_puesto)})</span>` : ''}
+                            ${tagIntervencion}
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[10px] text-slate-400">${fechaStr}</span>
+                            ${botonesAccion}
+                        </div>
+                    </div>
+                    <div id="cuerpoMensajeDetalle-${c.id}">
+                        ${c.mensaje ? `<div class="text-xs leading-relaxed whitespace-pre-line">${escaparHtmlSimple(c.mensaje)}</div>` : ''}
+                        ${c.editado == 1 ? `<div class="flex items-center gap-1 text-[10px] text-slate-400 mt-1 italic select-none"><span>editado</span></div>` : ''}
+                    </div>
+                    ${imagenHtml}
+                </div>
+            `;
+
+            cont.appendChild(wrapper);
+            cont.scrollTop = cont.scrollHeight;
+
+            if (!esMio) {
+                sonarChimeChat();
+            }
+        }
+
+        // Conectar al servidor de WebSockets en tiempo real
+        if (typeof io !== 'undefined') {
+            const socketTicket = io();
+            socketTicket.emit('unirse_ticket', '<%= ticket.id %>');
+
+            socketTicket.on('comentario:nuevo', function(data) {
+                if (data && data.ticketId == '<%= ticket.id %>') {
+                    agregarComentarioDetalleEnVivo(data.comentario);
+                }
+            });
+
+            socketTicket.on('comentario:editado', function(data) {
+                if (data && data.ticketId == '<%= ticket.id %>') {
+                    const cuerpo = document.getElementById('cuerpoMensajeDetalle-' + data.comentarioId);
+                    if (cuerpo) {
+                        cuerpo.innerHTML = `
+                            <div class="text-xs leading-relaxed whitespace-pre-line">${escaparHtmlSimple(data.mensaje)}</div>
+                            <div class="flex items-center gap-1 text-[10px] text-slate-400 mt-1 italic select-none"><span>editado</span></div>
+                        `;
+                    }
+                }
+            });
+
+            socketTicket.on('comentario:eliminado', function(data) {
+                if (data && data.ticketId == '<%= ticket.id %>') {
+                    const bloque = document.getElementById('bloqueComentarioDetalle-' + data.comentarioId);
+                    if (bloque) bloque.remove();
+                }
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             evaluarEstatusDetalle();
             const cont = document.getElementById('contenedorChatDetalle');
             if (cont) cont.scrollTop = cont.scrollHeight;
         });
     </script>
+    <script src="/socket.io/socket.io.js"></script>
 
 </body>
 </html>

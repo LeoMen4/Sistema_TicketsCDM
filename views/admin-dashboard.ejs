@@ -6364,13 +6364,110 @@
             }
         }
 
+        // ==========================================
+        // COMUNICACIÓN EN TIEMPO REAL CON WEBSOCKETS (SOCKET.IO)
+        // ==========================================
+        let socketAdmin = null;
+        function inicializarSocketsAdmin() {
+            if (typeof io === 'undefined') return;
+            try {
+                socketAdmin = io();
+
+                // 1. NUEVO TICKET EN TIEMPO REAL
+                socketAdmin.on('ticket:nuevo', function(data) {
+                    if (!data || !data.ticket) return;
+                    const t = data.ticket;
+                    const descartados = obtenerTicketsDescartados();
+                    if (descartados.includes(Number(t.id))) return;
+
+                    reproducirSonidoAlertaAdmin('ticket');
+                    mostrarToastNotificacionAdmin(
+                        `Ticket #${t.id}: ${t.titulo}`,
+                        `Solicitante: ${t.usuario_nombre || 'Usuario'} (${t.prioridad || 'Media'})`,
+                        t.id,
+                        'ticket'
+                    );
+                    dispararNotificacionEscritorioAdmin(
+                        `Nuevo Ticket #${t.id} - ${t.prioridad || 'Media'}`,
+                        `${t.usuario_nombre || 'Usuario'}: ${t.titulo}`,
+                        t.id,
+                        'ticket'
+                    );
+
+                    verificarNotificacionesLiveAdmin();
+                });
+
+                // 2. NUEVO MENSAJE DE CHAT EN TIEMPO REAL
+                socketAdmin.on('comentario:nuevo', function(data) {
+                    if (!data || !data.comentario) return;
+                    const c = data.comentario;
+                    const tId = data.ticketId;
+
+                    // Si este ticket está abierto en el modal de chat, recargar inmediatamente
+                    if (chatAdminTicketActivo && Number(chatAdminTicketActivo) === Number(tId)) {
+                        cargarMensajesChatAdmin(tId, false);
+                    }
+
+                    // Si fue enviado por un usuario solicitante, alertar con sonido y notificación
+                    if (c.autor_rol !== 'admin') {
+                        reproducirSonidoAlertaAdmin('chat');
+                        mostrarToastNotificacionAdmin(
+                            `Ticket #${tId} — ${c.autor_nombre}`,
+                            c.mensaje || 'Envió un archivo o evidencia adjunta',
+                            tId,
+                            'chat'
+                        );
+                        dispararNotificacionEscritorioAdmin(
+                            `Nuevo mensaje en Ticket #${tId}`,
+                            `${c.autor_nombre}: ${c.mensaje || 'Envió un adjunto'}`,
+                            tId,
+                            'chat'
+                        );
+
+                        // Actualizar badge en la fila
+                        const badgeFila = document.getElementById('badgeChatAdminTicket-' + tId);
+                        if (badgeFila) {
+                            const actual = parseInt(badgeFila.textContent || '0', 10) + 1;
+                            badgeFila.textContent = actual;
+                            badgeFila.style.display = '';
+                        }
+
+                        verificarNotificacionesLiveAdmin();
+                    }
+                });
+
+                // 3. CAMBIO DE ESTATUS EN TIEMPO REAL
+                socketAdmin.on('ticket:estatus_cambiado', function(data) {
+                    if (!data) return;
+                    verificarNotificacionesLiveAdmin();
+                });
+
+                // 4. EDICIÓN O ELIMINACIÓN DE COMENTARIOS EN TIEMPO REAL
+                socketAdmin.on('comentario:editado', function(data) {
+                    if (chatAdminTicketActivo && Number(chatAdminTicketActivo) === Number(data.ticketId)) {
+                        cargarMensajesChatAdmin(data.ticketId, false);
+                    }
+                });
+                socketAdmin.on('comentario:eliminado', function(data) {
+                    if (chatAdminTicketActivo && Number(chatAdminTicketActivo) === Number(data.ticketId)) {
+                        cargarMensajesChatAdmin(data.ticketId, false);
+                    }
+                });
+            } catch(e) {
+                console.warn('Error inicializando WebSocket Admin:', e);
+            }
+        }
+
         function iniciarMonitoreoNotificacionesAdmin() {
             actualizarBotonSonidoAdminUI();
             actualizarBotonNotifEscritorioAdminUI();
+            inicializarSocketsAdmin();
             verificarNotificacionesLiveAdmin();
-            setInterval(verificarNotificacionesLiveAdmin, 8000);
+            // Poleo de respaldo a baja frecuencia (20s) como fallback si la red se corta
+            setInterval(verificarNotificacionesLiveAdmin, 20000);
         }
     </script>
+    <script src="/socket.io/socket.io.js"></script>
 
 </body>
 </html>
