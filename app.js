@@ -1304,23 +1304,32 @@ function obtenerDatosAdmin(req, res, mensaje = null, error = null) {
                                                 ORDER BY usuarios.nombre ASC, equipos_usuario.tipo ASC, equipos_usuario.id DESC
                                             `, [], (errEq, equipos) => {
                                                 db.all('SELECT * FROM guias_rapidas ORDER BY destacada DESC, id DESC', [], (errGuias, guias) => {
-                                                    res.render('admin-dashboard', {
-                                                        adminNombre: req.session.usuario.nombre,
-                                                        adminPuesto: req.session.usuario.puesto || 'Especialista TI',
-                                                        adminId: req.session.usuario.id,
-                                                        adminEmail: req.session.usuario.email,
-                                                        usuarios: usuarios || [],
-                                                        usuariosEliminados: usuariosEliminados || [],
-                                                        ticketsEliminados: ticketsEliminados || [],
-                                                        tickets: ticketsConHistorial,
-                                                        categorias: categorias || [],
-                                                        equipos: equipos || [],
-                                                        guias: guias || [],
-                                                        configCorreo: configCorreo || {},
-                                                        plantillasCorreo: plantillasCorreo || [],
-                                                        filtroActual: filtroEstatus,
-                                                        mensaje: mensajeFinal,
-                                                        error: errorFinal
+                                                    db.all(`
+                                                        SELECT tickets.*, COALESCE(usuarios.nombre, tickets.creado_por_admin, 'Usuario') AS usuario_nombre, usuarios.email AS usuario_email, usuarios.puesto AS usuario_puesto
+                                                        FROM tickets
+                                                        LEFT JOIN usuarios ON tickets.usuario_id = usuarios.id
+                                                        WHERE tickets.deleted_at IS NULL AND tickets.estatus = 'Pendiente por cliente' AND tickets.fecha_programada_cliente IS NOT NULL
+                                                        ORDER BY tickets.fecha_programada_cliente ASC
+                                                    `, [], (errProg, ticketsProgramados) => {
+                                                        res.render('admin-dashboard', {
+                                                            adminNombre: req.session.usuario.nombre,
+                                                            adminPuesto: req.session.usuario.puesto || 'Especialista TI',
+                                                            adminId: req.session.usuario.id,
+                                                            adminEmail: req.session.usuario.email,
+                                                            usuarios: usuarios || [],
+                                                            usuariosEliminados: usuariosEliminados || [],
+                                                            ticketsEliminados: ticketsEliminados || [],
+                                                            tickets: ticketsConHistorial,
+                                                            ticketsProgramados: ticketsProgramados || [],
+                                                            categorias: categorias || [],
+                                                            equipos: equipos || [],
+                                                            guias: guias || [],
+                                                            configCorreo: configCorreo || {},
+                                                            plantillasCorreo: plantillasCorreo || [],
+                                                            filtroActual: filtroEstatus,
+                                                            mensaje: mensajeFinal,
+                                                            error: errorFinal
+                                                        });
                                                     });
                                                 });
                                             });
@@ -2221,21 +2230,33 @@ app.get('/api/admin/notificaciones-live', esAdmin, (req, res) => {
                          GROUP BY ticket_id`,
                         [],
                         (errCont, conteosPorTicket) => {
-                            return res.json({
-                                ok: true,
-                                ticketsNuevos,
-                                listaMensajesNoLeidos,
-                                ultimoTicket: ticketsNuevos.length > 0 ? ticketsNuevos[0] : null,
-                                ultimoComentarioUsuario: listaMensajesNoLeidos.length > 0 ? listaMensajesNoLeidos[0] : null,
-                                totalNuevos: ticketsNuevos.length,
-                                mensajesNoLeidos: listaMensajesNoLeidos.length,
-                                conteosPorTicket: conteosPorTicket || [],
-                                resumen: {
-                                    totalNuevosTickets: ticketsNuevos.length,
-                                    totalMensajesNoLeidos: listaMensajesNoLeidos.length,
-                                    totalAlertas: ticketsNuevos.length + listaMensajesNoLeidos.length
+                            db.all(
+                                `SELECT tickets.id, tickets.titulo, tickets.prioridad, tickets.fecha_programada_cliente, tickets.motivo_pendiente_cliente,
+                                        COALESCE(usuarios.nombre, tickets.creado_por_admin, 'Usuario') AS usuario_nombre, usuarios.puesto AS usuario_puesto
+                                 FROM tickets
+                                 LEFT JOIN usuarios ON tickets.usuario_id = usuarios.id
+                                 WHERE tickets.deleted_at IS NULL AND tickets.estatus = 'Pendiente por cliente' AND tickets.fecha_programada_cliente IS NOT NULL
+                                 ORDER BY tickets.fecha_programada_cliente ASC`,
+                                [],
+                                (errProg, ticketsProgramados) => {
+                                    return res.json({
+                                        ok: true,
+                                        ticketsNuevos,
+                                        listaMensajesNoLeidos,
+                                        ticketsProgramados: ticketsProgramados || [],
+                                        ultimoTicket: ticketsNuevos.length > 0 ? ticketsNuevos[0] : null,
+                                        ultimoComentarioUsuario: listaMensajesNoLeidos.length > 0 ? listaMensajesNoLeidos[0] : null,
+                                        totalNuevos: ticketsNuevos.length,
+                                        mensajesNoLeidos: listaMensajesNoLeidos.length,
+                                        conteosPorTicket: conteosPorTicket || [],
+                                        resumen: {
+                                            totalNuevosTickets: ticketsNuevos.length,
+                                            totalMensajesNoLeidos: listaMensajesNoLeidos.length,
+                                            totalAlertas: ticketsNuevos.length + listaMensajesNoLeidos.length
+                                        }
+                                    });
                                 }
-                            });
+                            );
                         }
                     );
                 }

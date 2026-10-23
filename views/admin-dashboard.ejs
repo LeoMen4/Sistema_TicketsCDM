@@ -392,14 +392,63 @@
                 <span class="flex-1">Configuración de Correo</span>
             </button>
 
-            <div class="pt-4 mt-4 border-t border-slate-100 space-y-1">
-                <a 
-                    href="/admin/dashboards" 
-                    class="menu-item text-brand-700 hover:bg-brand-50 font-bold"
-                >
-                    
-                    <span>Dashboards y Métricas</span>
-                </a>
+            <!-- RECORDATORIOS Y CITAS PROGRAMADAS (ESQUINA INFERIOR IZQUIERDA) -->
+            <div id="contenedorCitasSidebar" class="pt-3 mt-3 border-t border-slate-200">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-[11px] font-black uppercase tracking-wider text-amber-800 flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                        Citas Programadas
+                    </span>
+                    <span id="badgeTotalCitasSidebar" class="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                        <%= (typeof ticketsProgramados !== 'undefined' && ticketsProgramados) ? ticketsProgramados.length : 0 %>
+                    </span>
+                </div>
+
+                <div id="listaCitasSidebar" class="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                    <% if (typeof ticketsProgramados !== 'undefined' && ticketsProgramados && ticketsProgramados.length > 0) { %>
+                        <% ticketsProgramados.forEach(function(tc) { 
+                            const dCita = new Date(String(tc.fecha_programada_cliente).includes('T') ? tc.fecha_programada_cliente : String(tc.fecha_programada_cliente).replace(' ', 'T'));
+                            let fechaFormateada = tc.fecha_programada_cliente;
+                            if (!isNaN(dCita.getTime())) {
+                                const hoyStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(new Date());
+                                const citaStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(dCita);
+                                const horaStr = dCita.toLocaleTimeString('es-MX', { timeZone: 'America/Mexico_City', hour: '2-digit', minute: '2-digit' });
+                                if (citaStr === hoyStr) {
+                                    fechaFormateada = 'Hoy a las ' + horaStr + ' hrs';
+                                } else {
+                                    fechaFormateada = dCita.toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: 'short' }) + ', ' + horaStr + ' hrs';
+                                }
+                            }
+                        %>
+                            <div class="p-2 rounded-md bg-amber-50/70 border border-amber-200 text-xs hover:bg-amber-100/60 transition-colors">
+                                <div class="flex items-center justify-between gap-1">
+                                    <span class="font-bold text-amber-900 text-[11px] truncate flex items-center gap-1">
+                                        <svg class="w-3 h-3 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                        <%= fechaFormateada %>
+                                    </span>
+                                    <a href="/admin/tickets/<%= tc.id %>" target="_blank" class="text-[10px] font-black bg-white text-amber-800 hover:text-amber-950 px-1.5 py-0.5 rounded border border-amber-300 shadow-2xs hover:bg-amber-50 transition-colors" title="Abrir ticket completo">
+                                        #<%= tc.id %>
+                                    </a>
+                                </div>
+                                <div class="font-semibold text-slate-800 text-[11px] truncate mt-0.5" title="<%= tc.titulo %>">
+                                    <%= tc.titulo %>
+                                </div>
+                                <div class="text-[10px] text-slate-500 truncate">
+                                    <%= tc.usuario_nombre %>
+                                </div>
+                                <% if (tc.motivo_pendiente_cliente) { %>
+                                    <div class="text-[9px] text-amber-700/80 italic truncate mt-0.5" title="<%= tc.motivo_pendiente_cliente %>">
+                                        "<%= tc.motivo_pendiente_cliente %>"
+                                    </div>
+                                <% } %>
+                            </div>
+                        <% }); %>
+                    <% } else { %>
+                        <div class="p-2 text-center text-slate-400 text-[11px] italic rounded bg-slate-50 border border-dashed border-slate-200">
+                            Sin citas pendientes
+                        </div>
+                    <% } %>
+                </div>
             </div>
         </aside>
 
@@ -432,61 +481,6 @@
 
             <!-- MÓDULO 1: ATENCIÓN DE TICKETS DE FALLAS (VISIBLE PRINCIPALMENTE) -->
             <section id="modulo-tickets" class="modulo-admin space-y-4">
-                <%
-                    const hoyInicioDia = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(new Date());
-                    const ticketsCitaHoyAdmin = (tickets || []).filter(t => {
-                        if (!t.fecha_programada_cliente) return false;
-                        const fStr = String(t.fecha_programada_cliente).replace(' ', 'T');
-                        return fStr.startsWith(hoyInicioDia);
-                    });
-                %>
-                <% if (ticketsCitaHoyAdmin.length > 0) { %>
-                    <div class="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 rounded-lg shadow-md p-4 text-white border-2 border-amber-300">
-                        <div class="flex items-center justify-between gap-3 flex-wrap border-b border-white/20 pb-2.5 mb-3">
-                            <div class="flex items-center gap-2.5">
-                                <span class="w-3 h-3 rounded-full bg-white animate-pulse"></span>
-                                <div>
-                                    <h3 class="text-xs font-black uppercase tracking-wider text-amber-100 flex items-center gap-1.5">
-                                        <span>RECORDATORIO DE HOY: <%= ticketsCitaHoyAdmin.length %> CITA(S) / CONTACTO(S) PROGRAMADOS</span>
-                                    </h3>
-                                    <p class="text-xs font-bold text-white mt-0.5">Tienes visitas técnicas o seguimientos acordados con usuarios para el día de hoy:</p>
-                                </div>
-                            </div>
-                            <span class="px-2.5 py-1 rounded-full bg-white text-amber-800 text-[10px] font-black uppercase shadow-xs">
-                                ⏰ Horario CDMX
-                            </span>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                            <% ticketsCitaHoyAdmin.forEach(tc => { 
-                                const dCita = new Date(String(tc.fecha_programada_cliente).replace(' ', 'T'));
-                                const horaStr = !isNaN(dCita.getTime()) ? dCita.toLocaleTimeString('es-MX', { timeZone: 'America/Mexico_City', hour: '2-digit', minute: '2-digit' }) : tc.fecha_programada_cliente;
-                            %>
-                                <div class="bg-white/15 backdrop-blur-xs rounded-md p-3 border border-white/25 flex flex-col justify-between space-y-2">
-                                    <div>
-                                        <div class="flex items-center justify-between gap-1">
-                                            <span class="text-xs font-black text-amber-200">⏰ Hoy a las <%= horaStr %> hrs</span>
-                                            <span class="text-[10px] font-bold bg-white/20 px-1.5 py-0.2 rounded">#<%= tc.id %></span>
-                                        </div>
-                                        <div class="text-xs font-bold text-white truncate mt-1" title="<%= tc.titulo %>"><%= tc.titulo %></div>
-                                        <div class="text-[11px] text-amber-100 truncate"><%= tc.usuario_nombre %> <%= tc.usuario_puesto ? '• ' + tc.usuario_puesto : '' %></div>
-                                        <% if (tc.motivo_pendiente_cliente) { %>
-                                            <div class="text-[10px] text-white/90 italic line-clamp-2 mt-0.5">"<%= tc.motivo_pendiente_cliente %>"</div>
-                                        <% } %>
-                                    </div>
-                                    <div class="pt-1 flex items-center gap-2">
-                                        <a href="/admin/tickets/<%= tc.id %>" target="_blank" class="px-2.5 py-1 rounded bg-white text-amber-900 font-extrabold text-[11px] hover:bg-amber-50 shadow-2xs inline-flex items-center gap-1">
-                                            Abrir Ticket
-                                        </a>
-                                        <button type="button" onclick="abrirChatTicketAdmin('<%= tc.id %>')" class="px-2.5 py-1 rounded bg-black/20 hover:bg-black/30 text-white font-bold text-[11px] cursor-pointer">
-                                            Chat
-                                        </button>
-                                    </div>
-                                </div>
-                            <% }) %>
-                        </div>
-                    </div>
-                <% } %>
-                
                 <div class="bg-white rounded-md shadow-xs border border-slate-200 overflow-hidden">
                     
                     <!-- Barra de Filtros por Estatus y Botón Masivo a la Derecha -->
@@ -5970,15 +5964,30 @@
 
             const toast = document.createElement('div');
             const esTicket = tipo === 'ticket';
+            const esCita = tipo === 'cita';
+            let bordeClase = 'border-sky-400 ring-4 ring-sky-400/20';
+            let badgeBg = 'bg-sky-500 text-white';
+            let badgeTexto = 'MENSAJE DE CHAT';
+
+            if (esTicket) {
+                bordeClase = 'border-brand-500 ring-4 ring-brand-500/20';
+                badgeBg = 'bg-brand-600 text-white animate-pulse';
+                badgeTexto = ' NUEVO TICKET DETECTADO';
+            } else if (esCita) {
+                bordeClase = 'border-amber-500 ring-4 ring-amber-500/25';
+                badgeBg = 'bg-amber-600 text-white animate-pulse';
+                badgeTexto = 'RECORDATORIO DE PROGRAMACIÓN';
+            }
+
             toast.className = 'pointer-events-auto bg-slate-900 text-white rounded-xl shadow-2xl border-2 ' + 
-                (esTicket ? 'border-brand-500 ring-4 ring-brand-500/20' : 'border-sky-400 ring-4 ring-sky-400/20') + 
+                bordeClase + 
                 ' p-4 flex items-start justify-between gap-3.5 transition-all duration-300 transform translate-y-0';
             
             toast.innerHTML = `
                 <div class="flex-1 min-w-0 space-y-2">
                     <div class="flex items-center gap-2">
-                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${esTicket ? 'bg-brand-600 text-white animate-pulse' : 'bg-sky-500 text-white'}">
-                            ${esTicket ? ' NUEVO TICKET DETECTADO' : 'MENSAJE DE CHAT'}
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${badgeBg}">
+                            ${badgeTexto}
                         </span>
                         <span class="text-xs font-extrabold text-slate-300">#${ticketId}</span>
                     </div>
@@ -5996,7 +6005,7 @@
                             <span>Abrir Ticket #${ticketId}</span>
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                         </a>
-                        ${!esTicket ? `
+                        ${!esTicket && !esCita ? `
                             <button 
                                 type="button" 
                                 onclick="abrirChatTicketAdmin('${ticketId}'); this.closest('.pointer-events-auto').remove();" 
@@ -6029,6 +6038,130 @@
         }
 
         // ==========================================
+        // PROCESADOR DE ALERTAS DE CITAS PROGRAMADAS
+        // (Alerta Windows 1 día antes y 1 hora antes)
+        // ==========================================
+        function procesarAlertasCitasProgramadas(ticketsProgramados) {
+            if (!ticketsProgramados || !Array.isArray(ticketsProgramados)) return;
+
+            const ahora = Date.now();
+
+            // 1. Revisar y disparar alertas de escritorio si corresponde
+            ticketsProgramados.forEach(tp => {
+                if (!tp.fecha_programada_cliente) return;
+                const dCita = new Date(String(tp.fecha_programada_cliente).includes('T') ? tp.fecha_programada_cliente : String(tp.fecha_programada_cliente).replace(' ', 'T'));
+                if (isNaN(dCita.getTime())) return;
+
+                const diffMs = dCita.getTime() - ahora;
+                const diffMinutes = Math.floor(diffMs / 60000);
+                const diffHours = diffMs / 3600000;
+
+                const horaStr = dCita.toLocaleTimeString('es-MX', { timeZone: 'America/Mexico_City', hour: '2-digit', minute: '2-digit' });
+
+                // Alerta 1 día antes (entre 1.2 hrs y 26 hrs de anticipación)
+                const key1Dia = 'notif_cita_1dia_' + tp.id + '_' + tp.fecha_programada_cliente;
+                if (diffHours > 1.2 && diffHours <= 26) {
+                    if (!localStorage.getItem(key1Dia)) {
+                        localStorage.setItem(key1Dia, '1');
+                        dispararNotificacionEscritorioAdmin(
+                            `Recordatorio: Programación para Mañana (Ticket #${tp.id})`,
+                            `El día de mañana tienes programada la resolución de un ticket (Ticket #${tp.id} - ${horaStr} hrs con ${tp.usuario_nombre || 'Usuario'}: ${tp.titulo})`,
+                            tp.id,
+                            'cita-1dia'
+                        );
+                        mostrarToastNotificacionAdmin(
+                            `El día de mañana tienes programada la resolución de un ticket (#${tp.id})`,
+                            `A las ${horaStr} hrs con ${tp.usuario_nombre || 'Usuario'} • "${tp.titulo}"`,
+                            tp.id,
+                            'cita'
+                        );
+                        reproducirSonidoAlertaAdmin('ticket');
+                    }
+                }
+
+                // Alerta 1 hora antes (entre 0 y 65 minutos de anticipación)
+                const key1Hora = 'notif_cita_1hora_' + tp.id + '_' + tp.fecha_programada_cliente;
+                if (diffMinutes > 0 && diffMinutes <= 65) {
+                    if (!localStorage.getItem(key1Hora)) {
+                        localStorage.setItem(key1Hora, '1');
+                        dispararNotificacionEscritorioAdmin(
+                            `Aviso Urgente: Programación en 1 hora (Ticket #${tp.id})`,
+                            `En una hora tienes programada la resolución de un ticket (Ticket #${tp.id} - ${horaStr} hrs con ${tp.usuario_nombre || 'Usuario'}: ${tp.titulo})`,
+                            tp.id,
+                            'cita-1hora'
+                        );
+                        mostrarToastNotificacionAdmin(
+                            `En una hora tienes programada la resolución de un ticket (#${tp.id})`,
+                            `A las ${horaStr} hrs con ${tp.usuario_nombre || 'Usuario'} • "${tp.titulo}"`,
+                            tp.id,
+                            'cita'
+                        );
+                        reproducirSonidoAlertaAdmin('ticket');
+                    }
+                }
+            });
+
+            // 2. Refrescar widget de la esquina inferior izquierda
+            const listaSidebar = document.getElementById('listaCitasSidebar');
+            const badgeSidebar = document.getElementById('badgeTotalCitasSidebar');
+            if (badgeSidebar) {
+                badgeSidebar.textContent = ticketsProgramados.length;
+            }
+
+            if (listaSidebar) {
+                if (ticketsProgramados.length === 0) {
+                    listaSidebar.innerHTML = `
+                        <div class="p-2 text-center text-slate-400 text-[11px] italic rounded bg-slate-50 border border-dashed border-slate-200">
+                            Sin citas pendientes
+                        </div>
+                    `;
+                } else {
+                    const hoyStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(new Date());
+                    let htmlCitas = '';
+                    ticketsProgramados.forEach(tc => {
+                        const dCita = new Date(String(tc.fecha_programada_cliente).includes('T') ? tc.fecha_programada_cliente : String(tc.fecha_programada_cliente).replace(' ', 'T'));
+                        let fechaFormateada = tc.fecha_programada_cliente;
+                        if (!isNaN(dCita.getTime())) {
+                            const citaStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(dCita);
+                            const horaStr = dCita.toLocaleTimeString('es-MX', { timeZone: 'America/Mexico_City', hour: '2-digit', minute: '2-digit' });
+                            if (citaStr === hoyStr) {
+                                fechaFormateada = 'Hoy a las ' + horaStr + ' hrs';
+                            } else {
+                                fechaFormateada = dCita.toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: 'short' }) + ', ' + horaStr + ' hrs';
+                            }
+                        }
+
+                        htmlCitas += `
+                            <div class="p-2 rounded-md bg-amber-50/70 border border-amber-200 text-xs hover:bg-amber-100/60 transition-colors">
+                                <div class="flex items-center justify-between gap-1">
+                                    <span class="font-bold text-amber-900 text-[11px] truncate flex items-center gap-1">
+                                        <svg class="w-3 h-3 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                        ${escaparHtmlSimple(fechaFormateada)}
+                                    </span>
+                                    <a href="/admin/tickets/${tc.id}" target="_blank" class="text-[10px] font-black bg-white text-amber-800 hover:text-amber-950 px-1.5 py-0.5 rounded border border-amber-300 shadow-2xs hover:bg-amber-50 transition-colors" title="Abrir ticket completo">
+                                        #${tc.id}
+                                    </a>
+                                </div>
+                                <div class="font-semibold text-slate-800 text-[11px] truncate mt-0.5" title="${escaparHtmlSimple(tc.titulo)}">
+                                    ${escaparHtmlSimple(tc.titulo)}
+                                </div>
+                                <div class="text-[10px] text-slate-500 truncate">
+                                    ${escaparHtmlSimple(tc.usuario_nombre || 'Usuario')}
+                                </div>
+                                ${tc.motivo_pendiente_cliente ? `
+                                    <div class="text-[9px] text-amber-700/80 italic truncate mt-0.5" title="${escaparHtmlSimple(tc.motivo_pendiente_cliente)}">
+                                        "${escaparHtmlSimple(tc.motivo_pendiente_cliente)}"
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    });
+                    listaSidebar.innerHTML = htmlCitas;
+                }
+            }
+        }
+
+        // ==========================================
         // POLEO EN VIVO Y ACTUALIZACIÓN EN TIEMPO REAL
         // ==========================================
         async function verificarNotificacionesLiveAdmin() {
@@ -6036,6 +6169,11 @@
                 const resp = await fetch('/api/admin/notificaciones-live');
                 const data = await resp.json();
                 if (!data.ok) return;
+
+                // Procesar recordatorios y alertas de citas programadas
+                if (data.ticketsProgramados) {
+                    procesarAlertasCitasProgramadas(data.ticketsProgramados);
+                }
 
                 const descartados = obtenerTicketsDescartados();
                 const ticketsNuevosActivos = (data.ticketsNuevos || []).filter(t => !descartados.includes(Number(t.id)));
