@@ -99,25 +99,31 @@ function inicializarDiscord(io, db, uploadsDir) {
                 console.warn('[Discord Bot] Advertencia al precargar miembros:', errMem.message);
             }
 
-            // 1. Configurar permisos para roles de Administradores de TI en #tickets-soporte
+            // 1. Configurar permisos estrictos en #tickets-soporte: SOLO administradores del sistema de tickets
             try {
-                const roles = await servidorGrupoCDM.roles.fetch();
-                const rolesAdmin = roles.filter(r => 
-                    r.name.toLowerCase().includes('admin') || 
-                    r.name.toLowerCase().includes('servicio t') || 
-                    r.name.toLowerCase().includes('sistemas')
-                );
-                for (const [id, r] of rolesAdmin) {
-                    await canalTicketsBase.permissionOverwrites.edit(r.id, {
-                        ViewChannel: true,
-                        ManageThreads: true,
-                        SendMessagesInThreads: true,
-                        ReadMessageHistory: true
-                    }).catch(() => {});
+                // Eliminar cualquier permiso accidental de roles departamentales
+                const overwritesABorrar = ['1377000626180980896', '1377000555938844743'];
+                for (const oId of overwritesABorrar) {
+                    if (canalTicketsBase.permissionOverwrites.cache.has(oId)) {
+                        await canalTicketsBase.permissionOverwrites.delete(oId).catch(() => {});
+                    }
                 }
-                console.log('[Discord Bot] Permisos de roles administradores configurados en #tickets-soporte');
+
+                // Configurar acceso explícito únicamente para las cuentas de los administradores del sistema de tickets
+                const adminsDiscord = await obtenerMiembrosAdminDiscord();
+                for (const adm of adminsDiscord) {
+                    if (adm && adm.id) {
+                        await canalTicketsBase.permissionOverwrites.edit(adm.id, {
+                            ViewChannel: true,
+                            ManageThreads: true,
+                            SendMessagesInThreads: true,
+                            ReadMessageHistory: true
+                        }).catch(() => {});
+                    }
+                }
+                console.log(`[Discord Bot] Acceso estricto configurado exclusivamente para los administradores del sistema (${adminsDiscord.length})`);
             } catch (ePerms) {
-                console.warn('[Discord Bot] Advertencia configurando permisos de roles admin:', ePerms.message);
+                console.warn('[Discord Bot] Advertencia configurando permisos de administradores:', ePerms.message);
             }
 
             // 2. Limpieza preventiva de hilos pertenecientes a tickets ya resueltos o eliminados
