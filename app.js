@@ -1989,6 +1989,13 @@ app.post('/admin/tickets/actualizar-estatus-masivo', esAdmin, (req, res) => {
                             () => {
                                 // Notificar al usuario por correo usando el administrador actual como remitente
                                 mailer.notificarCambioEstatusUsuario(ticketId, nuevoEstatus, {}, { adminRemitente: req.session.usuario });
+
+                                // Notificar cambio de estatus en Discord (o eliminar hilo si pasa a Resuelto)
+                                try {
+                                    discordBot.notificarCambioEstatusDiscord(ticketId, nuevoEstatus, {
+                                        tecnico_resolvio: adminActualNombre
+                                    });
+                                } catch (eDisc) {}
                             }
                         );
                     }

@@ -99,6 +99,46 @@ function inicializarDiscord(io, db, uploadsDir) {
                 console.warn('[Discord Bot] Advertencia al precargar miembros:', errMem.message);
             }
 
+            // 1. Configurar permisos para roles de Administradores de TI en #tickets-soporte
+            try {
+                const roles = await servidorGrupoCDM.roles.fetch();
+                const rolesAdmin = roles.filter(r => 
+                    r.name.toLowerCase().includes('admin') || 
+                    r.name.toLowerCase().includes('servicio t') || 
+                    r.name.toLowerCase().includes('sistemas')
+                );
+                for (const [id, r] of rolesAdmin) {
+                    await canalTicketsBase.permissionOverwrites.edit(r.id, {
+                        ViewChannel: true,
+                        ManageThreads: true,
+                        SendMessagesInThreads: true,
+                        ReadMessageHistory: true
+                    }).catch(() => {});
+                }
+                console.log('[Discord Bot] Permisos de roles administradores configurados en #tickets-soporte');
+            } catch (ePerms) {
+                console.warn('[Discord Bot] Advertencia configurando permisos de roles admin:', ePerms.message);
+            }
+
+            // 2. Limpieza preventiva de hilos pertenecientes a tickets ya resueltos o eliminados
+            try {
+                const activeThreads = await canalTicketsBase.threads.fetchActive();
+                for (const [id, thread] of activeThreads.threads) {
+                    const match = thread.name.match(/^ticket-(\d+)/i);
+                    if (match && dbInstance) {
+                        const ticketId = parseInt(match[1], 10);
+                        dbInstance.get('SELECT id, estatus FROM tickets WHERE id = ?', [ticketId], async (errT, t) => {
+                            if (!errT && (!t || t.estatus === 'Resuelto')) {
+                                try {
+                                    await thread.delete('Limpieza: Ticket resuelto o cerrado');
+                                    dbInstance.run('UPDATE tickets SET discord_thread_id = NULL WHERE id = ?', [ticketId]);
+                                } catch (eDel) {}
+                            }
+                        });
+                    }
+                }
+            } catch (eClean) {}
+
         } catch (err) {
             console.error('[Discord Bot] Error al inicializar servidor o canales en Discord:', err);
         }
@@ -358,6 +398,32 @@ async function buscarMiembroDiscord(usuario) {
 }
 
 /**
+ * Obtiene todos los miembros de Discord correspondientes a administradores del sistema
+ */
+async function obtenerMiembrosAdminDiscord() {
+    if (!servidorGrupoCDM || !dbInstance) return [];
+    return new Promise((resolve) => {
+        dbInstance.all(
+            `SELECT id, nombre, email, discord_user_id FROM usuarios WHERE rol = 'admin' AND deleted_at IS NULL`,
+            [],
+            async (err, adminsDB) => {
+                if (err || !adminsDB) return resolve([]);
+                const miembros = [];
+                for (const adm of adminsDB) {
+                    try {
+                        const m = await buscarMiembroDiscord(adm);
+                        if (m && !miembros.some(x => x.id === m.id)) {
+                            miembros.push(m);
+                        }
+                    } catch (e) {}
+                }
+                resolve(miembros);
+            }
+        );
+    });
+}
+
+/**
  * Obtiene o crea el hilo de soporte dedicado en Discord para un ticket
  */
 async function obtenerOCrearHiloTicket(ticketId, ticketData = null, usuarioData = null) {
@@ -433,6 +499,18 @@ async function obtenerOCrearHiloTicket(ticketId, ticketData = null, usuarioData 
                 await nuevoHilo.members.add(miembroDiscord.id);
             } catch (eAdd) {}
         }
+
+        // 3.1. Agregar a todos los administradores del sistema al hilo para garantizar acceso y notificaciones inmediatas
+        try {
+            const adminsDiscord = await obtenerMiembrosAdminDiscord();
+            for (const admM of adminsDiscord) {
+                if (admM && (!miembroDiscord || admM.id !== miembroDiscord.id)) {
+                    try {
+                        await nuevoHilo.members.add(admM.id);
+                    } catch (eAddAdm) {}
+                }
+            }
+        } catch (eAdm) {}
 
         // 4. Publicar la tarjeta inicial de bienvenida y detalles del ticket
         const embedInicial = new EmbedBuilder()
@@ -584,11 +662,22 @@ async function notificarCambioEstatusDiscord(ticketId, nuevoEstatus, extraData =
         const msgEstatus = await hilo.send({ embeds: [embed] });
         mensajesEnviadosPorBot.add(msgEstatus.id);
 
-        // Si el ticket fue resuelto, enviar mensaje de cierre y archivar el hilo
+        // Si el ticket fue resuelto, notificar solución técnica y eliminar el hilo de Discord automáticamente
         if (nuevoEstatus === 'Resuelto') {
-            const msgCierre = await hilo.send('🔒 **Este ticket ha sido resuelto y cerrado.** Puedes responder en este hilo si requieres reapertura o crear un nuevo ticket desde el portal web.');
+            const msgCierre = await hilo.send('🔒 **Este ticket ha sido resuelto y cerrado.** Todo el historial de la conversación y notas técnicas quedan guardados de forma permanente en el portal web de tickets. Este canal de soporte de Discord se cerrará y eliminará automáticamente en 4 segundos.');
             mensajesEnviadosPorBot.add(msgCierre.id);
-            await hilo.setArchived(true).catch(() => {});
+
+            setTimeout(async () => {
+                try {
+                    await hilo.delete('Ticket resuelto y cerrado');
+                    if (dbInstance) {
+                        dbInstance.run('UPDATE tickets SET discord_thread_id = NULL WHERE id = ?', [ticketId]);
+                    }
+                    console.log(`[Discord Bot] Hilo del ticket #${ticketId} eliminado tras resolución.`);
+                } catch (eDel) {
+                    console.warn('[Discord Bot] No se pudo borrar el hilo resuelto:', eDel.message);
+                }
+            }, 4000);
         }
 
     } catch (e) {
