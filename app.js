@@ -1360,25 +1360,32 @@ function obtenerDatosAdmin(req, res, mensaje = null, error = null) {
                                                         WHERE tickets.deleted_at IS NULL AND tickets.estatus = 'Pendiente por cliente' AND tickets.fecha_programada_cliente IS NOT NULL
                                                         ORDER BY tickets.fecha_programada_cliente ASC
                                                     `, [], (errProg, ticketsProgramados) => {
-                                                        res.render('admin-dashboard', {
-                                                            adminNombre: req.session.usuario.nombre,
-                                                            adminPuesto: req.session.usuario.puesto || 'Especialista TI',
-                                                            adminId: req.session.usuario.id,
-                                                            adminEmail: req.session.usuario.email,
-                                                            usuarios: usuarios || [],
-                                                            usuariosEliminados: usuariosEliminados || [],
-                                                            ticketsEliminados: ticketsEliminados || [],
-                                                            tickets: ticketsConHistorial,
-                                                            ticketsProgramados: ticketsProgramados || [],
-                                                            categorias: categorias || [],
-                                                            equipos: equipos || [],
-                                                            guias: guias || [],
-                                                            configCorreo: configCorreo || {},
-                                                            plantillasCorreo: plantillasCorreo || [],
-                                                            discordInfo: discordBot.obtenerEstadoBot(),
-                                                            filtroActual: filtroEstatus,
-                                                            mensaje: mensajeFinal,
-                                                            error: errorFinal
+                                                        db.all(`
+                                                            SELECT * FROM recordatorios
+                                                            WHERE deleted_at IS NULL AND completado = 0
+                                                            ORDER BY fecha_programada ASC
+                                                        `, [], (errRec, recordatorios) => {
+                                                            res.render('admin-dashboard', {
+                                                                adminNombre: req.session.usuario.nombre,
+                                                                adminPuesto: req.session.usuario.puesto || 'Especialista TI',
+                                                                adminId: req.session.usuario.id,
+                                                                adminEmail: req.session.usuario.email,
+                                                                usuarios: usuarios || [],
+                                                                usuariosEliminados: usuariosEliminados || [],
+                                                                ticketsEliminados: ticketsEliminados || [],
+                                                                tickets: ticketsConHistorial,
+                                                                ticketsProgramados: ticketsProgramados || [],
+                                                                recordatorios: recordatorios || [],
+                                                                categorias: categorias || [],
+                                                                equipos: equipos || [],
+                                                                guias: guias || [],
+                                                                configCorreo: configCorreo || {},
+                                                                plantillasCorreo: plantillasCorreo || [],
+                                                                discordInfo: discordBot.obtenerEstadoBot(),
+                                                                filtroActual: filtroEstatus,
+                                                                mensaje: mensajeFinal,
+                                                                error: errorFinal
+                                                            });
                                                         });
                                                     });
                                                 });
@@ -1930,6 +1937,183 @@ app.post('/admin/tickets/cambiar-estatus', esAdmin, (req, res) => {
     });
 });
 
+// Editar la cita programada de un ticket (fecha y motivo sin reiniciar ticket)
+app.post('/admin/tickets/editar-cita', esAdmin, (req, res) => {
+    const { ticket_id, fecha_programada_cliente, motivo_pendiente_cliente, origen } = req.body;
+    const adminActualNombre = req.session.usuario ? req.session.usuario.nombre : 'Administrador TI';
+
+    if (!ticket_id || !fecha_programada_cliente) {
+        if (req.xhr || req.headers['sec-fetch-dest'] === 'empty' || req.body.formato === 'json') {
+            return res.status(400).json({ ok: false, error: 'Debes indicar una fecha y hora programada.' });
+        }
+        req.session.errorFlash = 'Debes indicar una fecha y hora programada.';
+        return res.redirect('/admin');
+    }
+
+    const fechaCli = String(fecha_programada_cliente).replace('T', ' ');
+    const motivoCli = (motivo_pendiente_cliente || '').trim();
+
+    db.run(
+        `UPDATE tickets SET fecha_programada_cliente = ?, motivo_pendiente_cliente = ? WHERE id = ?`,
+        [fechaCli, motivoCli, ticket_id],
+        function(errUpd) {
+            if (errUpd) {
+                if (req.xhr || req.headers['sec-fetch-dest'] === 'empty' || req.body.formato === 'json') {
+                    return res.status(500).json({ ok: false, error: errUpd.message });
+                }
+                req.session.errorFlash = 'Error al actualizar la cita: ' + errUpd.message;
+                return res.redirect('/admin');
+            }
+
+            db.run(
+                `INSERT INTO historial_tickets (ticket_id, estatus, usuario_nombre, detalle, fecha)
+                 VALUES (?, 'Pendiente por cliente', ?, ?, datetime('now', '-6 hours'))`,
+                [ticket_id, adminActualNombre, `[Cita Reprogramada] Nueva fecha: ${fechaCli}${motivoCli ? ' • Motivo: ' + motivoCli : ''}`]
+            );
+
+            io.emit('ticket:cita_actualizada', {
+                ticket_id: Number(ticket_id),
+                fecha_programada_cliente: fechaCli,
+                motivo_pendiente_cliente: motivoCli
+            });
+
+            try {
+                discordBot.notificarCambioEstatusDiscord(ticket_id, 'Pendiente por cliente', {
+                    fecha_programada_cliente: fechaCli,
+                    motivo_pendiente_cliente: motivoCli
+                });
+            } catch(e) {}
+
+            const quiereJson = req.xhr || req.headers['sec-fetch-dest'] === 'empty' || req.body.formato === 'json';
+            if (quiereJson) {
+                return res.json({ ok: true, ticket_id: Number(ticket_id), fecha_programada_cliente: fechaCli, motivo_pendiente_cliente: motivoCli });
+            }
+
+            req.session.mensajeFlash = `Cita del Ticket #${ticket_id} actualizada correctamente.`;
+            return res.redirect(origen === 'detalle' ? `/admin/tickets/${ticket_id}` : '/admin');
+        }
+    );
+});
+
+// Eliminar / Cancelar la cita programada de un ticket
+app.post('/admin/tickets/eliminar-cita', esAdmin, (req, res) => {
+    const { ticket_id, origen } = req.body;
+    const adminActualNombre = req.session.usuario ? req.session.usuario.nombre : 'Administrador TI';
+
+    if (!ticket_id) {
+        return res.status(400).json({ ok: false, error: 'ID de ticket no especificado.' });
+    }
+
+    db.run(
+        `UPDATE tickets SET fecha_programada_cliente = NULL, motivo_pendiente_cliente = NULL WHERE id = ?`,
+        [ticket_id],
+        function(errUpd) {
+            if (errUpd) {
+                return res.status(500).json({ ok: false, error: errUpd.message });
+            }
+
+            db.run(
+                `INSERT INTO historial_tickets (ticket_id, estatus, usuario_nombre, detalle, fecha)
+                 VALUES (?, 'Pendiente', ?, '[Cita Cancelada / Eliminada] Se retiró la fecha programada de atención.', datetime('now', '-6 hours'))`,
+                [ticket_id, adminActualNombre]
+            );
+
+            io.emit('ticket:cita_actualizada', {
+                ticket_id: Number(ticket_id),
+                fecha_programada_cliente: null,
+                motivo_pendiente_cliente: null,
+                eliminada: true
+            });
+
+            const quiereJson = req.xhr || req.headers['sec-fetch-dest'] === 'empty' || req.body.formato === 'json';
+            if (quiereJson) {
+                return res.json({ ok: true, ticket_id: Number(ticket_id), eliminada: true });
+            }
+
+            req.session.mensajeFlash = `Cita del Ticket #${ticket_id} eliminada correctamente.`;
+            return res.redirect(origen === 'detalle' ? `/admin/tickets/${ticket_id}` : '/admin');
+        }
+    );
+});
+
+// Rutas para Recordatorios Generales / Tareas Programadas TI
+app.post('/admin/recordatorios/crear', esAdmin, (req, res) => {
+    const { destinatario, usuario_id, descripcion, fecha_programada } = req.body;
+    const adminActualNombre = req.session.usuario ? req.session.usuario.nombre : 'Administrador TI';
+
+    if (!destinatario || !descripcion || !fecha_programada) {
+        return res.status(400).json({ ok: false, error: 'Completa todos los campos obligatorios del recordatorio.' });
+    }
+
+    const fechaProg = String(fecha_programada).replace('T', ' ');
+    const userIdNum = usuario_id ? parseInt(usuario_id, 10) : null;
+
+    db.run(
+        `INSERT INTO recordatorios (destinatario, usuario_id, descripcion, fecha_programada, creado_por)
+         VALUES (?, ?, ?, ?, ?)`,
+        [destinatario.trim(), userIdNum, descripcion.trim(), fechaProg, adminActualNombre],
+        function(errIns) {
+            if (errIns) {
+                return res.status(500).json({ ok: false, error: errIns.message });
+            }
+
+            const recId = this.lastID;
+            db.get(`SELECT * FROM recordatorios WHERE id = ?`, [recId], (errGet, nuevoRec) => {
+                if (nuevoRec) {
+                    io.emit('recordatorio:nuevo', { recordatorio: nuevoRec });
+                }
+
+                const quiereJson = req.xhr || req.headers['sec-fetch-dest'] === 'empty' || req.body.formato === 'json';
+                if (quiereJson) {
+                    return res.json({ ok: true, recordatorio: nuevoRec });
+                }
+                req.session.mensajeFlash = 'Recordatorio programado con éxito.';
+                return res.redirect('/admin');
+            });
+        }
+    );
+});
+
+app.post('/admin/recordatorios/editar', esAdmin, (req, res) => {
+    const { id, destinatario, descripcion, fecha_programada } = req.body;
+    if (!id || !destinatario || !descripcion || !fecha_programada) {
+        return res.status(400).json({ ok: false, error: 'Todos los campos son obligatorios.' });
+    }
+
+    const fechaProg = String(fecha_programada).replace('T', ' ');
+    db.run(
+        `UPDATE recordatorios SET destinatario = ?, descripcion = ?, fecha_programada = ? WHERE id = ?`,
+        [destinatario.trim(), descripcion.trim(), fechaProg, id],
+        function(errUpd) {
+            if (errUpd) {
+                return res.status(500).json({ ok: false, error: errUpd.message });
+            }
+
+            db.get(`SELECT * FROM recordatorios WHERE id = ?`, [id], (errGet, recAct) => {
+                if (recAct) {
+                    io.emit('recordatorio:actualizado', { recordatorio: recAct });
+                }
+                return res.json({ ok: true, recordatorio: recAct });
+            });
+        }
+    );
+});
+
+app.post('/admin/recordatorios/eliminar', esAdmin, (req, res) => {
+    const { id } = req.body;
+    if (!id) return res.status(400).json({ ok: false, error: 'ID no especificado.' });
+
+    db.run(
+        `UPDATE recordatorios SET deleted_at = datetime('now', '-6 hours') WHERE id = ?`,
+        [id],
+        function(errDel) {
+            if (errDel) return res.status(500).json({ ok: false, error: errDel.message });
+            io.emit('recordatorio:eliminado', { id: Number(id) });
+            return res.json({ ok: true, id: Number(id) });
+        }
+    );
+});
+
 // Actualizar estatus masivo de tickets desde la vista de administrador (con registro del especialista)
 app.post('/admin/tickets/actualizar-estatus-masivo', esAdmin, (req, res) => {
     let { cambios } = req.body;
@@ -2397,22 +2581,31 @@ app.get('/api/admin/notificaciones-live', esAdmin, (req, res) => {
                                  ORDER BY tickets.fecha_programada_cliente ASC`,
                                 [],
                                 (errProg, ticketsProgramados) => {
-                                    return res.json({
-                                        ok: true,
-                                        ticketsNuevos,
-                                        listaMensajesNoLeidos,
-                                        ticketsProgramados: ticketsProgramados || [],
-                                        ultimoTicket: ticketsNuevos.length > 0 ? ticketsNuevos[0] : null,
-                                        ultimoComentarioUsuario: listaMensajesNoLeidos.length > 0 ? listaMensajesNoLeidos[0] : null,
-                                        totalNuevos: ticketsNuevos.length,
-                                        mensajesNoLeidos: listaMensajesNoLeidos.length,
-                                        conteosPorTicket: conteosPorTicket || [],
-                                        resumen: {
-                                            totalNuevosTickets: ticketsNuevos.length,
-                                            totalMensajesNoLeidos: listaMensajesNoLeidos.length,
-                                            totalAlertas: ticketsNuevos.length + listaMensajesNoLeidos.length
+                                    db.all(
+                                        `SELECT * FROM recordatorios
+                                         WHERE deleted_at IS NULL AND completado = 0
+                                         ORDER BY fecha_programada ASC`,
+                                        [],
+                                        (errRec, recordatorios) => {
+                                            return res.json({
+                                                ok: true,
+                                                ticketsNuevos,
+                                                listaMensajesNoLeidos,
+                                                ticketsProgramados: ticketsProgramados || [],
+                                                recordatorios: recordatorios || [],
+                                                ultimoTicket: ticketsNuevos.length > 0 ? ticketsNuevos[0] : null,
+                                                ultimoComentarioUsuario: listaMensajesNoLeidos.length > 0 ? listaMensajesNoLeidos[0] : null,
+                                                totalNuevos: ticketsNuevos.length,
+                                                mensajesNoLeidos: listaMensajesNoLeidos.length,
+                                                conteosPorTicket: conteosPorTicket || [],
+                                                resumen: {
+                                                    totalNuevosTickets: ticketsNuevos.length,
+                                                    totalMensajesNoLeidos: listaMensajesNoLeidos.length,
+                                                    totalAlertas: ticketsNuevos.length + listaMensajesNoLeidos.length
+                                                }
+                                            });
                                         }
-                                    });
+                                    );
                                 }
                             );
                         }

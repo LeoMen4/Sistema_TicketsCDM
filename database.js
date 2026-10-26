@@ -259,6 +259,21 @@ db.serialize(() => {
         )
     `);
 
+    // Tabla para Recordatorios Generales / Tareas Programadas TI
+    db.run(`
+        CREATE TABLE IF NOT EXISTS recordatorios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            destinatario TEXT NOT NULL,
+            usuario_id INTEGER DEFAULT NULL,
+            descripcion TEXT NOT NULL,
+            fecha_programada DATETIME NOT NULL,
+            creado_por TEXT NOT NULL,
+            completado INTEGER DEFAULT 0,
+            deleted_at DATETIME DEFAULT NULL,
+            fecha_creacion DATETIME DEFAULT (datetime('now', '-6 hours'))
+        )
+    `);
+
     // Tabla de configuraciones globales del sistema (ej. tolerancia de alertas, banderas de inicialización)
     db.run(`
         CREATE TABLE IF NOT EXISTS configuraciones (

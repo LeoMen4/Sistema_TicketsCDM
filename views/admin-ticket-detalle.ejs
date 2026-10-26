@@ -280,8 +280,33 @@
 
                 <% if (ticket.estatus === 'Pendiente por cliente' && (ticket.fecha_programada_cliente || ticket.motivo_pendiente_cliente)) { %>
                     <div class="w-full bg-amber-50 border border-amber-300 rounded-md p-3 text-xs text-amber-950 mt-2 space-y-1">
-                        <div class="font-bold flex items-center gap-1.5 text-amber-900">
-                            <span>Detalle de Espera por Disponibilidad del Cliente:</span>
+                        <div class="flex items-center justify-between">
+                            <div class="font-bold flex items-center gap-1.5 text-amber-900">
+                                <span>Detalle de Espera por Disponibilidad del Cliente:</span>
+                            </div>
+                            <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                                <div class="flex items-center gap-1.5">
+                                    <button 
+                                        type="button" 
+                                        onclick="abrirModalEditarCitaDetalle()" 
+                                        class="text-amber-800 hover:text-amber-950 hover:bg-amber-200/70 px-2 py-0.5 rounded text-[11px] font-bold border border-amber-300 bg-white transition-colors cursor-pointer"
+                                        title="Editar fecha u hora de la cita"
+                                    >
+                                        ✏️ Editar Cita
+                                    </button>
+                                    <form action="/admin/tickets/eliminar-cita" method="POST" onsubmit="return confirm('¿Seguro que deseas eliminar la cita programada?');" class="inline">
+                                        <input type="hidden" name="ticket_id" value="<%= ticket.id %>">
+                                        <input type="hidden" name="origen" value="detalle">
+                                        <button 
+                                            type="submit" 
+                                            class="text-red-600 hover:text-red-800 hover:bg-red-100 px-2 py-0.5 rounded text-[11px] font-bold border border-red-200 bg-white transition-colors cursor-pointer"
+                                            title="Eliminar cita"
+                                        >
+                                            🗑️ Eliminar
+                                        </button>
+                                    </form>
+                                </div>
+                            <% } %>
                         </div>
                         <% if (ticket.fecha_programada_cliente) { %>
                             <div><strong>Cita / Contacto acordado:</strong> <%= ticket.fecha_programada_cliente %></div>
@@ -990,6 +1015,71 @@
             </form>
         </div>
     </div>
+
+    <!-- MODAL PARA EDITAR CITA PROGRAMADA DESDE DETALLE -->
+    <div id="modalEditarCitaDetalle" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 480px; border-top: 4px solid #f59e0b;">
+            <div class="flex items-center justify-between mb-3 border-b border-slate-100 pb-2.5">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">📅</span>
+                    <h4 class="text-base font-bold text-slate-900 m-0">Editar Cita Programada</h4>
+                </div>
+                <button type="button" onclick="cerrarModalEditarCitaDetalle()" class="text-slate-400 hover:text-slate-600 text-lg font-bold cursor-pointer">&times;</button>
+            </div>
+            <form action="/admin/tickets/editar-cita" method="POST" class="space-y-4">
+                <input type="hidden" name="ticket_id" value="<%= ticket.id %>">
+                <input type="hidden" name="origen" value="detalle">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                        Fecha y hora programada de contacto / visita:
+                    </label>
+                    <input 
+                        type="datetime-local" 
+                        name="fecha_programada_cliente" 
+                        required
+                        value="<%= ticket.fecha_programada_cliente ? String(ticket.fecha_programada_cliente).replace(' ', 'T').slice(0, 16) : '' %>"
+                        class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 bg-white focus:border-amber-600 focus:outline-none shadow-2xs font-bold"
+                    >
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                        Motivo / Breve descripción:
+                    </label>
+                    <textarea 
+                        name="motivo_pendiente_cliente" 
+                        rows="2"
+                        placeholder="Ej. El usuario estará disponible para revisión física..."
+                        class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 bg-white focus:border-amber-600 focus:outline-none shadow-2xs"
+                    ><%= ticket.motivo_pendiente_cliente || '' %></textarea>
+                </div>
+                <div class="modal-actions pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+                    <button 
+                        type="button" 
+                        onclick="cerrarModalEditarCitaDetalle()" 
+                        class="px-3.5 py-2 rounded text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+                    >
+                        Cancelar
+                    </button>
+                    <button 
+                        type="submit" 
+                        class="px-4 py-2 rounded text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 transition-colors shadow-xs cursor-pointer flex items-center gap-1.5"
+                    >
+                        <span>Guardar Cambios</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+        function abrirModalEditarCitaDetalle() {
+            var m = document.getElementById('modalEditarCitaDetalle');
+            if (m) m.style.display = 'block';
+        }
+        function cerrarModalEditarCitaDetalle() {
+            var m = document.getElementById('modalEditarCitaDetalle');
+            if (m) m.style.display = 'none';
+        }
+    </script>
     <% } %>
 
     <script>
