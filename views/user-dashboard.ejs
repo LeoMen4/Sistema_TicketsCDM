@@ -438,60 +438,119 @@
 
                         <!-- Barra de Búsqueda y Filtros en Mis Tickets -->
                         <% if (tickets.length > 0) { %>
-                            <div class="flex flex-wrap items-center gap-2.5 pt-2 border-t border-slate-200/80">
-                                <div class="relative flex-1 min-w-[230px]">
-                                    <input 
-                                        type="text" 
-                                        id="buscarMisTickets" 
-                                        oninput="filtrarMisTickets()" 
-                                        placeholder="Buscar en mis tickets por #ID, título, tipo de falla o descripción..." 
-                                        class="w-full rounded-md border border-slate-300 pl-8 pr-7 py-1.5 text-xs text-slate-900 placeholder-slate-400 bg-white focus:border-brand-600 focus:outline-none shadow-2xs"
-                                    >
-                                    
+                            <% 
+                                const conteoEst = {
+                                    'nuevo ticket': 0,
+                                    'en proceso': 0,
+                                    'pendiente': 0,
+                                    'pendiente por cliente': 0,
+                                    'resuelto': 0
+                                };
+                                tickets.forEach(t => {
+                                    const st = (t.estatus || '').toLowerCase().trim();
+                                    if (conteoEst[st] !== undefined) conteoEst[st]++;
+                                });
+                            %>
+                            <div class="space-y-2.5 pt-2 border-t border-slate-200/80">
+                                <div class="flex flex-wrap items-center gap-2.5">
+                                    <div class="relative flex-1 min-w-[230px]">
+                                        <input 
+                                            type="text" 
+                                            id="buscarMisTickets" 
+                                            oninput="filtrarMisTickets()" 
+                                            placeholder="Buscar en mis tickets por #ID, título, tipo de falla o descripción..." 
+                                            class="w-full rounded-md border border-slate-300 pl-8 pr-7 py-1.5 text-xs text-slate-900 placeholder-slate-400 bg-white focus:border-brand-600 focus:outline-none shadow-2xs"
+                                        >
+                                        
+                                        <button 
+                                            type="button" 
+                                            id="btnClearBuscarMisTickets" 
+                                            onclick="document.getElementById('buscarMisTickets').value=''; filtrarMisTickets();" 
+                                            style="display: none;" 
+                                            class="absolute right-2 top-1.5 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer"
+                                        >✕</button>
+                                    </div>
+
+                                    <div class="min-w-[145px]">
+                                        <select 
+                                            id="filtroMisTicketsPrioridad" 
+                                            onchange="filtrarMisTickets()" 
+                                            class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-xs text-slate-900 bg-white font-medium focus:border-brand-600 focus:outline-none shadow-2xs"
+                                        >
+                                            <option value="">Todas las prioridades</option>
+                                            <option value="alta">Alta</option>
+                                            <option value="media">Media</option>
+                                            <option value="baja">Baja</option>
+                                        </select>
+                                    </div>
+
                                     <button 
                                         type="button" 
-                                        id="btnClearBuscarMisTickets" 
-                                        onclick="document.getElementById('buscarMisTickets').value=''; filtrarMisTickets();" 
-                                        style="display: none;" 
-                                        class="absolute right-2 top-1.5 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer"
-                                    >✕</button>
-                                </div>
-
-                                <div class="min-w-[155px]">
-                                    <select 
-                                        id="filtroMisTicketsEstatus" 
-                                        onchange="filtrarMisTickets()" 
-                                        class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-xs text-slate-900 bg-white font-medium focus:border-brand-600 focus:outline-none shadow-2xs"
+                                        onclick="limpiarFiltrosMisTickets()" 
+                                        class="text-xs font-bold text-slate-600 hover:text-brand-600 bg-white border border-slate-200 px-2.5 py-1.5 rounded-md transition-colors cursor-pointer"
+                                        title="Restablecer filtros y volver a ver todos los estatus"
                                     >
-                                        <option value="">Todos los estatus</option>
-                                        <option value="nuevo ticket">Nuevo ticket</option>
-                                        <option value="en proceso">En proceso</option>
-                                        <option value="pendiente">Pendiente</option>
-                                        <option value="pendiente por cliente">Pendiente por cliente</option>
-                                        <option value="resuelto">Resuelto</option>
-                                    </select>
+                                        Restablecer
+                                    </button>
                                 </div>
 
-                                <div class="min-w-[145px]">
-                                    <select 
-                                        id="filtroMisTicketsPrioridad" 
-                                        onchange="filtrarMisTickets()" 
-                                        class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-xs text-slate-900 bg-white font-medium focus:border-brand-600 focus:outline-none shadow-2xs"
-                                    >
-                                        <option value="">Todas las prioridades</option>
-                                        <option value="alta">Alta</option>
-                                        <option value="media">Media</option>
-                                        <option value="baja">Baja</option>
-                                    </select>
-                                </div>
+                                <!-- Filtro de Deselección / Selección de Estatus -->
+                                <div class="flex flex-wrap items-center gap-1.5 p-2 rounded-lg bg-slate-50 border border-slate-200/90 text-xs">
+                                    <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mr-1 flex items-center gap-1">
+                                        <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+                                        Estatus visibles:
+                                    </span>
 
-                                <button 
-                                    type="button" 
-                                    onclick="limpiarFiltrosMisTickets()" 
-                                    class="text-xs font-bold text-slate-600 hover:text-brand-600 bg-white border border-slate-200 px-2.5 py-1.5 rounded-md transition-colors cursor-pointer"
-                                >
-                                    Limpiar
-                                </button>
+                                    <!-- Chip Nuevo Ticket -->
+                                    <label class="filtro-chip-estatus inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold cursor-pointer transition-all select-none border border-sky-300 bg-sky-50 text-sky-800 hover:bg-sky-100" title="Marcar/Desmarcar para mostrar u ocultar">
+                                        <input type="checkbox" class="filtro-estatus-checkbox w-3.5 h-3.5 text-sky-600 rounded border-slate-300 focus:ring-0 cursor-pointer" value="nuevo ticket" checked onchange="filtrarMisTickets()">
+                                        <span>Nuevo ticket (<%= conteoEst['nuevo ticket'] %>)</span>
+                                    </label>
+
+                                    <!-- Chip En Proceso -->
+                                    <label class="filtro-chip-estatus inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold cursor-pointer transition-all select-none border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100" title="Marcar/Desmarcar para mostrar u ocultar">
+                                        <input type="checkbox" class="filtro-estatus-checkbox w-3.5 h-3.5 text-amber-600 rounded border-slate-300 focus:ring-0 cursor-pointer" value="en proceso" checked onchange="filtrarMisTickets()">
+                                        <span>En proceso (<%= conteoEst['en proceso'] %>)</span>
+                                    </label>
+
+                                    <!-- Chip Pendiente -->
+                                    <label class="filtro-chip-estatus inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold cursor-pointer transition-all select-none border border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100" title="Marcar/Desmarcar para mostrar u ocultar">
+                                        <input type="checkbox" class="filtro-estatus-checkbox w-3.5 h-3.5 text-rose-600 rounded border-slate-300 focus:ring-0 cursor-pointer" value="pendiente" checked onchange="filtrarMisTickets()">
+                                        <span>Pendiente (<%= conteoEst['pendiente'] %>)</span>
+                                    </label>
+
+                                    <!-- Chip Pendiente por Cliente -->
+                                    <label class="filtro-chip-estatus inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold cursor-pointer transition-all select-none border border-orange-300 bg-orange-50 text-orange-800 hover:bg-orange-100" title="Marcar/Desmarcar para mostrar u ocultar">
+                                        <input type="checkbox" class="filtro-estatus-checkbox w-3.5 h-3.5 text-orange-600 rounded border-slate-300 focus:ring-0 cursor-pointer" value="pendiente por cliente" checked onchange="filtrarMisTickets()">
+                                        <span>Pendiente por cliente (<%= conteoEst['pendiente por cliente'] %>)</span>
+                                    </label>
+
+                                    <!-- Chip Resuelto -->
+                                    <label class="filtro-chip-estatus inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold cursor-pointer transition-all select-none border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100" title="Desmarca esta casilla si no deseas ver los tickets ya resueltos">
+                                        <input type="checkbox" class="filtro-estatus-checkbox w-3.5 h-3.5 text-emerald-600 rounded border-slate-300 focus:ring-0 cursor-pointer" value="resuelto" checked onchange="filtrarMisTickets()">
+                                        <span>Resuelto (<%= conteoEst['resuelto'] %>)</span>
+                                    </label>
+
+                                    <div class="sm:ml-auto flex items-center gap-2 pt-1 sm:pt-0">
+                                        <button 
+                                            type="button" 
+                                            onclick="marcarTodosEstatusMisTickets(true)" 
+                                            class="text-[11px] font-bold text-slate-500 hover:text-brand-600 underline cursor-pointer"
+                                            title="Marcar todas las casillas para ver todos los tickets"
+                                        >
+                                            Ver todos
+                                        </button>
+                                        <span class="text-slate-300">|</span>
+                                        <button 
+                                            type="button" 
+                                            onclick="ocultarSoloResueltosMisTickets()" 
+                                            class="text-[11px] font-bold text-slate-500 hover:text-brand-600 underline cursor-pointer"
+                                            title="Ocultar los tickets resueltos y dejar solo los activos"
+                                        >
+                                            Ocultar resueltos
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         <% } %>
                     </div>
@@ -1494,10 +1553,37 @@
             }
         }
 
+        function actualizarEstilosChipsEstatus() {
+            document.querySelectorAll('.filtro-chip-estatus').forEach(label => {
+                const cb = label.querySelector('input[type="checkbox"]');
+                if (!cb) return;
+                if (cb.checked) {
+                    label.style.opacity = '1';
+                    label.style.filter = 'none';
+                    label.style.textDecoration = 'none';
+                } else {
+                    label.style.opacity = '0.50';
+                    label.style.filter = 'grayscale(100%)';
+                    label.style.textDecoration = 'line-through';
+                }
+            });
+        }
+        document.addEventListener('DOMContentLoaded', actualizarEstilosChipsEstatus);
+
         function filtrarMisTickets() {
             const busqVal = (document.getElementById('buscarMisTickets')?.value || '').toLowerCase().trim();
-            const estVal = (document.getElementById('filtroMisTicketsEstatus')?.value || '').toLowerCase().trim();
             const prioVal = (document.getElementById('filtroMisTicketsPrioridad')?.value || '').toLowerCase().trim();
+
+            actualizarEstilosChipsEstatus();
+
+            // Obtener los estatus que están seleccionados / permitidos
+            const cbsEstatus = document.querySelectorAll('.filtro-estatus-checkbox');
+            const estatusPermitidos = [];
+            cbsEstatus.forEach(cb => {
+                if (cb.checked) {
+                    estatusPermitidos.push(cb.value.toLowerCase().trim());
+                }
+            });
 
             const btnClear = document.getElementById('btnClearBuscarMisTickets');
             if (btnClear) btnClear.style.display = busqVal.length > 0 ? 'block' : 'none';
@@ -1506,9 +1592,10 @@
             let visCount = 0;
 
             filas.forEach(fila => {
+                const estFila = (fila.dataset.estatus || '').toLowerCase().trim();
                 const coincideBusq = !busqVal || (fila.dataset.search || '').includes(busqVal);
-                const coincideEst = !estVal || (fila.dataset.estatus || '') === estVal;
                 const coincidePrio = !prioVal || (fila.dataset.prioridad || '') === prioVal;
+                const coincideEst = estatusPermitidos.includes(estFila);
 
                 if (coincideBusq && coincideEst && coincidePrio) {
                     fila.style.display = '';
@@ -1518,9 +1605,12 @@
                 }
             });
 
+            const totalEstatusCbs = cbsEstatus.length;
+            const hayFiltroEstatus = totalEstatusCbs > 0 && estatusPermitidos.length < totalEstatusCbs;
+
             const contador = document.getElementById('contadorMisTickets');
             if (contador) {
-                contador.textContent = (busqVal || estVal || prioVal)
+                contador.textContent = (busqVal || prioVal || hayFiltroEstatus)
                     ? `Mostrando ${visCount} de ${filas.length}`
                     : `${filas.length} ticket${filas.length === 1 ? '' : 's'}`;
             }
@@ -1531,14 +1621,30 @@
             }
         }
 
+        function marcarTodosEstatusMisTickets(marcar) {
+            const cbs = document.querySelectorAll('.filtro-estatus-checkbox');
+            cbs.forEach(cb => { cb.checked = !!marcar; });
+            filtrarMisTickets();
+        }
+
+        function ocultarSoloResueltosMisTickets() {
+            const cbs = document.querySelectorAll('.filtro-estatus-checkbox');
+            cbs.forEach(cb => {
+                if (cb.value.toLowerCase().trim() === 'resuelto') {
+                    cb.checked = false;
+                } else {
+                    cb.checked = true;
+                }
+            });
+            filtrarMisTickets();
+        }
+
         function limpiarFiltrosMisTickets() {
             const b = document.getElementById('buscarMisTickets');
-            const e = document.getElementById('filtroMisTicketsEstatus');
             const p = document.getElementById('filtroMisTicketsPrioridad');
             if (b) b.value = '';
-            if (e) e.value = '';
             if (p) p.value = '';
-            filtrarMisTickets();
+            marcarTodosEstatusMisTickets(true);
         }
 
         function manejarCambioCategoria() {
