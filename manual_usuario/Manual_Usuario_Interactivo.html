@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-900 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual de Usuario - Sistema de Tickets TI • Grupo CDM</title>
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            50: '#fef2f2',
+                            100: '#fee2e2',
+                            500: '#ef4444',
+                            600: '#dc2626',
+                            700: '#b91c1c',
+                            800: '#991b1b',
+                            900: '#7f1d1d'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .slide-hidden { display: none !important; }
+        .slide-active { display: flex !important; animation: fadeIn 0.35s ease-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @media print {
+            body { background: white !important; color: black !important; }
+            .no-print { display: none !important; }
+            .slide-hidden { display: block !important; page-break-after: always; }
+            .slide-container { min-height: auto !important; height: auto !important; box-shadow: none !important; }
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col justify-between select-none overflow-x-hidden font-sans bg-slate-950">
+
+    <!-- BARRA SUPERIOR DE CONTROL -->
+    <header class="no-print bg-slate-900/90 backdrop-blur border-b border-slate-800 px-4 py-3 flex items-center justify-between sticky top-0 z-50">
+        <div class="flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full bg-brand-600 animate-pulse"></span>
+            <div>
+                <h1 class="text-sm font-extrabold text-white tracking-wide">GRUPO CDM • SISTEMA DE TICKETS TI</h1>
+                <p class="text-[11px] text-slate-400">Manual de Usuario Interactivo para Colaboradores</p>
+            </div>
+        </div>
+
+        <!-- Indicador de Diapositiva y Selector Rápido -->
+        <div class="flex items-center gap-2">
+            <div class="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-300">
+                <span>Diapositiva</span>
+                <span id="slideIndicator" class="text-brand-500 font-black">1</span>
+                <span>/</span>
+                <span id="slideTotal">10</span>
+            </div>
+
+            <button onclick="togglePantallaCompleta()" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-colors cursor-pointer border border-slate-700" title="Pantalla completa">
+                ⛶ Pantalla Completa
+            </button>
+            <button onclick="window.print()" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-colors cursor-pointer border border-slate-700" title="Imprimir / Guardar en PDF">
+                🖨️ PDF
+            </button>
+        </div>
+    </header>
+
+    <!-- BARRA DE PROGRESO DE LA PRESENTACIÓN -->
+    <div class="w-full bg-slate-800 h-1.5 no-print">
+        <div id="progressBar" class="bg-brand-600 h-1.5 transition-all duration-300" style="width: 10%;"></div>
+    </div>
+
+    <!-- CONTENEDOR PRINCIPAL DE DIAPOSITIVAS (ASPECT RATIO 16:9 / FULL CONTENT) -->
+    <main class="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex items-center justify-center">
+
+        <!-- SLIDE 1: PORTADA -->
+        <div class="slide slide-active flex-col justify-between w-full min-h-[540px] bg-slate-900 border border-slate-800 rounded-2xl p-8 sm:p-12 shadow-2xl relative overflow-hidden" data-slide="1">
+            <div class="absolute -right-20 -top-20 w-80 h-80 bg-brand-600/10 rounded-full blur-3xl pointer-events-none"></div>
+            
+            <div>
+                <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase bg-brand-950 text-brand-400 border border-brand-800/80 mb-6">
+                    Mesa de Ayuda • Departamento de Sistemas TI
+                </span>
+                <h2 class="text-3xl sm:text-5xl font-black text-white tracking-tight mb-4">
+                    Sistema de Gestión de Tickets
+                </h2>
+                <h3 class="text-xl sm:text-2xl font-bold text-slate-300 mb-6">
+                    Manual y Guía de Uso para Colaboradores
+                </h3>
+                <p class="text-slate-400 max-w-2xl text-sm sm:text-base leading-relaxed">
+                    Aprende cómo levantar solicitudes de soporte, dar seguimiento a tus equipos en tiempo real, comunicarte en directo con el personal de Sistemas y consultar resoluciones técnicas de forma ágil y transparente.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-8 border-t border-slate-800/80 mt-8">
+                <div class="p-4 rounded-xl bg-slate-800/60 border border-slate-700/60">
+                    <span class="text-2xl mb-1 block">🎫</span>
+                    <div class="font-bold text-white text-xs">Folio de Seguimiento</div>
+                    <div class="text-[11px] text-slate-400">Atención ordenada sin reportes perdidos</div>
+                </div>
+                <div class="p-4 rounded-xl bg-slate-800/60 border border-slate-700/60">
+                    <span class="text-2xl mb-1 block">⚡</span>
+                    <div class="font-bold text-white text-xs">Soporte Multicanal</div>
+                    <div class="text-[11px] text-slate-400">Plataforma Web y Discord en vivo</div>
+                </div>
+                <div class="p-4 rounded-xl bg-slate-800/60 border border-slate-700/60">
+                    <span class="text-2xl mb-1 block">🔒</span>
+                    <div class="font-bold text-white text-xs">Privacidad Garantizada</div>
+                    <div class="text-[11px] text-slate-400">Canales exclusivos solo entre tú y TI</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 2: ¿QUÉ ES EL SISTEMA Y BENEFICIOS? -->
+        <div class="slide slide-hidden flex-col justify-between w-full min-h-[540px] bg-slate-900 border border-slate-800 rounded-2xl p-8 sm:p-10 shadow-2xl" data-slide="2">
+            <div>
+                <span class="text-xs font-black tracking-wider uppercase text-brand-500 mb-2 block">MESA DE AYUDA TI • GRUPO CDM</span>
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-2">¿Qué es el Sistema de Tickets y para qué sirve?</h2>
+                <p class="text-slate-400 text-xs sm:text-sm mb-6">Es la herramienta centralizada donde se gestionan todas las peticiones, fallas y requerimientos tecnológicos de Grupo CDM.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div class="p-5 rounded-xl bg-slate-800/80 border-t-4 border-t-blue-500 border-slate-700 space-y-2">
+                        <div class="text-2xl">🎯</div>
+                        <h4 class="font-bold text-white text-base">Folio Único (#ID)</h4>
+                        <p class="text-xs text-slate-300 leading-relaxed">
+                            Cada falla recibe un número único (ej. <strong>#45</strong>). Ya no existen reportes olvidados por pasillo, mensajes de WhatsApp perdidos o peticiones sin atender.
+                        </p>
+                    </div>
+
+                    <div class="p-5 rounded-xl bg-slate-800/80 border-t-4 border-t-emerald-500 border-slate-700 space-y-2">
+                        <div class="text-2xl">⏱️</div>
+                        <h4 class="font-bold text-white text-base">Tiempos Cronometrados</h4>
+                        <p class="text-xs text-slate-300 leading-relaxed">
+                            Cada ticket cuenta con medición de tiempos de servicio (SLA). Sabrás qué técnico lo está atendiendo y el historial paso a paso de tu equipo.
+                        </p>
+                    </div>
+
+                    <div class="p-5 rounded-xl bg-slate-800/80 border-t-4 border-t-purple-500 border-slate-700 space-y-2">
+                        <div class="text-2xl">🔔</div>
+                        <h4 class="font-bold text-white text-base">Alertas en Tiempo Real</h4>
+                        <p class="text-xs text-slate-300 leading-relaxed">
+                            Recibes notificaciones automáticas por correo institucional y Discord en cuanto un técnico comience tu reporte o publique una solución.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-blue-950/40 border border-blue-800/60 flex items-center gap-3 mt-6">
+                <span class="text-xl">💡</span>
+                <p class="text-xs text-blue-200">
+                    <strong>Regla de oro:</strong> Toda solicitud tecnológica (hardware, software, red, telefonía o accesos) debe contar con su ticket registrado para ser atendida conforme a prioridades.
+                </p>
+            </div>
+        </div>
+
+        <!-- SLIDE 3: ACCESO E INICIO DE SESIÓN -->
+        <div class="slide slide-hidden flex-col justify-between w-full min-h-[540px] bg-slate-900 border border-slate-800 rounded-2xl p-8 sm:p-10 shadow-2xl" data-slide="3">
+            <div>
+                <span class="text-xs font-black tracking-wider uppercase text-brand-500 mb-2 block">PASO 1</span>
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-2">Acceso e Inicio de Sesión</h2>
+                <p class="text-slate-400 text-xs sm:text-sm mb-6">Ingresar al portal es muy sencillo desde cualquier computadora conectada a la red de Grupo CDM.</p>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Columna Izquierda: Datos -->
+                    <div class="p-6 rounded-xl bg-slate-800/80 border border-slate-700 space-y-4">
+                        <h4 class="font-bold text-white text-base flex items-center gap-2">
+                            <span>🔑</span> Tus Credenciales de Acceso
+                        </h4>
+                        <div class="space-y-3 text-xs">
+                            <div class="p-3 rounded-lg bg-slate-900 border border-slate-700/80">
+                                <span class="font-bold text-blue-400 block mb-0.5">1. Correo Institucional:</span>
+                                <span class="text-slate-300 font-mono">tu_usuario@grupo-cdm.mx</span>
+                            </div>
+                            <div class="p-3 rounded-lg bg-slate-900 border border-slate-700/80">
+                                <span class="font-bold text-blue-400 block mb-0.5">2. Contraseña:</span>
+                                <span class="text-slate-300">Asignada por el departamento de Sistemas TI</span>
+                            </div>
+                            <div class="p-3 rounded-lg bg-slate-900 border border-slate-700/80">
+                                <span class="font-bold text-amber-400 block mb-0.5">3. Cierre automático por inactividad:</span>
+                                <span class="text-slate-300">Por seguridad de tus trámites, tras 5 minutos sin uso la sesión se cerrará de forma automática.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Columna Derecha: Tips -->
+                    <div class="p-6 rounded-xl bg-slate-800/50 border border-slate-700 space-y-4">
+                        <h4 class="font-bold text-white text-base flex items-center gap-2">
+                            <span>🛡️</span> Recomendaciones de Seguridad
+                        </h4>
+                        <ul class="text-xs text-slate-300 space-y-3 leading-relaxed">
+                            <li class="flex items-start gap-2">
+                                <span class="text-emerald-400 font-bold">✔</span>
+                                <span>Tu cuenta es estrictamente personal. Los tickets levantados quedan registrados con tu nombre y puesto.</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="text-emerald-400 font-bold">✔</span>
+                                <span>Guarda el enlace del portal en los <strong>Marcadores o Favoritos</strong> de tu navegador para abrirlo con un clic.</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="text-emerald-400 font-bold">✔</span>
+                                <span>Si necesitas restablecer tu contraseña, acude con el personal de Sistemas para tu nueva clave.</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="text-emerald-400 font-bold">✔</span>
+                                <span>Al terminar tus actividades, haz clic en el botón superior <strong>"Cerrar Sesión"</strong>.</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center text-[11px] text-slate-500 pt-4 border-t border-slate-800">
+                Mesa de Ayuda TI • Plataforma Segura Grupo CDM
+            </div>
+        </div>
+
+        <!-- SLIDE 4: CÓMO LEVANTAR UN TICKET -->
+        <div class="slide slide-hidden flex-col justify-between w-full min-h-[540px] bg-slate-900 border border-slate-800 rounded-2xl p-8 sm:p-10 shadow-2xl" data-slide="4">
+            <div>
+                <span class="text-xs font-black tracking-wider uppercase text-brand-500 mb-2 block">PASO 2</span>
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-2">Cómo Levantar un Ticket de Soporte</h2>
+                <p class="text-slate-400 text-xs sm:text-sm mb-6">Haz clic en el botón <strong class="text-white bg-brand-600 px-2 py-0.5 rounded text-xs">Nuevo Ticket</strong> en tu panel y completa el formulario:</p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="p-4 rounded-xl bg-slate-800 border-t-4 border-t-blue-500 border-slate-700 space-y-2">
+                        <span class="text-xl">✍️</span>
+                        <h4 class="font-bold text-white text-sm">1. Título Descriptivo</h4>
+                        <p class="text-xs text-slate-300">
+                            Una frase corta y clara de la falla.<br><br>
+                            <em class="text-slate-400 text-[11px]">Ej: "Falla de audio en extensión 701" o "Sin acceso a carpeta compartida"</em>
+                        </p>
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-slate-800 border-t-4 border-t-purple-500 border-slate-700 space-y-2">
+                        <span class="text-xl">📂</span>
+                        <h4 class="font-bold text-white text-sm">2. Categoría y Área</h4>
+                        <p class="text-xs text-slate-300">
+                            Selecciona a qué pertenece:<br><br>
+                            • Hardware (PC, laptop, monitor)<br>
+                            • Software y Programas<br>
+                            • Redes y Telefonía<br>
+                            • Accesos y Cuentas
+                        </p>
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-slate-800 border-t-4 border-t-amber-500 border-slate-700 space-y-2">
+                        <span class="text-xl">📝</span>
+                        <h4 class="font-bold text-white text-sm">3. Descripción</h4>
+                        <p class="text-xs text-slate-300">
+                            Explica lo ocurrido:<br><br>
+                            • ¿Qué hacías cuando falló?<br>
+                            • ¿Aparece un código de error?<br>
+                            • ¿Afecta una entrega urgente?
+                        </p>
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-slate-800 border-t-4 border-t-emerald-500 border-slate-700 space-y-2">
+                        <span class="text-xl">📸</span>
+                        <h4 class="font-bold text-white text-sm">4. Evidencia / Foto</h4>
+                        <p class="text-xs text-slate-300">
+                            Sube una captura de pantalla o foto con tu celular.<br><br>
+                            <span class="text-emerald-400 text-[11px] font-semibold">¡Ahorra hasta un 50% de tiempo en la atención!</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-800/60 flex items-center gap-3 mt-6">
+                <span class="text-xl">✅</span>
+                <p class="text-xs text-emerald-200">
+                    Al dar clic en <strong>"Crear Ticket"</strong>, el sistema te asigna tu folio y le notifica de inmediato al equipo de guardia en Discord y por correo.
+                </p>
+            </div>
+        </div>
+
+        <!-- SLIDE 5: ESTADOS DE UN TICKET -->
+        <div class="slide slide-hidden flex-col justify-between w-full min-h-[540px] bg-slate-900 border border-slate-800 rounded-2xl p-8 sm:p-10 shadow-2xl" data-slide="5">
+            <div>
+                <span class="text-xs font-black tracking-wider uppercase text-brand-500 mb-2 block">PASO 3</span>
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-2">¿Qué significa cada estatus de tu Ticket?</h2>
+                <p class="text-slate-400 text-xs sm:text-sm mb-4">Conoce las 5 etapas por las que pasa tu reporte durante el ciclo de atención:</p>
+
+                <div class="space-y-2.5">
+                    <div class="p-3 rounded-lg bg-slate-800 border border-slate-700 flex flex-col sm:flex-row sm:items-center gap-3">
+                        <span class="px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wider bg-sky-950 text-sky-300 border border-sky-700 min-w-[170px] text-center">
+                            🟦 Nuevo ticket
+                        </span>
+                        <span class="text-xs text-slate-300">
+                            Tu reporte fue recibido en la plataforma y se encuentra listo en la fila de asignación de Sistemas TI.
+                        </span>
+                    </div>
+
+                    <div class="p-3 rounded-lg bg-slate-800 border border-slate-700 flex flex-col sm:flex-row sm:items-center gap-3">
+                        <span class="px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wider bg-amber-950 text-amber-300 border border-amber-700 min-w-[170px] text-center">
+                            🟨 En proceso
+                        </span>
+                        <span class="text-xs text-slate-300">
+                            Un especialista TI ya fue asignado y está trabajando activamente en la solución técnica o diagnóstico.
+                        </span>
+                    </div>
+
+                    <div class="p-3 rounded-lg bg-slate-800 border border-slate-700 flex flex-col sm:flex-row sm:items-center gap-3">
+                        <span class="px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wider bg-rose-950 text-rose-300 border border-rose-700 min-w-[170px] text-center">
+                            🟥 Pendiente
+                        </span>
+                        <span class="text-xs text-slate-300">
+                            Se requiere una refacción, compra de material, autorización gerencial o servicio con proveedor externo.
+                        </span>
+                    </div>
+
+                    <div class="p-3 rounded-lg bg-slate-800 border border-slate-700 flex flex-col sm:flex-row sm:items-center gap-3">
+                        <span class="px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wider bg-purple-950 text-purple-300 border border-purple-700 min-w-[170px] text-center">
+                            🟪 Pendiente Cliente
+                        </span>
+                        <span class="text-xs text-slate-300">
+                            El conteo se pausa porque se programó una <strong>cita con fecha y hora acordada</strong> para revisión presencial o llamada.
+                        </span>
+                    </div>
+
+                    <div class="p-3 rounded-lg bg-slate-800 border border-slate-700 flex flex-col sm:flex-row sm:items-center gap-3">
+                        <span class="px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wider bg-emerald-950 text-emerald-300 border border-emerald-700 min-w-[170px] text-center">
+                            🟩 Resuelto
+                        </span>
+                        <span class="text-xs text-slate-300">
+                            El ticket ha sido concluido con éxito. Puedes consultar la nota técnica con la solución aplicada.
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center text-[11px] text-slate-500 pt-3 border-t border-slate-800">
+                La tabla de tu panel se actualiza automáticamente en vivo cuando el especialista cambia el estatus.
+            </div>
+        </div>
+
+        <!-- SLIDE 6: FILTRADO INTELIGENTE DE TICKETS -->
+        <div class="slide slide-hidden flex-col justify-between w-full min-h-[540px] bg-slate-900 border border-slate-800 rounded-2xl p-8 sm:p-10 shadow-2xl" data-slide="6">
+            <div>
+                <span class="text-xs font-black tracking-wider uppercase text-brand-500 mb-2 block">PASO 4</span>
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-2">Filtros Inteligentes: Ver u Ocultar lo que Gustes</h2>
+                <p class="text-slate-400 text-xs sm:text-sm mb-6">Tu panel cuenta con un sistema de selección múltiple para organizar tu lista de reportes al instante:</p>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="p-5 rounded-xl bg-slate-800 border border-slate-700 space-y-3">
+                        <h4 class="font-bold text-white text-base">✨ ¿Cómo funciona?</h4>
+                        <ul class="text-xs text-slate-300 space-y-2.5 leading-relaxed">
+                            <li class="flex items-start gap-2">
+                                <span class="text-emerald-400 font-bold">1.</span>
+                                <span><strong>Todo visible al entrar:</strong> Al ingresar, todas las casillas están marcadas para que veas de inmediato si tu reporte ya quedó resuelto.</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="text-emerald-400 font-bold">2.</span>
+                                <span><strong>Deselecciona lo que no quieras ver:</strong> Con solo desmarcar la casilla <em>[Resuelto]</em>, los tickets concluidos desaparecen de tu vista.</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="text-emerald-400 font-bold">3.</span>
+                                <span><strong>Acceso 'Ocultar resueltos':</strong> Un botón rápido para dejar activa solo la lista de reportes en atención.</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="text-emerald-400 font-bold">4.</span>
+                                <span><strong>Acceso 'Ver todos':</strong> Vuelve a mostrar todo tu historial con un solo clic.</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Representación Visual -->
+                    <div class="p-5 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+                        <div class="text-xs font-bold uppercase tracking-wider text-slate-400">Ejemplo de la barra interactiva:</div>
+                        <div class="flex flex-wrap gap-2 text-xs">
+                            <span class="px-2.5 py-1 rounded bg-sky-950 text-sky-300 border border-sky-700 font-semibold">☑ Nuevo ticket (1)</span>
+                            <span class="px-2.5 py-1 rounded bg-amber-950 text-amber-300 border border-amber-700 font-semibold">☑ En proceso (2)</span>
+                            <span class="px-2.5 py-1 rounded bg-rose-950 text-rose-300 border border-rose-700 font-semibold">☑ Pendiente (0)</span>
+                            <span class="px-2.5 py-1 rounded bg-purple-950 text-purple-300 border border-purple-700 font-semibold">☑ Pendiente Cliente (1)</span>
+                            <span class="px-2.5 py-1 rounded bg-slate-800 text-slate-500 border border-slate-700 line-through font-semibold opacity-60">☐ Resuelto (4)</span>
+                        </div>
+                        <div class="p-3 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-400 mt-3">
+                            👉 Al desmarcar <strong>"Resuelto"</strong>, la etiqueta se vuelve gris tachada y la tabla solo te muestra los tickets que siguen en atención activa.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center text-[11px] text-slate-500 pt-3 border-t border-slate-800">
+                Usa también el buscador dinámico para encontrar reportes por palabra clave o número #ID.
+            </div>
+        </div>
+
+        <!-- SLIDE 7: CHAT EN VIVO Y DISCORD -->
+        <div class="slide slide-hidden flex-col justify-between w-full min-h-[540px] bg-slate-900 border border-slate-800 rounded-2xl p-8 sm:p-10 shadow-2xl" data-slide="7">
+            <div>
+                <span class="text-xs font-black tracking-wider uppercase text-brand-500 mb-2 block">PASO 5</span>
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-2">Comunicación en Vivo: Portal Web y Discord</h2>
+                <p class="text-slate-400 text-xs sm:text-sm mb-6">Elige el canal que te sea más práctico; ambos están 100% sincronizados en tiempo real.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="p-6 rounded-xl bg-slate-800 border-t-4 border-t-blue-500 border-slate-700 space-y-3">
+                        <div class="flex items-center gap-2">
+                            <span class="text-2xl">💻</span>
+                            <h4 class="font-bold text-white text-base">Chat en la Plataforma Web</h4>
+                        </div>
+                        <ul class="text-xs text-slate-300 space-y-2 leading-relaxed">
+                            <li>• Botón <strong>"Chat con TI"</strong> en cada uno de tus tickets.</li>
+                            <li>• Puedes enviar mensajes y adjuntar fotos del problema.</li>
+                            <li>• Alertas sonoras y avisos en pantalla cuando el técnico responde.</li>
+                            <li>• Tienes 5 minutos para editar o corregir cualquier mensaje enviado.</li>
+                        </ul>
+                    </div>
+
+                    <div class="p-6 rounded-xl bg-slate-800 border-t-4 border-t-indigo-500 border-slate-700 space-y-3">
+                        <div class="flex items-center gap-2">
+                            <span class="text-2xl">💬</span>
+                            <h4 class="font-bold text-white text-base">Hilos Privados en Discord</h4>
+                        </div>
+                        <ul class="text-xs text-slate-300 space-y-2 leading-relaxed">
+                            <li>• Se crea un <strong>hilo confidencial</strong> en el canal <code>#tickets-soporte</code>.</li>
+                            <li>• Solo tú y el equipo de TI tienen acceso (nadie más puede leerlo).</li>
+                            <li>• Puedes contestar directamente desde la app de Discord en PC o móvil.</li>
+                            <li>• Al resolverse, el hilo se archiva para mantener limpio tu Discord.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-slate-800/80 border border-slate-700 flex items-center justify-between mt-6 text-xs text-slate-300">
+                <span>🔄 <strong>Sincronización total:</strong> Lo que escribas en la web se ve en Discord, y lo que escribas en Discord se ve en la web.</span>
+            </div>
+        </div>
+
+        <!-- SLIDE 8: BUENAS PRÁCTICAS -->
+        <div class="slide slide-hidden flex-col justify-between w-full min-h-[540px] bg-slate-900 border border-slate-800 rounded-2xl p-8 sm:p-10 shadow-2xl" data-slide="8">
+            <div>
+                <span class="text-xs font-black tracking-wider uppercase text-brand-500 mb-2 block">PASO 6</span>
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-2">Buenas Prácticas para una Atención Rápida</h2>
+                <p class="text-slate-400 text-xs sm:text-sm mb-6">Sigue estos sencillos consejos para que tus reportes se resuelvan en el menor tiempo posible:</p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="p-4 rounded-xl bg-slate-800/90 border border-slate-700 flex gap-3">
+                        <span class="text-2xl">1️⃣</span>
+                        <div>
+                            <h4 class="font-bold text-white text-sm mb-1">Un ticket por falla</h4>
+                            <p class="text-xs text-slate-300">Evita juntar fallas distintas en un mismo ticket (ej. pedir tóner y reportar un virus). Separarlos permite que el especialista adecuado atienda cada solicitud.</p>
+                        </div>
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-slate-800/90 border border-slate-700 flex gap-3">
+                        <span class="text-2xl">2️⃣</span>
+                        <div>
+                            <h4 class="font-bold text-white text-sm mb-1">Adjunta captura o foto</h4>
+                            <p class="text-xs text-slate-300">Una imagen del mensaje de error exacto ayuda al técnico a llevar las herramientas o refacciones adecuadas desde la primera visita.</p>
+                        </div>
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-slate-800/90 border border-slate-700 flex gap-3">
+                        <span class="text-2xl">3️⃣</span>
+                        <div>
+                            <h4 class="font-bold text-white text-sm mb-1">Atiende tus citas programadas</h4>
+                            <p class="text-xs text-slate-300">Si tu ticket está en "Pendiente por cliente", revisa la fecha y hora de visita programada para asegurar que el equipo esté libre.</p>
+                        </div>
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-slate-800/90 border border-slate-700 flex gap-3">
+                        <span class="text-2xl">4️⃣</span>
+                        <div>
+                            <h4 class="font-bold text-white text-sm mb-1">Confirma la resolución</h4>
+                            <p class="text-xs text-slate-300">Al recibir la notificación de ticket resuelto, prueba que tu equipo funcione correctamente. Si persiste, avisa de inmediato en el chat.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-3 rounded-lg bg-brand-950/40 border border-brand-800/60 text-xs text-brand-300 flex items-center gap-2 mt-6">
+                <span>⚠️</span>
+                <span><strong>Seguridad:</strong> El departamento de Sistemas TI nunca te solicitará contraseñas personales ni bancarias por chat ni correo.</span>
+            </div>
+        </div>
+
+        <!-- SLIDE 9: PREGUNTAS FRECUENTES (FAQ) -->
+        <div class="slide slide-hidden flex-col justify-between w-full min-h-[540px] bg-slate-900 border border-slate-800 rounded-2xl p-8 sm:p-10 shadow-2xl" data-slide="9">
+            <div>
+                <span class="text-xs font-black tracking-wider uppercase text-brand-500 mb-2 block">DUDAS FRECUENTES</span>
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-2">Preguntas Frecuentes de los Usuarios (FAQ)</h2>
+                <p class="text-slate-400 text-xs sm:text-sm mb-4">Respuestas inmediatas a las dudas más comunes:</p>
+
+                <div class="space-y-3">
+                    <div class="p-3.5 rounded-xl bg-slate-800/90 border border-slate-700">
+                        <div class="font-bold text-white text-xs sm:text-sm mb-1">❓ ¿Puedo modificar un ticket que acabo de crear?</div>
+                        <p class="text-xs text-slate-300 pl-4">👉 <strong>Sí.</strong> Mientras su estatus sea "Nuevo ticket", verás los botones de <em>Editar</em> o <em>Eliminar</em> en la tabla para corregir datos o retirarlo.</p>
+                    </div>
+
+                    <div class="p-3.5 rounded-xl bg-slate-800/90 border border-slate-700">
+                        <div class="font-bold text-white text-xs sm:text-sm mb-1">❓ ¿Qué hago si la falla regresa después de que marcaron el ticket como Resuelto?</div>
+                        <p class="text-xs text-slate-300 pl-4">👉 <strong>No necesitas crear otro ticket.</strong> Escribe un mensaje en el chat del ticket solicitando la reapertura. El técnico lo reactivará con todo el historial previo.</p>
+                    </div>
+
+                    <div class="p-3.5 rounded-xl bg-slate-800/90 border border-slate-700">
+                        <div class="font-bold text-white text-xs sm:text-sm mb-1">❓ ¿Cómo sé cuándo vendrá el técnico si tengo cita programada?</div>
+                        <p class="text-xs text-slate-300 pl-4">👉 En tu panel de tickets verás un recuadro destacado que indica: <em>"Cita acordada: [Día y Hora]"</em> con el motivo de la espera.</p>
+                    </div>
+
+                    <div class="p-3.5 rounded-xl bg-slate-800/90 border border-slate-700">
+                        <div class="font-bold text-white text-xs sm:text-sm mb-1">❓ ¿Por qué ya no veo un ticket resuelto en mi barra de Discord?</div>
+                        <p class="text-xs text-slate-300 pl-4">👉 Para no saturar tu pantalla, Discord lo archiva. Puedes consultarlo en cualquier momento arriba en el botón <strong>Hilos (🧵) > pestaña "Archivados"</strong>.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center text-[11px] text-slate-500 pt-3 border-t border-slate-800">
+                Consulta también la sección de <strong>"Guías Rápidas"</strong> en el menú lateral de tu portal.
+            </div>
+        </div>
+
+        <!-- SLIDE 10: CIERRE Y CANALES DE CONTACTO -->
+        <div class="slide slide-hidden flex-col justify-between w-full min-h-[540px] bg-slate-900 border border-slate-800 rounded-2xl p-8 sm:p-12 shadow-2xl relative overflow-hidden" data-slide="10">
+            <div class="absolute -left-20 -bottom-20 w-80 h-80 bg-brand-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div>
+                <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase bg-brand-950 text-brand-400 border border-brand-800/80 mb-4">
+                    Departamento de Sistemas TI • Grupo CDM
+                </span>
+                <h2 class="text-3xl sm:text-4xl font-black text-white tracking-tight mb-2">
+                    ¡Estamos para apoyarte!
+                </h2>
+                <p class="text-slate-300 text-sm sm:text-base max-w-2xl leading-relaxed mb-8">
+                    Nuestro compromiso es garantizar que tus herramientas de trabajo funcionen de manera óptima y que tus requerimientos sean resueltos en el menor tiempo posible.
+                </p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                    <div class="p-5 rounded-xl bg-slate-800/80 border border-slate-700">
+                        <div class="text-2xl mb-2">🌐</div>
+                        <h4 class="font-bold text-white text-sm mb-1">Portal Web Oficial</h4>
+                        <p class="text-xs text-slate-400">Ingresa para levantar nuevos reportes y consultar avances las 24 horas.</p>
+                    </div>
+
+                    <div class="p-5 rounded-xl bg-slate-800/80 border border-slate-700">
+                        <div class="text-2xl mb-2">💬</div>
+                        <h4 class="font-bold text-white text-sm mb-1">Servidor de Discord</h4>
+                        <p class="text-xs text-slate-400">Canal <code>#tickets-soporte</code> para chat en vivo e intercambio de capturas con el técnico.</p>
+                    </div>
+
+                    <div class="p-5 rounded-xl bg-slate-800/80 border border-slate-700">
+                        <div class="text-2xl mb-2">✉️</div>
+                        <h4 class="font-bold text-white text-sm mb-1">Notificaciones por Correo</h4>
+                        <p class="text-xs text-slate-400">Avisos automáticos de confirmación, seguimiento y soluciones técnicas.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center text-xs text-slate-400 pt-6 border-t border-slate-800 mt-6">
+                © 2026 Grupo CDM &bull; Departamento de Sistemas TI &bull; Mesa de Ayuda Corporativa
+            </div>
+        </div>
+
+    </main>
+
+    <!-- BARRA INFERIOR DE NAVEGACIÓN -->
+    <footer class="no-print bg-slate-900 border-t border-slate-800 px-6 py-4 flex items-center justify-between sticky bottom-0 z-50">
+        <div class="text-xs text-slate-400 hidden sm:block">
+            Usa las flechas <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-white font-mono">◀</kbd> <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-white font-mono">▶</kbd> del teclado o la barra espaciadora.
+        </div>
+
+        <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+            <button id="btnPrev" onclick="cambiarSlide(-1)" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-300 transition-colors cursor-pointer flex items-center gap-1.5">
+                <span>◀ Anterior</span>
+            </button>
+            <button id="btnNext" onclick="cambiarSlide(1)" class="px-5 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-xs font-bold text-white shadow-md transition-colors cursor-pointer flex items-center gap-1.5">
+                <span>Siguiente ▶</span>
+            </button>
+        </div>
+    </footer>
+
+    <!-- SCRIPT DE NAVEGACIÓN INTERACTIVA -->
+    <script>
+        let currentSlide = 1;
+        const totalSlides = 10;
+
+        function mostrarSlide(n) {
+            if (n < 1) n = 1;
+            if (n > totalSlides) n = totalSlides;
+            currentSlide = n;
+
+            document.querySelectorAll('.slide').forEach(slide => {
+                slide.classList.remove('slide-active');
+                slide.classList.add('slide-hidden');
+            });
+
+            const activeSlide = document.querySelector(`.slide[data-slide="${currentSlide}"]`);
+            if (activeSlide) {
+                activeSlide.classList.remove('slide-hidden');
+                activeSlide.classList.add('slide-active');
+            }
+
+            // Actualizar indicadores
+            document.getElementById('slideIndicator').textContent = currentSlide;
+            document.getElementById('progressBar').style.width = `${(currentSlide / totalSlides) * 100}%`;
+
+            // Habilitar / Deshabilitar botones
+            document.getElementById('btnPrev').disabled = (currentSlide === 1);
+            document.getElementById('btnPrev').classList.toggle('opacity-40', currentSlide === 1);
+            document.getElementById('btnPrev').classList.toggle('cursor-not-allowed', currentSlide === 1);
+
+            const btnNext = document.getElementById('btnNext');
+            if (currentSlide === totalSlides) {
+                btnNext.innerHTML = '<span>Finalizar ✔</span>';
+                btnNext.classList.remove('bg-brand-600', 'hover:bg-brand-700');
+                btnNext.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+            } else {
+                btnNext.innerHTML = '<span>Siguiente ▶</span>';
+                btnNext.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
+                btnNext.classList.add('bg-brand-600', 'hover:bg-brand-700');
+            }
+        }
+
+        function cambiarSlide(delta) {
+            mostrarSlide(currentSlide + delta);
+        }
+
+        // Navegación por Teclado
+        window.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+                cambiarSlide(1);
+            } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+                cambiarSlide(-1);
+            } else if (e.key === 'Home') {
+                mostrarSlide(1);
+            } else if (e.key === 'End') {
+                mostrarSlide(totalSlides);
+            }
+        });
+
+        function togglePantallaCompleta() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        // Inicializar en Slide 1
+        mostrarSlide(1);
+    </script>
+</body>
+</html>
