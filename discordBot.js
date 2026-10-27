@@ -126,17 +126,23 @@ function inicializarDiscord(io, db, uploadsDir) {
                 console.warn('[Discord Bot] Advertencia configurando permisos de administradores:', ePerms.message);
             }
 
-            // 2. Limpieza preventiva de hilos pertenecientes a tickets ya resueltos o eliminados
+            // 2. Sincronización de hilos pertenecientes a tickets resueltos o eliminados
             try {
                 const activeThreads = await canalTicketsBase.threads.fetchActive();
                 for (const [id, thread] of activeThreads.threads) {
                     const match = thread.name.match(/^ticket-(\d+)/i);
                     if (match && dbInstance) {
                         const ticketId = parseInt(match[1], 10);
-                        dbInstance.get('SELECT id, estatus FROM tickets WHERE id = ?', [ticketId], async (errT, t) => {
-                            if (!errT && (!t || t.estatus === 'Resuelto')) {
+                        dbInstance.get('SELECT id, estatus, deleted_at FROM tickets WHERE id = ?', [ticketId], async (errT, t) => {
+                            if (!errT && t && t.estatus === 'Resuelto') {
                                 try {
-                                    await thread.delete('Limpieza: Ticket resuelto o cerrado');
+                                    if (!thread.locked) await thread.setLocked(true, 'Ticket resuelto');
+                                    if (!thread.archived) await thread.setArchived(true, 'Ticket resuelto');
+                                    console.log(`[Discord Bot] Hilo activo del ticket #${ticketId} sincronizado a archivado y bloqueado (Resuelto).`);
+                                } catch (eArc) {}
+                            } else if (!errT && (!t || t.deleted_at)) {
+                                try {
+                                    await thread.delete('Ticket eliminado del sistema');
                                     dbInstance.run('UPDATE tickets SET discord_thread_id = NULL WHERE id = ?', [ticketId]);
                                 } catch (eDel) {}
                             }
@@ -471,8 +477,13 @@ async function obtenerOCrearHiloTicket(ticketId, ticketData = null, usuarioData 
             try {
                 const hiloExistente = await client.channels.fetch(ticket.discord_thread_id);
                 if (hiloExistente && !hiloExistente.deleted) {
-                    if (hiloExistente.archived) {
-                        await hiloExistente.setArchived(false);
+                    if (ticket && ticket.estatus !== 'Resuelto') {
+                        if (hiloExistente.locked) {
+                            await hiloExistente.setLocked(false, 'Ticket activo').catch(() => {});
+                        }
+                        if (hiloExistente.archived) {
+                            await hiloExistente.setArchived(false, 'Ticket activo').catch(() => {});
+                        }
                     }
                     return hiloExistente;
                 }
@@ -579,8 +590,11 @@ async function enviarMensajeDesdeWeb({ ticketId, autorNombre, autorRol, autorPue
         const hilo = await obtenerOCrearHiloTicket(ticketId);
         if (!hilo) return;
 
+        if (hilo.locked) {
+            await hilo.setLocked(false).catch(() => {});
+        }
         if (hilo.archived) {
-            await hilo.setArchived(false);
+            await hilo.setArchived(false).catch(() => {});
         }
 
         const prefijoAutor = autorRol === 'admin' 
@@ -621,8 +635,11 @@ async function notificarCambioEstatusDiscord(ticketId, nuevoEstatus, extraData =
         const hilo = await obtenerOCrearHiloTicket(ticketId);
         if (!hilo) return;
 
+        if (hilo.locked) {
+            await hilo.setLocked(false).catch(() => {});
+        }
         if (hilo.archived) {
-            await hilo.setArchived(false);
+            await hilo.setArchived(false).catch(() => {});
         }
 
         let color = 0x3b82f6; // Azul
@@ -668,22 +685,32 @@ async function notificarCambioEstatusDiscord(ticketId, nuevoEstatus, extraData =
         const msgEstatus = await hilo.send({ embeds: [embed] });
         mensajesEnviadosPorBot.add(msgEstatus.id);
 
-        // Si el ticket fue resuelto, notificar solución técnica y eliminar el hilo de Discord automáticamente
+        // Si el ticket fue resuelto, bloquear y archivar el hilo (se oculta de la barra activa pero se conserva en "Archivados")
         if (nuevoEstatus === 'Resuelto') {
-            const msgCierre = await hilo.send('🔒 **Este ticket ha sido resuelto y cerrado.** Todo el historial de la conversación y notas técnicas quedan guardados de forma permanente en el portal web de tickets. Este canal de soporte de Discord se cerrará y eliminará automáticamente en 4 segundos.');
+            const solucionTexto = extraData.comentario_resolucion 
+                ? `\n• **Solución aplicada:** *${extraData.comentario_resolucion}*` 
+                : '';
+            const msgCierre = await hilo.send(
+                `🔒 **Este ticket ha sido resuelto y cerrado por Sistemas TI.**${solucionTexto}\n\n` +
+                `• Este hilo ha sido **bloqueado y archivado** para mantener limpia la barra lateral.\n` +
+                `• Puedes consultarlo en cualquier momento arriba en el botón **Hilos 🧵 > pestaña Archivados**.\n` +
+                `• Si en el futuro este ticket es reabierto en la plataforma web, el hilo **se desarchivará automáticamente** con todo su historial intacto.`
+            );
             mensajesEnviadosPorBot.add(msgCierre.id);
 
             setTimeout(async () => {
                 try {
-                    await hilo.delete('Ticket resuelto y cerrado');
-                    if (dbInstance) {
-                        dbInstance.run('UPDATE tickets SET discord_thread_id = NULL WHERE id = ?', [ticketId]);
+                    if (!hilo.locked) {
+                        await hilo.setLocked(true, 'Ticket resuelto y cerrado');
                     }
-                    console.log(`[Discord Bot] Hilo del ticket #${ticketId} eliminado tras resolución.`);
-                } catch (eDel) {
-                    console.warn('[Discord Bot] No se pudo borrar el hilo resuelto:', eDel.message);
+                    if (!hilo.archived) {
+                        await hilo.setArchived(true, 'Ticket resuelto y cerrado');
+                    }
+                    console.log(`[Discord Bot] Hilo del ticket #${ticketId} archivado y bloqueado exitosamente.`);
+                } catch (eArc) {
+                    console.warn('[Discord Bot] No se pudo archivar el hilo resuelto:', eArc.message);
                 }
-            }, 4000);
+            }, 1500);
         }
 
     } catch (e) {
