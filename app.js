@@ -17,8 +17,24 @@ const discordBot = require('./discordBot');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: { origin: '*' }
+    cors: { origin: '*' },
+    transports: ['websocket', 'polling'],
+    pingTimeout: 30000,
+    pingInterval: 10000
 });
+
+// Función centralizada para notificar a TODAS las computadoras conectadas cualquier cambio en tiempo real
+function emitirCambioGlobalTickets(accion, datos = {}) {
+    try {
+        io.emit('ticket:cambio_global', {
+            accion: accion,
+            timestamp: Date.now(),
+            ...datos
+        });
+    } catch (e) {
+        console.error('Error al emitir ticket:cambio_global:', e);
+    }
+}
 
 // Manejo de conexiones WebSocket para actualización instantánea
 io.on('connection', (socket) => {
@@ -414,6 +430,7 @@ app.post('/tickets/crear', esUsuario, upload.single('imagen'), (req, res) => {
                                     usuario_puesto: req.session.usuario.puesto || ''
                                 }
                             });
+                            emitirCambioGlobalTickets('crear', { ticket_id: ticketId });
 
                             // Notificar a administradores por correo
                             mailer.notificarNuevoTicketAdmin(ticketId, datosTicket);
@@ -497,6 +514,8 @@ const procesarEdicionTicketUsuario = (req, res) => {
                      VALUES (?, ?, ?, ?, ?, datetime('now', '-6 hours'))`,
                     [ticket_id, 'Nuevo ticket', usuarioNombre, req.session.usuario.puesto || 'Usuario', 'Ticket modificado por el usuario solicitante'],
                     () => {
+                        emitirCambioGlobalTickets('editar', { ticket_id: Number(ticket_id) });
+                        io.emit('ticket:editado', { ticket_id: Number(ticket_id) });
                         req.session.mensajeFlash = `¡Ticket #${ticket_id} modificado exitosamente!`;
                         return res.redirect('/usuario');
                     }
@@ -559,6 +578,8 @@ const procesarEliminacionTicketUsuario = (req, res) => {
                      VALUES (?, ?, ?, ?, ?, datetime('now', '-6 hours'))`,
                     [ticket_id, 'Cancelado por usuario', usuarioNombre, req.session.usuario.puesto || 'Usuario', detalleHistorial],
                     () => {
+                        emitirCambioGlobalTickets('eliminar', { ticket_id: Number(ticket_id) });
+                        io.emit('ticket:eliminado', { ticket_id: Number(ticket_id) });
                         req.session.mensajeFlash = `El ticket #${ticket_id} fue cancelado y retirado exitosamente.`;
                         return res.redirect('/usuario');
                     }
@@ -1732,6 +1753,7 @@ app.post('/admin/tickets/crear', esAdmin, upload.single('imagen'), (req, res) =>
                                         creado_por_admin: adminNombre
                                     }
                                 });
+                                emitirCambioGlobalTickets('crear', { ticket_id: ticketId });
 
                                 // Notificar a los administradores
                                 mailer.notificarNuevoTicketAdmin(ticketId, datosTicket, { adminRemitente: req.session.usuario });
@@ -1900,6 +1922,7 @@ app.post('/admin/tickets/cambiar-estatus', esAdmin, (req, res) => {
                     entregado_por: nuevoEntregadoPor,
                     adminActualNombre: adminActualNombre
                 });
+                emitirCambioGlobalTickets('estatus', { ticket_id: Number(ticket_id), estatus: estatus });
 
                 // Notificar cambio de estatus en Discord (actualiza la tarjeta del hilo)
                 try {
@@ -1996,6 +2019,7 @@ app.post('/admin/tickets/editar-categoria', esAdmin, (req, res) => {
                             subcategoria: nuevaSubcat,
                             reclasificado_por: adminActualNombre
                         });
+                        emitirCambioGlobalTickets('categoria', { ticket_id: Number(ticket_id), tipo_falla: nuevaCat, subcategoria: nuevaSubcat });
 
                         // Agregar registro en el chat del ticket para visibilidad
                         db.run(
@@ -2053,6 +2077,7 @@ app.post('/admin/tickets/editar-cita', esAdmin, (req, res) => {
                 fecha_programada_cliente: fechaCli,
                 motivo_pendiente_cliente: motivoCli
             });
+            emitirCambioGlobalTickets('cita', { ticket_id: Number(ticket_id) });
 
             try {
                 discordBot.notificarCambioEstatusDiscord(ticket_id, 'Pendiente por cliente', {
@@ -2101,6 +2126,7 @@ app.post('/admin/tickets/eliminar-cita', esAdmin, (req, res) => {
                 motivo_pendiente_cliente: null,
                 eliminada: true
             });
+            emitirCambioGlobalTickets('cita_eliminada', { ticket_id: Number(ticket_id) });
 
             const quiereJson = req.xhr || req.headers['sec-fetch-dest'] === 'empty' || req.body.formato === 'json';
             if (quiereJson) {
@@ -2263,6 +2289,7 @@ app.post('/admin/tickets/actualizar-estatus-masivo', esAdmin, (req, res) => {
 
                     procesados++;
                     if (procesados === total) {
+                        emitirCambioGlobalTickets('masivo', { total });
                         if (errores > 0) {
                             req.session.mensajeFlash = `Se actualizaron ${total - errores} de ${total} ticket(s). Hubo errores en algunos registros.`;
                         } else {
@@ -2341,6 +2368,7 @@ app.post('/admin/tickets/registrar-avance', esAdmin, (req, res) => {
                                 comentario_resolucion: `Avance en etapa [${etapaLabel}]: ${notaLimpia}`
                             }, { adminRemitente: req.session.usuario });
 
+                            emitirCambioGlobalTickets('avance', { ticket_id: Number(ticket_id) });
                             req.session.mensajeFlash = `Avance registrado para el Ticket #${ticket_id} por ${espNombre}.`;
                             return res.redirect(origen === 'detalle' ? `/admin/tickets/${ticket_id}` : '/admin');
                         }
@@ -2926,6 +2954,8 @@ app.post('/admin/tickets/eliminar', esAdmin, (req, res) => {
                     return res.redirect(origen === 'detalle' ? `/admin/tickets/${ticket_id}` : '/admin');
                 }
 
+                emitirCambioGlobalTickets('eliminar', { ticket_id: Number(ticket.id) });
+                io.emit('ticket:eliminado', { ticket_id: Number(ticket.id) });
                 req.session.mensajeFlash = `Ticket #${ticket.id} ("${ticket.titulo}") movido a la papelera de reciclaje exitosamente. Podrás recuperarlo en cualquier momento.`;
                 return res.redirect('/admin');
             });
@@ -2953,6 +2983,7 @@ app.post('/admin/tickets/recuperar', esAdmin, (req, res) => {
                 return res.redirect('/admin');
             }
 
+            emitirCambioGlobalTickets('recuperar', { ticket_id: Number(ticket.id) });
             req.session.mensajeFlash = `¡Ticket #${ticket.id} ("${ticket.titulo}") restaurado exitosamente! Ha vuelto a la lista principal de tickets.`;
             return res.redirect('/admin');
         });
@@ -3070,6 +3101,8 @@ app.post('/admin/tickets/eliminar-definitivo', esAdmin, (req, res) => {
                             fs.unlink(rutaImagen, () => {});
                         }
 
+                        emitirCambioGlobalTickets('eliminar_definitivo', { ticket_id: Number(ticket.id) });
+                        io.emit('ticket:eliminado', { ticket_id: Number(ticket.id) });
                         req.session.mensajeFlash = `Ticket #${ticket.id} ("${ticket.titulo}") eliminado definitivamente del sistema.`;
                         return res.redirect('/admin');
                     });

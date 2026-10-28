@@ -8,6 +8,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Socket.IO para sincronización instantánea en tiempo real -->
+    <script src="/socket.io/socket.io.js"></script>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -555,7 +557,7 @@
                         <% } %>
                     </div>
 
-                    <div class="overflow-x-auto">
+                    <div class="overflow-x-auto" id="contenedorTablaMisTickets">
                         <table class="w-full text-left border-collapse">
                             <thead>
                                 <tr class="border-b border-slate-200 bg-slate-50/50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
@@ -2182,10 +2184,96 @@
             } catch (e) {}
         }
 
+        // ==========================================
+        // SINCRONIZACIÓN AUTOMÁTICA EN TIEMPO REAL (COLABORADOR)
+        // ==========================================
+        let sincronizandoTableroUser = false;
+        async function refrescarTableroUsuarioEnVivo() {
+            if (sincronizandoTableroUser) return;
+            const modalAbierto = document.querySelector('.modal[style*="display: block"]') || 
+                                 document.querySelector('.modal:not([style*="display: none"])[style*="display"]');
+            const inputActivo = document.activeElement && 
+                                (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') && 
+                                document.activeElement.id !== 'buscarMisTickets';
+            if (modalAbierto || inputActivo) return;
+
+            sincronizandoTableroUser = true;
+            try {
+                const resp = await fetch(window.location.href, { 
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    cache: 'no-store' 
+                });
+                if (!resp.ok) return;
+                const html = await resp.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                const nuevoContTabla = doc.getElementById('contenedorTablaMisTickets');
+                const contTablaActual = document.getElementById('contenedorTablaMisTickets');
+                if (nuevoContTabla && contTablaActual) {
+                    contTablaActual.innerHTML = nuevoContTabla.innerHTML;
+                }
+
+                if (typeof filtrarTablaMisTickets === 'function') {
+                    filtrarTablaMisTickets();
+                }
+            } catch (err) {
+                console.warn('Error sincronizando tablero usuario en vivo:', err);
+            } finally {
+                sincronizandoTableroUser = false;
+            }
+        }
+
         // Inicialización de WebSockets para comunicación instantánea de Usuario
         if (typeof io !== 'undefined') {
             try {
-                const socketUser = io();
+                const socketUser = io({
+                    transports: ['websocket', 'polling'],
+                    reconnection: true,
+                    reconnectionAttempts: Infinity,
+                    reconnectionDelay: 1000,
+                    reconnectionDelayMax: 5000,
+                    timeout: 20000
+                });
+
+                socketUser.on('connect', function() {
+                    console.log('[WebSocket Usuario] Conectado en tiempo real');
+                    refrescarTableroUsuarioEnVivo();
+                    verificarNotificacionesVivoUsuario();
+                });
+
+                socketUser.on('ticket:nuevo', function() {
+                    refrescarTableroUsuarioEnVivo();
+                    verificarNotificacionesVivoUsuario();
+                });
+
+                socketUser.on('ticket:cambio_global', function() {
+                    refrescarTableroUsuarioEnVivo();
+                    verificarNotificacionesVivoUsuario();
+                });
+
+                socketUser.on('ticket:estatus_cambiado', function() {
+                    refrescarTableroUsuarioEnVivo();
+                    verificarNotificacionesVivoUsuario();
+                });
+
+                socketUser.on('ticket:categoria_actualizada', function() {
+                    refrescarTableroUsuarioEnVivo();
+                });
+
+                socketUser.on('ticket:cita_actualizada', function() {
+                    refrescarTableroUsuarioEnVivo();
+                    verificarNotificacionesVivoUsuario();
+                });
+
+                socketUser.on('ticket:editado', function() {
+                    refrescarTableroUsuarioEnVivo();
+                });
+
+                socketUser.on('ticket:eliminado', function() {
+                    refrescarTableroUsuarioEnVivo();
+                    verificarNotificacionesVivoUsuario();
+                });
 
                 socketUser.on('comentario:nuevo', function(data) {
                     if (!data || !data.comentario) return;
@@ -2194,11 +2282,6 @@
                     if (modal && modal.style.display !== 'none' && inputTId && Number(inputTId.value) === Number(data.ticketId)) {
                         abrirModalChatUsuario(data.ticketId, false);
                     }
-                    verificarNotificacionesVivoUsuario();
-                });
-
-                socketUser.on('ticket:estatus_cambiado', function(data) {
-                    if (!data) return;
                     verificarNotificacionesVivoUsuario();
                 });
 
@@ -2223,7 +2306,9 @@
         }
 
         verificarNotificacionesVivoUsuario();
-        setInterval(verificarNotificacionesVivoUsuario, 25000);
+        // Sincronización continua de respaldo (cada 5s) para reflejar cambios en todas las PCs
+        setInterval(refrescarTableroUsuarioEnVivo, 5000);
+        setInterval(verificarNotificacionesVivoUsuario, 20000);
 
         // Control de tiempo de inactividad de 5 minutos para usuarios
         (function() {
@@ -2261,6 +2346,5 @@
             reiniciarContadorInactividad();
         })();
     </script>
-    <script src="/socket.io/socket.io.js"></script>
 </body>
 </html>

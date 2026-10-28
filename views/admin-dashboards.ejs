@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="es" class="h-full bg-slate-50">
 <head>
+    <!-- Socket.IO Cliente -->
+    <script src="/socket.io/socket.io.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboards y Métricas - Sistema de Tickets</title>
@@ -1822,6 +1824,15 @@
         });
 
         window.addEventListener('DOMContentLoaded', () => {
+        if (typeof io !== 'undefined') {
+            const socketDash = io({ transports: ['websocket', 'polling'] });
+            let tRefresh = null;
+            socketDash.on('ticket:cambio_global', () => {
+                if (tRefresh) clearTimeout(tRefresh);
+                tRefresh = setTimeout(() => { window.location.reload(); }, 2000);
+            });
+        }
+
             renderizarGrafica('estatus', 'pie', datosEstatus.labels, datosEstatus.counts, datosEstatus.colors, 'Estatus', false);
             renderizarGrafica('prioridad', 'pie', datosPrioridad.labels, datosPrioridad.counts, datosPrioridad.colors, 'Prioridad', false);
             renderizarGrafica('tiempos-resolucion', 'bar', datosTiemposResolucion.labels, datosTiemposResolucion.hours, datosTiemposResolucion.colors, 'Tiempos de Resolución', true, datosTiemposResolucion.formattedTexts);

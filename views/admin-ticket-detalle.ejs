@@ -8,6 +8,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Socket.IO para sincronización instantánea en tiempo real -->
+    <script src="/socket.io/socket.io.js"></script>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -1608,7 +1610,14 @@
 
         // Conectar al servidor de WebSockets en tiempo real
         if (typeof io !== 'undefined') {
-            const socketTicket = io();
+            const socketTicket = io({
+                transports: ['websocket', 'polling'],
+                reconnection: true,
+                reconnectionAttempts: Infinity,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000,
+                timeout: 20000
+            });
             socketTicket.emit('unirse_ticket', '<%= ticket.id %>');
 
             socketTicket.on('comentario:nuevo', function(data) {
@@ -1633,6 +1642,26 @@
                 if (data && data.ticketId == '<%= ticket.id %>') {
                     const bloque = document.getElementById('bloqueComentarioDetalle-' + data.comentarioId);
                     if (bloque) bloque.remove();
+                }
+            });
+
+            socketTicket.on('ticket:categoria_actualizada', function(data) {
+                if (data && Number(data.ticket_id) === Number('<%= ticket.id %>')) {
+                    window.location.reload();
+                }
+            });
+
+            socketTicket.on('ticket:cita_actualizada', function(data) {
+                if (data && Number(data.ticket_id) === Number('<%= ticket.id %>')) {
+                    window.location.reload();
+                }
+            });
+
+            socketTicket.on('ticket:cambio_global', function(data) {
+                if (data && data.ticket_id && Number(data.ticket_id) === Number('<%= ticket.id %>')) {
+                    if (data.accion === 'categoria' || data.accion === 'cita' || data.accion === 'editar') {
+                        window.location.reload();
+                    }
                 }
             });
 
@@ -1673,7 +1702,6 @@
             if (cont) cont.scrollTop = cont.scrollHeight;
         });
     </script>
-    <script src="/socket.io/socket.io.js"></script>
 
 </body>
 </html>
