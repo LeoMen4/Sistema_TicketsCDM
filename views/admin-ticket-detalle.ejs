@@ -333,13 +333,29 @@
                     </span>
                 <% } %>
 
-                <!-- Categoría / Subcategoría -->
-                <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                    <%= ticket.tipo_falla %>
-                    <% if (ticket.subcategoria) { %>
-                        <strong class="text-brand-600 ml-1">› <%= ticket.subcategoria %></strong>
+                <!-- Categoría / Subcategoría y Botón de Reclasificación -->
+                <div class="inline-flex items-center gap-1.5 flex-wrap">
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                        <span class="text-slate-500 mr-1">Categoría:</span>
+                        <strong class="text-slate-800"><%= ticket.tipo_falla %></strong>
+                        <% if (ticket.subcategoria) { %>
+                            <strong class="text-brand-600 ml-1">› <%= ticket.subcategoria %></strong>
+                        <% } %>
+                    </span>
+                    <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                        <button 
+                            type="button" 
+                            onclick="abrirModalEditarCategoriaDetalle()" 
+                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 hover:border-brand-300 transition-colors cursor-pointer shadow-2xs"
+                            title="Reclasificar la categoría del ticket para que los Dashboards y Métricas de SLA reflejen la información correcta"
+                        >
+                            <svg class="w-3.5 h-3.5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                            </svg>
+                            <span>Editar Categoría</span>
+                        </button>
                     <% } %>
-                </span>
+                </div>
 
                 <!-- Fecha y hora -->
                 <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs text-slate-500 bg-slate-50 border border-slate-200">
@@ -1079,6 +1095,162 @@
             var m = document.getElementById('modalEditarCitaDetalle');
             if (m) m.style.display = 'none';
         }
+    </script>
+
+    <!-- MODAL PARA RECLASIFICAR / EDITAR CATEGORÍA DEL TICKET (SOLO ADMIN) -->
+    <div id="modalEditarCategoriaDetalle" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 520px; border-top: 4px solid #dc2626;">
+            <div class="flex items-center justify-between mb-3 border-b border-slate-100 pb-2.5">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">🏷️</span>
+                    <div>
+                        <h4 class="text-base font-bold text-slate-900 m-0">Reclasificar Categoría del Ticket</h4>
+                        <p class="text-[11px] text-slate-500 m-0">Corrige la categoría si el usuario la seleccionó incorrectamente para que los Dashboards y métricas SLA sean precisos.</p>
+                    </div>
+                </div>
+                <button type="button" onclick="cerrarModalEditarCategoriaDetalle()" class="text-slate-400 hover:text-slate-600 text-lg font-bold cursor-pointer">&times;</button>
+            </div>
+
+            <!-- Alerta Informativa de Categoría Actual -->
+            <div class="p-3 bg-slate-50 border border-slate-200 rounded-md mb-3 text-xs text-slate-700">
+                <span class="font-bold text-slate-900 block mb-0.5">Categoría registrada actualmente:</span>
+                <span class="inline-flex items-center gap-1 font-semibold text-brand-700 bg-white px-2 py-0.5 rounded border border-slate-200">
+                    <%= ticket.tipo_falla %>
+                    <% if (ticket.subcategoria) { %>
+                        <span class="text-slate-400">›</span> <%= ticket.subcategoria %>
+                    <% } %>
+                </span>
+            </div>
+
+            <form action="/admin/tickets/editar-categoria" method="POST" class="space-y-4">
+                <input type="hidden" name="ticket_id" value="<%= ticket.id %>">
+                <input type="hidden" name="origen" value="detalle">
+                
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                        Nueva Categoría Principal (Tipo de Falla): <span class="text-brand-600">*</span>
+                    </label>
+                    <select 
+                        name="tipo_falla" 
+                        id="selectCategoriaModalDetalle" 
+                        required 
+                        onchange="actualizarSubcategoriasModalDetalle()"
+                        class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 bg-white focus:border-brand-600 focus:outline-none shadow-2xs font-semibold"
+                    >
+                        <option value="">-- Seleccionar categoría --</option>
+                        <% if (typeof categorias !== 'undefined' && categorias && categorias.length > 0) { %>
+                            <% categorias.forEach(function(cat) { %>
+                                <option value="<%= cat.nombre %>" <%= ticket.tipo_falla === cat.nombre ? 'selected' : '' %>>
+                                    <%= cat.nombre %>
+                                </option>
+                            <% }); %>
+                        <% } else { %>
+                            <option value="Conectividad e Internet" <%= ticket.tipo_falla === 'Conectividad e Internet' ? 'selected' : '' %>>Conectividad e Internet</option>
+                            <option value="Falla en Programas / Software" <%= ticket.tipo_falla === 'Falla en Programas / Software' ? 'selected' : '' %>>Falla en Programas / Software</option>
+                            <option value="Paquetes de Oficina / Licencias" <%= ticket.tipo_falla === 'Paquetes de Oficina / Licencias' ? 'selected' : '' %>>Paquetes de Oficina / Licencias</option>
+                            <option value="Periféricos" <%= ticket.tipo_falla === 'Periféricos' ? 'selected' : '' %>>Periféricos</option>
+                            <option value="Falla General de Computadora / PC" <%= ticket.tipo_falla === 'Falla General de Computadora / PC' ? 'selected' : '' %>>Falla General de Computadora / PC</option>
+                            <option value="Otros" <%= ticket.tipo_falla === 'Otros' ? 'selected' : '' %>>Otros</option>
+                        <% } %>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                        Subcategoría / Dispositivo (Opcional):
+                    </label>
+                    <select 
+                        name="subcategoria" 
+                        id="selectSubcategoriaModalDetalle" 
+                        class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 bg-white focus:border-brand-600 focus:outline-none shadow-2xs"
+                    >
+                        <option value="">-- Sin subcategoría --</option>
+                        <% if (ticket.subcategoria) { %>
+                            <option value="<%= ticket.subcategoria %>" selected><%= ticket.subcategoria %></option>
+                        <% } %>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                        Motivo de Reclasificación (Opcional - Para Bitácora):
+                    </label>
+                    <input 
+                        type="text" 
+                        name="motivo_reclasificacion" 
+                        placeholder="Ej. El usuario reportó falla de software pero era problema físico de cable..."
+                        class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 bg-white focus:border-brand-600 focus:outline-none shadow-2xs"
+                    >
+                </div>
+
+                <div class="modal-actions pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+                    <button 
+                        type="button" 
+                        onclick="cerrarModalEditarCategoriaDetalle()" 
+                        class="px-3.5 py-2 rounded text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+                    >
+                        Cancelar
+                    </button>
+                    <button 
+                        type="submit" 
+                        class="px-4 py-2 rounded text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 transition-colors shadow-xs cursor-pointer flex items-center gap-1.5"
+                    >
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <span>Guardar Reclasificación</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+        const CATS_SUBCATS_DATA = <%- JSON.stringify(typeof categorias !== 'undefined' ? categorias : []) %>;
+        
+        function abrirModalEditarCategoriaDetalle() {
+            var m = document.getElementById('modalEditarCategoriaDetalle');
+            if (m) {
+                m.style.display = 'block';
+                actualizarSubcategoriasModalDetalle('<%= ticket.subcategoria || "" %>');
+            }
+        }
+
+        function cerrarModalEditarCategoriaDetalle() {
+            var m = document.getElementById('modalEditarCategoriaDetalle');
+            if (m) m.style.display = 'none';
+        }
+
+        function actualizarSubcategoriasModalDetalle(valorPreseleccionado) {
+            const selectCat = document.getElementById('selectCategoriaModalDetalle');
+            const selectSub = document.getElementById('selectSubcategoriaModalDetalle');
+            if (!selectCat || !selectSub) return;
+
+            const catSeleccionada = selectCat.value;
+            selectSub.innerHTML = '<option value="">-- Sin subcategoría --</option>';
+
+            if (!catSeleccionada) return;
+
+            const encontrada = (CATS_SUBCATS_DATA || []).find(c => c.nombre === catSeleccionada);
+            if (encontrada && encontrada.subcategorias && encontrada.subcategorias.length > 0) {
+                encontrada.subcategorias.forEach(sub => {
+                    const opt = document.createElement('option');
+                    opt.value = sub.nombre;
+                    opt.textContent = sub.nombre;
+                    if (valorPreseleccionado && valorPreseleccionado === sub.nombre) {
+                        opt.selected = true;
+                    }
+                    selectSub.appendChild(opt);
+                });
+            }
+        }
+
+        // Cierre con tecla Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                cerrarModalEditarCategoriaDetalle();
+                cerrarModalEditarCitaDetalle();
+            }
+        });
     </script>
     <% } %>
 

@@ -1256,18 +1256,21 @@ function verDetalleTicket(req, res) {
                         delete req.session.errorFlash;
                     }
 
-                    res.render('admin-ticket-detalle', {
-                        usuarioActual: usuarioActual,
-                        usuarioActualNombre: usuarioActual.nombre,
-                        adminNombre: esAdmin ? usuarioActual.nombre : null,
-                        esAdmin: esAdmin,
-                        ticket: ticket,
-                        historial: historial,
-                        comentarios: comentarios,
-                        especialistasTI: especialistasTI,
-                        usuariosActivos: usuariosActivos,
-                        mensaje: mensajeFlash,
-                        error: errorFlash
+                    obtenerCategoriasConSubcategorias((categoriasAgrupadas) => {
+                        res.render('admin-ticket-detalle', {
+                            usuarioActual: usuarioActual,
+                            usuarioActualNombre: usuarioActual.nombre,
+                            adminNombre: esAdmin ? usuarioActual.nombre : null,
+                            esAdmin: esAdmin,
+                            ticket: ticket,
+                            historial: historial,
+                            comentarios: comentarios,
+                            especialistasTI: especialistasTI,
+                            usuariosActivos: usuariosActivos,
+                            categorias: categoriasAgrupadas,
+                            mensaje: mensajeFlash,
+                            error: errorFlash
+                        });
                     });
                 });
             });
@@ -1934,6 +1937,80 @@ app.post('/admin/tickets/cambiar-estatus', esAdmin, (req, res) => {
                 res.redirect('/admin');
             });
         });
+    });
+});
+
+// Reclasificar categoría y subcategoría del ticket (Solo desde el detalle del ticket por Administrador)
+app.post('/admin/tickets/editar-categoria', esAdmin, (req, res) => {
+    const { ticket_id, tipo_falla, subcategoria, motivo_reclasificacion, origen } = req.body;
+    const adminActualNombre = (req.session && req.session.usuario && req.session.usuario.nombre) ? req.session.usuario.nombre : 'Administrador TI';
+    const adminActualPuesto = (req.session && req.session.usuario && req.session.usuario.puesto) ? req.session.usuario.puesto : 'Especialista TI';
+
+    if (!ticket_id || !tipo_falla || !tipo_falla.trim()) {
+        req.session.errorFlash = 'Debes seleccionar una categoría válida para el ticket.';
+        return res.redirect(ticket_id ? `/admin/tickets/${ticket_id}` : '/admin');
+    }
+
+    const nuevaCat = tipo_falla.trim();
+    const nuevaSubcat = (subcategoria && subcategoria.trim()) ? subcategoria.trim() : null;
+
+    db.get('SELECT id, tipo_falla, subcategoria, estatus FROM tickets WHERE id = ?', [ticket_id], (errT, ticketActual) => {
+        if (errT || !ticketActual) {
+            req.session.errorFlash = 'No se encontró el ticket especificado.';
+            return res.redirect('/admin');
+        }
+
+        const catAnterior = ticketActual.tipo_falla || 'Sin categoría';
+        const subcatAnterior = ticketActual.subcategoria ? ` › ${ticketActual.subcategoria}` : '';
+        const catNuevaTxt = nuevaCat + (nuevaSubcat ? ` › ${nuevaSubcat}` : '');
+
+        db.run(
+            `UPDATE tickets 
+             SET tipo_falla = ?, 
+                 subcategoria = ?, 
+                 editado = 1, 
+                 editado_at = datetime('now', '-6 hours') 
+             WHERE id = ?`,
+            [nuevaCat, nuevaSubcat, ticket_id],
+            function(errUpdate) {
+                if (errUpdate) {
+                    req.session.errorFlash = 'Error al actualizar la categoría: ' + errUpdate.message;
+                    return res.redirect(`/admin/tickets/${ticket_id}`);
+                }
+
+                let detalleBitacora = `Categoría reclasificada por Admin: "${catAnterior}${subcatAnterior}" ➔ "${catNuevaTxt}"`;
+                if (motivo_reclasificacion && motivo_reclasificacion.trim()) {
+                    detalleBitacora += ` • Motivo: ${motivo_reclasificacion.trim()}`;
+                }
+
+                // Registrar en el historial cronológico para auditoría
+                db.run(
+                    `INSERT INTO historial_tickets (ticket_id, estatus, usuario_nombre, usuario_puesto, detalle, fecha) 
+                     VALUES (?, ?, ?, ?, ?, datetime('now', '-6 hours'))`,
+                    [ticket_id, ticketActual.estatus || 'En proceso', adminActualNombre, adminActualPuesto, detalleBitacora],
+                    () => {
+                        // Notificar en tiempo real por WebSockets
+                        io.emit('ticket:categoria_actualizada', {
+                            ticket_id: Number(ticket_id),
+                            tipo_falla: nuevaCat,
+                            subcategoria: nuevaSubcat,
+                            reclasificado_por: adminActualNombre
+                        });
+
+                        // Agregar registro en el chat del ticket para visibilidad
+                        db.run(
+                            `INSERT INTO ticket_comentarios (ticket_id, usuario_id, autor_nombre, autor_rol, autor_puesto, mensaje, tipo_intervencion, leido_admin, leido_usuario, fecha)
+                             VALUES (?, ?, ?, 'admin', ?, ?, 'avance', 1, 0, datetime('now', '-6 hours'))`,
+                            [ticket_id, req.session.usuario ? req.session.usuario.id : 1, adminActualNombre, adminActualPuesto, `🏷️ ${detalleBitacora}`],
+                            () => {}
+                        );
+
+                        req.session.mensajeFlash = `¡Categoría del Ticket #${ticket_id} actualizada correctamente a "${catNuevaTxt}"!`;
+                        return res.redirect(`/admin/tickets/${ticket_id}`);
+                    }
+                );
+            }
+        );
     });
 });
 
