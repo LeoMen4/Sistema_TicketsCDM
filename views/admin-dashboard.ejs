@@ -603,31 +603,23 @@
                             <span class="text-xs font-bold uppercase tracking-wider text-slate-700 mr-1">
                                 Clasificar por estatus:
                             </span>
-                            <div class="inline-flex items-center gap-1 bg-white p-1 rounded-md border border-slate-200 shadow-2xs" id="clasificadorEstatusAdmin">
+                            <div class="inline-flex items-center gap-1 bg-white p-1 rounded-md border border-slate-200 shadow-2xs overflow-x-auto max-w-full" id="clasificadorEstatusAdmin">
                                 <a 
                                     href="/admin?estatus=Todos" 
-                                    class="px-3 py-1 rounded text-xs font-bold transition-all <%= filtroActual === 'Todos' ? 'bg-brand-600 text-white shadow-2xs' : 'text-slate-600 hover:text-brand-600 hover:bg-slate-50' %>"
+                                    class="px-3 py-1 rounded text-xs font-bold whitespace-nowrap transition-all <%= filtroActual === 'Todos' ? 'bg-brand-600 text-white shadow-2xs' : 'text-slate-600 hover:text-brand-600 hover:bg-slate-50' %>"
                                 >Todos</a>
-                                <a 
-                                    href="/admin?estatus=Nuevo ticket" 
-                                    class="px-3 py-1 rounded text-xs font-bold transition-all <%= filtroActual === 'Nuevo ticket' ? 'bg-brand-600 text-white shadow-2xs' : 'text-slate-600 hover:text-brand-600 hover:bg-slate-50' %>"
-                                >Nuevos</a>
-                                <a 
-                                    href="/admin?estatus=Pendiente" 
-                                    class="px-3 py-1 rounded text-xs font-bold transition-all <%= filtroActual === 'Pendiente' ? 'bg-brand-600 text-white shadow-2xs' : 'text-slate-600 hover:text-brand-600 hover:bg-slate-50' %>"
-                                >Pendientes</a>
-                                <a 
-                                    href="/admin?estatus=Pendiente por cliente" 
-                                    class="px-3 py-1 rounded text-xs font-bold transition-all <%= filtroActual === 'Pendiente por cliente' ? 'bg-brand-600 text-white shadow-2xs' : 'text-slate-600 hover:text-brand-600 hover:bg-slate-50' %>"
-                                >Pend. Cliente</a>
-                                <a 
-                                    href="/admin?estatus=En proceso" 
-                                    class="px-3 py-1 rounded text-xs font-bold transition-all <%= filtroActual === 'En proceso' ? 'bg-brand-600 text-white shadow-2xs' : 'text-slate-600 hover:text-brand-600 hover:bg-slate-50' %>"
-                                >En proceso</a>
-                                <a 
-                                    href="/admin?estatus=Resuelto" 
-                                    class="px-3 py-1 rounded text-xs font-bold transition-all <%= filtroActual === 'Resuelto' ? 'bg-brand-600 text-white shadow-2xs' : 'text-slate-600 hover:text-brand-600 hover:bg-slate-50' %>"
-                                >Resueltos</a>
+                                <% (typeof estatusTicketsList !== 'undefined' && estatusTicketsList.length > 0 ? estatusTicketsList : [
+                                    { nombre: 'Nuevo ticket' },
+                                    { nombre: 'Pendiente' },
+                                    { nombre: 'Pendiente por cliente' },
+                                    { nombre: 'En proceso' },
+                                    { nombre: 'Resuelto' }
+                                ]).forEach(est => { %>
+                                    <a 
+                                        href="/admin?estatus=<%= encodeURIComponent(est.nombre) %>" 
+                                        class="px-3 py-1 rounded text-xs font-bold whitespace-nowrap transition-all <%= filtroActual === est.nombre ? 'bg-brand-600 text-white shadow-2xs' : 'text-slate-600 hover:text-brand-600 hover:bg-slate-50' %>"
+                                    ><%= est.nombre %></a>
+                                <% }) %>
                             </div>
                             <% if (filtroActual === 'Todos') { %>
                                 <span class="text-[11px] text-slate-400 italic">
@@ -1024,7 +1016,7 @@
                                                 %>
                                                 <select 
                                                     id="selectEstatusFila-<%= t.id %>"
-                                                    class="select-estatus-ticket w-full max-w-[155px] rounded border <%= claseSelectEstatus %> px-2 py-1 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer transition-all shadow-2xs" 
+                                                    class="select-estatus-ticket w-full max-w-[155px] rounded border px-2 py-1 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer transition-all shadow-2xs" 
                                                     data-ticket-id="<%= t.id %>" 
                                                     data-original-status="<%= t.estatus %>" 
                                                     data-atendido-por="<%= t.atendido_por || '' %>"
@@ -1033,11 +1025,26 @@
                                                     data-motivo-pendiente="<%= t.motivo_pendiente_cliente || '' %>"
                                                     onchange="manejarCambioSelectEstatus(this)"
                                                 >
-                                                    <option value="Nuevo ticket" class="bg-sky-50 text-sky-800 font-bold" <%= t.estatus === 'Nuevo ticket' ? 'selected' : '' %>>Nuevo ticket</option>
-                                                    <option value="Pendiente" class="bg-rose-50 text-rose-800 font-bold" <%= t.estatus === 'Pendiente' ? 'selected' : '' %>>Pendiente TI</option>
-                                                    <option value="Pendiente por cliente" class="bg-orange-50 text-orange-800 font-bold" <%= t.estatus === 'Pendiente por cliente' ? 'selected' : '' %>>Pendiente por cliente</option>
-                                                    <option value="En proceso" class="bg-amber-50 text-amber-800 font-bold" <%= t.estatus === 'En proceso' ? 'selected' : '' %>>En proceso</option>
-                                                    <option value="Resuelto" class="bg-emerald-50 text-emerald-800 font-bold" <%= t.estatus === 'Resuelto' ? 'selected' : '' %>>Resuelto</option>
+                                                    <% (typeof estatusTicketsList !== 'undefined' && estatusTicketsList.length > 0 ? estatusTicketsList : [
+                                                        { nombre: 'Nuevo ticket', color_bg: '#f0f9ff', color_texto: '#0369a1' },
+                                                        { nombre: 'En proceso', color_bg: '#fffbeb', color_texto: '#b45309' },
+                                                        { nombre: 'Pendiente', color_bg: '#fff1f2', color_texto: '#be123c' },
+                                                        { nombre: 'Pendiente por cliente', color_bg: '#fff7ed', color_texto: '#c2410c' },
+                                                        { nombre: 'Resuelto', color_bg: '#ecfdf5', color_texto: '#047857' }
+                                                    ]).forEach(est => { %>
+                                                        <option 
+                                                            value="<%= est.nombre %>" 
+                                                            data-pide-evidencia="<%= est.pide_evidencia ? '1' : '0' %>"
+                                                            data-pide-descripcion="<%= est.pide_descripcion || 'opcional' %>"
+                                                            data-pausa-tiempo="<%= est.pausa_tiempo ? '1' : '0' %>"
+                                                            data-color="<%= est.color || '#3b82f6' %>"
+                                                            data-color-bg="<%= est.color_bg || '#f8fafc' %>"
+                                                            data-color-texto="<%= est.color_texto || '#1e293b' %>"
+                                                            data-color-borde="<%= est.color_borde || '#cbd5e1' %>"
+                                                            style="background-color: <%= est.color_bg || '#ffffff' %>; color: <%= est.color_texto || '#000000' %>; font-weight: bold;" 
+                                                            <%= t.estatus === est.nombre ? 'selected' : '' %>
+                                                        ><%= est.nombre %></option>
+                                                    <% }) %>
                                                 </select>
 
                                                 <div class="flex items-center gap-1.5 mt-1">
@@ -1523,7 +1530,110 @@
                     </div>
                 </div>
 
-                <!-- BLOQUE 2: GESTIÓN DE CATEGORÍAS DE RESOLUCIÓN (ESTATUS RESUELTO) -->
+
+                <!-- BLOQUE 2: ESTATUS DE TICKETS Y FLUJO DE ATENCIÓN -->
+                <div class="bg-white rounded-md shadow-xs border border-slate-200 p-6 border-t-4 border-t-purple-600 space-y-4">
+                    <div class="flex justify-between items-center pb-3 border-b border-slate-100 flex-wrap gap-3">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                                <span>Estatus de Tickets y Flujo de Atención</span>
+                            </h3>
+                            <p class="text-xs text-slate-500 mt-0.5">Personaliza los estados del flujo de trabajo, si pausan el tiempo en dashboards (excluyendo domingos), si exigen foto de evidencia o nota obligatoria.</p>
+                        </div>
+                        <button 
+                            type="button" 
+                            onclick="abrirModalCrearEstatus()" 
+                            class="inline-flex items-center gap-1.5 py-1.5 px-3.5 rounded-md text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 shadow-xs transition-all cursor-pointer"
+                        >
+                            + Nuevo Estatus
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto w-full rounded-md border border-slate-200">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                                    <th class="py-3 px-4">Estatus / Badge</th>
+                                    <th class="py-3 px-4 text-center">Pausa Tiempo</th>
+                                    <th class="py-3 px-4 text-center">Pide Evidencia</th>
+                                    <th class="py-3 px-4 text-center">Justificación</th>
+                                    <th class="py-3 px-4 text-center">Tipo</th>
+                                    <th class="py-3 px-4 text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <% (typeof estatusTicketsList !== 'undefined' && estatusTicketsList.length > 0 ? estatusTicketsList : []).forEach(est => { %>
+                                    <tr class="hover:bg-slate-50 transition-colors">
+                                        <td class="py-3 px-4 font-bold">
+                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-bold border" style="background-color: <%= est.color_bg || '#f8fafc' %>; color: <%= est.color_texto || '#1e293b' %>; border-color: <%= est.color_borde || '#cbd5e1' %>;">
+                                                <span class="w-2 h-2 rounded-full" style="background-color: <%= est.color || '#3b82f6' %>;"></span>
+                                                <%= est.nombre %>
+                                            </span>
+                                        </td>
+                                        <td class="py-3 px-4 text-center">
+                                            <% if (est.pausa_tiempo) { %>
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300">
+                                                    ⏸️ Pausa Tiempo
+                                                </span>
+                                            <% } else { %>
+                                                <span class="text-slate-400 text-[11px]">▶️ Tiempo corre</span>
+                                            <% } %>
+                                        </td>
+                                        <td class="py-3 px-4 text-center">
+                                            <% if (est.pide_evidencia) { %>
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-800 border border-sky-300">
+                                                    📸 Foto Requerida
+                                                </span>
+                                            <% } else { %>
+                                                <span class="text-slate-400 text-[11px]">No requerida</span>
+                                            <% } %>
+                                        </td>
+                                        <td class="py-3 px-4 text-center">
+                                            <% if (est.pide_descripcion === 'obligatoria') { %>
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-300">Obligatoria</span>
+                                            <% } else if (est.pide_descripcion === 'opcional') { %>
+                                                <span class="text-slate-500 text-[11px]">Opcional</span>
+                                            <% } else { %>
+                                                <span class="text-slate-400 text-[11px]">Ninguna</span>
+                                            <% } %>
+                                        </td>
+                                        <td class="py-3 px-4 text-center">
+                                            <% if (est.es_sistema) { %>
+                                                <span class="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">Sistema</span>
+                                            <% } else { %>
+                                                <span class="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">Personalizado</span>
+                                            <% } %>
+                                        </td>
+                                        <td class="py-3 px-4 text-right whitespace-nowrap">
+                                            <div class="inline-flex items-center gap-1.5">
+                                                <button 
+                                                    type="button" 
+                                                    onclick="abrirModalEditarEstatus('<%= est.id %>', '<%= est.nombre %>', '<%= est.color || '#3b82f6' %>', <%= est.pausa_tiempo ? 1 : 0 %>, <%= est.pide_evidencia ? 1 : 0 %>, '<%= est.pide_descripcion || 'opcional' %>', <%= est.es_sistema ? 1 : 0 %>)" 
+                                                    class="px-2.5 py-1 text-[11px] font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded border border-slate-300 transition-colors cursor-pointer"
+                                                    title="Editar estatus"
+                                                >
+                                                    Editar
+                                                </button>
+                                                <% if (!est.es_sistema) { %>
+                                                    <button 
+                                                        type="button" 
+                                                        onclick="abrirModalEliminarEstatus('<%= est.id %>', '<%= est.nombre %>')" 
+                                                        class="px-2.5 py-1 text-[11px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded border border-rose-200 transition-colors cursor-pointer"
+                                                        title="Eliminar estatus"
+                                                    >
+                                                        Eliminar
+                                                    </button>
+                                                <% } %>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- BLOQUE 3: GESTIÓN DE CATEGORÍAS DE RESOLUCIÓN (ESTATUS RESUELTO) -->
                 <div class="bg-white rounded-md shadow-xs border border-slate-200 p-6 border-t-4 border-t-emerald-600 space-y-4">
                     <div class="flex justify-between items-center pb-3 border-b border-slate-100 flex-wrap gap-3">
                         <div>
@@ -1545,8 +1655,10 @@
                         <table class="w-full text-left border-collapse text-xs">
                             <thead>
                                 <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-600">
-                                    <th class="py-3 px-4 w-1/4">Categoría de Resolución</th>
-                                    <th class="py-3 px-4 w-2/5">Descripción / Alcance</th>
+                                    <th class="py-3 px-4">Categoría de Resolución</th>
+                                    <th class="py-3 px-4">Descripción / Alcance</th>
+                                    <th class="py-3 px-4 text-center">Pide Evidencia</th>
+                                    <th class="py-3 px-4 text-center">Justificación</th>
                                     <th class="py-3 px-4 text-center">Registro de Equipo</th>
                                     <th class="py-3 px-4 text-right">Acciones</th>
                                 </tr>
@@ -1561,6 +1673,22 @@
                                             <%= cr.descripcion || '<span class="text-slate-400 italic">Sin descripción</span>' %>
                                         </td>
                                         <td class="py-3 px-4 text-center">
+                                            <% if (cr.pide_evidencia) { %>
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-800 border border-sky-300">
+                                                    📸 Foto Requerida
+                                                </span>
+                                            <% } else { %>
+                                                <span class="text-slate-400 text-[11px]">No requerida</span>
+                                            <% } %>
+                                        </td>
+                                        <td class="py-3 px-4 text-center">
+                                            <% if (cr.pide_descripcion === 'obligatoria') { %>
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-300">Obligatoria</span>
+                                            <% } else { %>
+                                                <span class="text-slate-500 text-[11px]">Opcional</span>
+                                            <% } %>
+                                        </td>
+                                        <td class="py-3 px-4 text-center">
                                             <% if (cr.requiere_equipo) { %>
                                                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
                                                     Requiere serie / modelo
@@ -1573,7 +1701,7 @@
                                             <div class="inline-flex items-center gap-1.5">
                                                 <button 
                                                     type="button" 
-                                                    onclick="abrirModalEditarCategoriaResolucion('<%= cr.id %>', '<%= cr.nombre %>', '<%= (cr.descripcion || '').replace(/'/g, "\\'") %>', <%= cr.requiere_equipo ? 1 : 0 %>)" 
+                                                    onclick="abrirModalEditarCategoriaResolucion('<%= cr.id %>', '<%= cr.nombre %>', '<%= (cr.descripcion || '').replace(/'/g, "\\'") %>', <%= cr.requiere_equipo ? 1 : 0 %>, <%= cr.pide_evidencia ? 1 : 0 %>, '<%= cr.pide_descripcion || 'opcional' %>')" 
                                                     class="px-2.5 py-1 text-[11px] font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded border border-slate-300 transition-colors cursor-pointer"
                                                     title="Editar categoría"
                                                 >
@@ -3489,7 +3617,7 @@
                 </div>
             </div>
             
-            <form action="/admin/tickets/cambiar-estatus" method="POST" id="formModalResolucion" class="space-y-3.5">
+            <form action="/admin/tickets/cambiar-estatus" method="POST" id="formModalResolucion" enctype="multipart/form-data" class="space-y-3.5">
                 <input type="hidden" name="ticket_id" id="idTicketResolucion">
                 <input type="hidden" name="estatus" value="Resuelto">
 
@@ -3544,21 +3672,30 @@
                         class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:border-brand-600 focus:outline-none shadow-2xs bg-white font-semibold"
                     >
                         <% (typeof categoriasResolucion !== 'undefined' && categoriasResolucion.length > 0 ? categoriasResolucion : [
-                            { nombre: 'Mantenimiento', requiere_equipo: 0 },
-                            { nombre: 'Cambio de pieza', requiere_equipo: 0 },
-                            { nombre: 'Reemplazo', requiere_equipo: 1 }
+                            { nombre: 'Mantenimiento', requiere_equipo: 0, pide_evidencia: 0, pide_descripcion: 'opcional' },
+                            { nombre: 'Cambio de pieza', requiere_equipo: 0, pide_evidencia: 0, pide_descripcion: 'opcional' },
+                            { nombre: 'Reemplazo', requiere_equipo: 1, pide_evidencia: 0, pide_descripcion: 'opcional' }
                         ]).forEach(cr => { %>
-                            <option value="<%= cr.nombre %>" data-requiere-equipo="<%= cr.requiere_equipo ? '1' : '0' %>"><%= cr.nombre %></option>
+                            <option value="<%= cr.nombre %>" data-requiere-equipo="<%= cr.requiere_equipo ? '1' : '0' %>" data-pide-evidencia="<%= cr.pide_evidencia ? '1' : '0' %>" data-pide-descripcion="<%= cr.pide_descripcion || 'opcional' %>"><%= cr.nombre %></option>
                         <% }) %>
                     </select>
                 </div>
 
+                <div id="bloqueEvidenciaResolucion" style="display: none;" class="p-3 bg-sky-50/70 border border-sky-200 rounded space-y-1.5">
+                    <label class="block text-xs font-bold text-sky-900">
+                        📸 Foto / Evidencia de Resolución <span class="text-brand-600" id="reqFotoResolucion">*</span>:
+                    </label>
+                    <input type="file" name="imagen" id="inputFotoResolucion" accept="image/*" class="w-full text-xs text-slate-700 bg-white p-1 rounded border border-slate-300">
+                    <small class="text-[10px] text-sky-700 block">Sube foto de la solución, comprobante, pieza cambiada o entrega.</small>
+                </div>
+
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                        Comentario sobre la resolución:
+                        Comentario sobre la resolución <span class="text-brand-600" id="reqComentarioResolucion" style="display: none;">*</span>:
                     </label>
                     <textarea 
                         name="comentario_resolucion" 
+                        id="inputComentarioResolucion"
                         rows="3" 
                         placeholder="Procedimiento realizado para solucionar la incidencia..."
                         class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:border-brand-600 focus:outline-none shadow-2xs"
@@ -4743,6 +4880,17 @@
                 return;
             }
 
+            // Verificar si el estatus seleccionado requiere evidencia fotográfica o nota obligatoria
+            const optSeleccionada = select.selectedOptions ? select.selectedOptions[0] : null;
+            const pideFoto = optSeleccionada ? (optSeleccionada.dataset.pideEvidencia === '1') : false;
+            const pideDesc = optSeleccionada ? optSeleccionada.dataset.pideDescripcion : 'opcional';
+
+            if (pideFoto || pideDesc === 'obligatoria') {
+                if (btnFila) btnFila.style.display = 'none';
+                abrirModalCambioEstatusEspecial(select, nuevoEstatus, pideFoto, pideDesc);
+                return;
+            }
+
             if (nuevoEstatus === select.dataset.originalStatus) {
                 if (btnFila) btnFila.style.display = 'none';
                 if (ind) ind.textContent = '';
@@ -4833,6 +4981,9 @@
             if (!sel) return;
             const opt = sel.selectedOptions ? sel.selectedOptions[0] : null;
             const requiereEquipo = (opt && opt.dataset.requiereEquipo === '1') || sel.value === 'Reemplazo';
+            const pideEvidencia = opt ? (opt.dataset.pideEvidencia === '1') : false;
+            const pideDesc = opt ? opt.dataset.pideDescripcion : 'opcional';
+
             const campos = document.getElementById('camposReemplazo');
             const tipoInput = document.getElementById('inputTipoNuevo');
             const modelInput = document.getElementById('inputModeloNuevo');
@@ -4849,6 +5000,30 @@
                     if (tipoInput) tipoInput.required = false;
                     if (modelInput) modelInput.required = false;
                     if (serieInput) serieInput.required = false;
+                }
+            }
+
+            const bloqueEvidencia = document.getElementById('bloqueEvidenciaResolucion');
+            const inFoto = document.getElementById('inputFotoResolucion');
+            if (bloqueEvidencia && inFoto) {
+                if (pideEvidencia) {
+                    bloqueEvidencia.style.display = 'block';
+                    inFoto.required = true;
+                } else {
+                    bloqueEvidencia.style.display = 'none';
+                    inFoto.required = false;
+                }
+            }
+
+            const inComent = document.getElementById('inputComentarioResolucion');
+            const reqComent = document.getElementById('reqComentarioResolucion');
+            if (inComent) {
+                if (pideDesc === 'obligatoria') {
+                    inComent.required = true;
+                    if (reqComent) reqComent.style.display = 'inline';
+                } else {
+                    inComent.required = false;
+                    if (reqComent) reqComent.style.display = 'none';
                 }
             }
         }
@@ -7650,6 +7825,19 @@
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Descripción / Notas de Alcance (Opcional):</label>
                     <input type="text" name="descripcion" id="inputDescCatResolucion" placeholder="Breve explicación de cuándo aplica esta solución..." class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:border-emerald-600 focus:outline-none">
                 </div>
+                <div class="p-3 bg-sky-50/70 border border-sky-200 rounded space-y-1">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="pide_evidencia" value="1" id="chkPideEvidenciaCatResolucion" class="rounded border-sky-300 text-sky-600 focus:ring-sky-500">
+                        <span class="text-xs font-bold text-sky-950">📸 ¿Solicitar foto / evidencia obligatoria al resolver con esta categoría?</span>
+                    </label>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Descripción / Justificación de Solución:</label>
+                    <select name="pide_descripcion" id="selPideDescCatResolucion" class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 bg-white">
+                        <option value="opcional">Opcional (el técnico puede escribir una nota si lo desea)</option>
+                        <option value="obligatoria">Obligatoria (debe detallar el procedimiento para cerrar)</option>
+                    </select>
+                </div>
                 <div class="p-3 bg-slate-50 border border-slate-200 rounded">
                     <label class="inline-flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="requiere_equipo" value="1" id="chkReqEquipoCatResolucion" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
@@ -7682,6 +7870,19 @@
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Descripción / Notas de Alcance:</label>
                     <input type="text" name="descripcion" id="descCatResolucionEditar" class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:border-emerald-600 focus:outline-none">
                 </div>
+                <div class="p-3 bg-sky-50/70 border border-sky-200 rounded space-y-1">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="pide_evidencia" value="1" id="chkPideEvidenciaCatResolucionEditar" class="rounded border-sky-300 text-sky-600 focus:ring-sky-500">
+                        <span class="text-xs font-bold text-sky-950">📸 ¿Solicitar foto / evidencia obligatoria al resolver?</span>
+                    </label>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Descripción / Justificación de Solución:</label>
+                    <select name="pide_descripcion" id="selPideDescCatResolucionEditar" class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 bg-white">
+                        <option value="opcional">Opcional</option>
+                        <option value="obligatoria">Obligatoria</option>
+                    </select>
+                </div>
                 <div class="p-3 bg-slate-50 border border-slate-200 rounded">
                     <label class="inline-flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="requiere_equipo" value="1" id="chkReqEquipoCatResolucionEditar" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
@@ -7710,6 +7911,225 @@
                 <input type="hidden" name="id" id="idCatResolucionEliminar">
                 <div class="modal-actions">
                     <button type="button" onclick="cerrarModalEliminarCategoriaResolucion()" class="px-3.5 py-1.5 rounded text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200">Cancelar</button>
+                    <button type="submit" class="px-3.5 py-1.5 rounded text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-xs">Sí, Eliminar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    
+    <!-- MODAL CAMBIO DE ESTATUS CON EVIDENCIA O JUSTIFICACIÓN -->
+    <div id="modalCambioEstatusEspecial" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="flex items-center gap-2 mb-2 text-purple-600">
+                <span class="text-xl">📋</span>
+                <h4 class="text-base font-bold text-slate-900 m-0">Actualizar Estatus: <span id="txtTituloEstatusEspecial"></span></h4>
+            </div>
+            <p class="text-xs text-slate-500 mb-3" id="txtSubtituloEstatusEspecial">Este estatus requiere ingresar datos de seguimiento.</p>
+            <form action="/admin/tickets/cambiar-estatus" method="POST" id="formCambioEstatusEspecial" enctype="multipart/form-data" class="space-y-3">
+                <input type="hidden" name="ticket_id" id="idEspecialTicket">
+                <input type="hidden" name="estatus" id="valEspecialEstatus">
+                <input type="hidden" name="origen" value="dashboard">
+
+                <div id="bloqueEvidenciaEspecial" style="display: none;" class="p-3 bg-sky-50/70 border border-sky-200 rounded space-y-1.5">
+                    <label class="block text-xs font-bold text-sky-900">
+                        📸 Foto / Evidencia Adjunta <span class="text-brand-600" id="reqFotoEspecial">*</span>:
+                    </label>
+                    <input type="file" name="imagen" id="inputFotoEspecial" accept="image/*" class="w-full text-xs text-slate-700 bg-white p-1 rounded border border-slate-300">
+                    <small class="text-[10px] text-sky-700 block">Sube foto de la pieza, equipo, comprobante de compra o reporte.</small>
+                </div>
+
+                <div id="bloqueJustificacionEspecial" class="space-y-1">
+                    <label class="block text-xs font-bold text-slate-700">
+                        Motivo / Justificación <span class="text-brand-600" id="reqJustifEspecial">*</span>:
+                    </label>
+                    <textarea name="detalle_intervencion" id="inputJustifEspecial" rows="3" placeholder="Describe los detalles de esta etapa..." class="w-full rounded border border-slate-300 p-2 text-xs text-slate-900 focus:border-purple-600 focus:outline-none"></textarea>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" onclick="cancelarCambioEstatusEspecial()" class="px-3.5 py-1.5 rounded text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200">Cancelar</button>
+                    <button type="submit" id="btnConfirmarEstatusEspecial" class="px-3.5 py-1.5 rounded text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 shadow-xs">Guardar Estatus</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL CREAR ESTATUS PERSONALIZADO -->
+    <div id="modalCrearEstatus" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="flex items-center gap-2 mb-2 text-purple-600">
+                <span class="text-xl">✨</span>
+                <h4 class="text-base font-bold text-slate-900 m-0">Crear Nuevo Estatus de Ticket</h4>
+            </div>
+            <p class="text-xs text-slate-500 mb-3">Define un nuevo estado para clasificar los reportes de soporte.</p>
+            <form action="/admin/estatus-tickets/crear" method="POST" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Nombre del Estatus <span class="text-brand-600">*</span>:</label>
+                    <input type="text" name="nombre" required placeholder="Ej. Pendiente de refacción, En pruebas externas..." class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:border-purple-600 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Color de Insignia:</label>
+                    <div class="grid grid-cols-6 gap-2">
+                        <label class="flex flex-col items-center gap-1 p-1.5 rounded border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                            <input type="radio" name="color" value="#8b5cf6" checked class="text-purple-600">
+                            <span class="w-4 h-4 rounded-full bg-[#8b5cf6]"></span>
+                            <span class="text-[9px] text-slate-600 font-bold">Morado</span>
+                        </label>
+                        <label class="flex flex-col items-center gap-1 p-1.5 rounded border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                            <input type="radio" name="color" value="#f97316" class="text-orange-600">
+                            <span class="w-4 h-4 rounded-full bg-[#f97316]"></span>
+                            <span class="text-[9px] text-slate-600 font-bold">Naranja</span>
+                        </label>
+                        <label class="flex flex-col items-center gap-1 p-1.5 rounded border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                            <input type="radio" name="color" value="#06b6d4" class="text-cyan-600">
+                            <span class="w-4 h-4 rounded-full bg-[#06b6d4]"></span>
+                            <span class="text-[9px] text-slate-600 font-bold">Cian</span>
+                        </label>
+                        <label class="flex flex-col items-center gap-1 p-1.5 rounded border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                            <input type="radio" name="color" value="#6366f1" class="text-indigo-600">
+                            <span class="w-4 h-4 rounded-full bg-[#6366f1]"></span>
+                            <span class="text-[9px] text-slate-600 font-bold">Índigo</span>
+                        </label>
+                        <label class="flex flex-col items-center gap-1 p-1.5 rounded border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                            <input type="radio" name="color" value="#ec4899" class="text-pink-600">
+                            <span class="w-4 h-4 rounded-full bg-[#ec4899]"></span>
+                            <span class="text-[9px] text-slate-600 font-bold">Rosa</span>
+                        </label>
+                        <label class="flex flex-col items-center gap-1 p-1.5 rounded border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                            <input type="radio" name="color" value="#64748b" class="text-slate-600">
+                            <span class="w-4 h-4 rounded-full bg-[#64748b]"></span>
+                            <span class="text-[9px] text-slate-600 font-bold">Gris</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-amber-50/70 border border-amber-200 rounded space-y-1">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="pausa_tiempo" value="1" class="rounded border-amber-300 text-amber-600 focus:ring-amber-500">
+                        <span class="text-xs font-bold text-amber-950">⏸️ ¿Pausar el tiempo para los Dashboards y Métricas?</span>
+                    </label>
+                    <p class="text-[11px] text-amber-800 ml-5">El tiempo que el ticket pase en este estatus no se contará como tiempo de resolución de TI (excluyendo domingos).</p>
+                </div>
+
+                <div class="p-3 bg-sky-50/70 border border-sky-200 rounded space-y-1">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="pide_evidencia" value="1" class="rounded border-sky-300 text-sky-600 focus:ring-sky-500">
+                        <span class="text-xs font-bold text-sky-950">📸 ¿Solicitar foto / evidencia obligatoria al cambiar a este estatus?</span>
+                    </label>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Descripción / Justificación:</label>
+                    <select name="pide_descripcion" class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 bg-white">
+                        <option value="opcional">Opcional (el técnico puede escribir una nota si lo desea)</option>
+                        <option value="obligatoria">Obligatoria (debe escribir la justificación para guardar)</option>
+                        <option value="ninguno">Ninguna (no pedir justificación)</option>
+                    </select>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" onclick="cerrarModalCrearEstatus()" class="px-3.5 py-1.5 rounded text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200">Cancelar</button>
+                    <button type="submit" class="px-3.5 py-1.5 rounded text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 shadow-xs">Crear Estatus</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL EDITAR ESTATUS -->
+    <div id="modalEditarEstatus" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="flex items-center gap-2 mb-2 text-purple-600">
+                <span class="text-xl">✏️</span>
+                <h4 class="text-base font-bold text-slate-900 m-0">Editar Estatus</h4>
+            </div>
+            <form action="/admin/estatus-tickets/editar" method="POST" class="space-y-3">
+                <input type="hidden" name="id" id="idEditEstatus">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Nombre del Estatus <span class="text-brand-600">*</span>:</label>
+                    <input type="text" name="nombre" id="nomEditEstatus" required class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:border-purple-600 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Color de Insignia:</label>
+                    <div class="grid grid-cols-6 gap-2" id="contenedorPaletaEditEstatus">
+                        <label class="flex flex-col items-center gap-1 p-1.5 rounded border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                            <input type="radio" name="color" value="#8b5cf6" class="text-purple-600">
+                            <span class="w-4 h-4 rounded-full bg-[#8b5cf6]"></span>
+                            <span class="text-[9px] text-slate-600 font-bold">Morado</span>
+                        </label>
+                        <label class="flex flex-col items-center gap-1 p-1.5 rounded border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                            <input type="radio" name="color" value="#f97316" class="text-orange-600">
+                            <span class="w-4 h-4 rounded-full bg-[#f97316]"></span>
+                            <span class="text-[9px] text-slate-600 font-bold">Naranja</span>
+                        </label>
+                        <label class="flex flex-col items-center gap-1 p-1.5 rounded border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                            <input type="radio" name="color" value="#06b6d4" class="text-cyan-600">
+                            <span class="w-4 h-4 rounded-full bg-[#06b6d4]"></span>
+                            <span class="text-[9px] text-slate-600 font-bold">Cian</span>
+                        </label>
+                        <label class="flex flex-col items-center gap-1 p-1.5 rounded border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                            <input type="radio" name="color" value="#6366f1" class="text-indigo-600">
+                            <span class="w-4 h-4 rounded-full bg-[#6366f1]"></span>
+                            <span class="text-[9px] text-slate-600 font-bold">Índigo</span>
+                        </label>
+                        <label class="flex flex-col items-center gap-1 p-1.5 rounded border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                            <input type="radio" name="color" value="#ec4899" class="text-pink-600">
+                            <span class="w-4 h-4 rounded-full bg-[#ec4899]"></span>
+                            <span class="text-[9px] text-slate-600 font-bold">Rosa</span>
+                        </label>
+                        <label class="flex flex-col items-center gap-1 p-1.5 rounded border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                            <input type="radio" name="color" value="#64748b" class="text-slate-600">
+                            <span class="w-4 h-4 rounded-full bg-[#64748b]"></span>
+                            <span class="text-[9px] text-slate-600 font-bold">Gris</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-amber-50/70 border border-amber-200 rounded space-y-1">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="pausa_tiempo" value="1" id="chkEditPausaTiempo" class="rounded border-amber-300 text-amber-600 focus:ring-amber-500">
+                        <span class="text-xs font-bold text-amber-950">⏸️ ¿Pausar el tiempo para los Dashboards y Métricas?</span>
+                    </label>
+                </div>
+
+                <div class="p-3 bg-sky-50/70 border border-sky-200 rounded space-y-1">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="pide_evidencia" value="1" id="chkEditPideEvidencia" class="rounded border-sky-300 text-sky-600 focus:ring-sky-500">
+                        <span class="text-xs font-bold text-sky-950">📸 ¿Solicitar foto / evidencia obligatoria?</span>
+                    </label>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Descripción / Justificación:</label>
+                    <select name="pide_descripcion" id="selEditPideDesc" class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 bg-white">
+                        <option value="opcional">Opcional</option>
+                        <option value="obligatoria">Obligatoria</option>
+                        <option value="ninguno">Ninguna</option>
+                    </select>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" onclick="cerrarModalEditarEstatus()" class="px-3.5 py-1.5 rounded text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200">Cancelar</button>
+                    <button type="submit" class="px-3.5 py-1.5 rounded text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 shadow-xs">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL ELIMINAR ESTATUS -->
+    <div id="modalEliminarEstatus" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="flex items-center gap-2 mb-2 text-rose-600">
+                <span class="text-xl">🗑️</span>
+                <h4 class="text-base font-bold text-slate-900 m-0">Confirmar Eliminación de Estatus</h4>
+            </div>
+            <p class="text-xs text-slate-600 mb-1">¿Estás seguro de eliminar el estatus <strong id="txtNomEliminarEstatus" class="text-slate-900"></strong>?</p>
+            <p class="text-[11px] text-slate-500 mb-3">Los tickets previamente asociados a este estatus conservarán su historial intacto.</p>
+            <form action="/admin/estatus-tickets/eliminar" method="POST">
+                <input type="hidden" name="id" id="idEliminarEstatus">
+                <div class="modal-actions">
+                    <button type="button" onclick="cerrarModalEliminarEstatus()" class="px-3.5 py-1.5 rounded text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200">Cancelar</button>
                     <button type="submit" class="px-3.5 py-1.5 rounded text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-xs">Sí, Eliminar</button>
                 </div>
             </form>
@@ -7753,16 +8173,24 @@
             if (inDesc) inDesc.value = '';
             const chk = document.getElementById('chkReqEquipoCatResolucion');
             if (chk) chk.checked = false;
+            const chkEvi = document.getElementById('chkPideEvidenciaCatResolucion');
+            if (chkEvi) chkEvi.checked = false;
+            const selDesc = document.getElementById('selPideDescCatResolucion');
+            if (selDesc) selDesc.value = 'opcional';
             document.getElementById('modalCrearCategoriaResolucion').style.display = 'block';
         }
         function cerrarModalCrearCategoriaResolucion() {
             document.getElementById('modalCrearCategoriaResolucion').style.display = 'none';
         }
-        function abrirModalEditarCategoriaResolucion(id, nombre, desc, reqEq) {
+        function abrirModalEditarCategoriaResolucion(id, nombre, desc, reqEq, pideEvidencia, pideDesc) {
             document.getElementById('idCatResolucionEditar').value = id;
             document.getElementById('nombreCatResolucionEditar').value = nombre;
             document.getElementById('descCatResolucionEditar').value = desc;
             document.getElementById('chkReqEquipoCatResolucionEditar').checked = Boolean(reqEq);
+            const chkEvi = document.getElementById('chkPideEvidenciaCatResolucionEditar');
+            if (chkEvi) chkEvi.checked = Boolean(pideEvidencia);
+            const selDesc = document.getElementById('selPideDescCatResolucionEditar');
+            if (selDesc) selDesc.value = pideDesc || 'opcional';
             document.getElementById('modalEditarCategoriaResolucion').style.display = 'block';
         }
         function cerrarModalEditarCategoriaResolucion() {
@@ -7775,6 +8203,75 @@
         }
         function cerrarModalEliminarCategoriaResolucion() {
             document.getElementById('modalEliminarCategoriaResolucion').style.display = 'none';
+        }
+
+        
+        let selectEstatusEspecialPendiente = null;
+
+        function abrirModalCrearEstatus() {
+            document.getElementById('modalCrearEstatus').style.display = 'block';
+        }
+        function cerrarModalCrearEstatus() {
+            document.getElementById('modalCrearEstatus').style.display = 'none';
+        }
+        function abrirModalEditarEstatus(id, nombre, color, pausa, evidencia, desc, esSistema) {
+            document.getElementById('idEditEstatus').value = id;
+            document.getElementById('nomEditEstatus').value = nombre;
+            document.getElementById('chkEditPausaTiempo').checked = Boolean(pausa);
+            document.getElementById('chkEditPideEvidencia').checked = Boolean(evidencia);
+            document.getElementById('selEditPideDesc').value = desc || 'opcional';
+            const rads = document.querySelectorAll('#contenedorPaletaEditEstatus input[type="radio"]');
+            rads.forEach(r => { r.checked = (r.value === color); });
+            document.getElementById('modalEditarEstatus').style.display = 'block';
+        }
+        function cerrarModalEditarEstatus() {
+            document.getElementById('modalEditarEstatus').style.display = 'none';
+        }
+        function abrirModalEliminarEstatus(id, nombre) {
+            document.getElementById('idEliminarEstatus').value = id;
+            document.getElementById('txtNomEliminarEstatus').textContent = nombre;
+            document.getElementById('modalEliminarEstatus').style.display = 'block';
+        }
+        function cerrarModalEliminarEstatus() {
+            document.getElementById('modalEliminarEstatus').style.display = 'none';
+        }
+
+        function abrirModalCambioEstatusEspecial(select, nuevoEstatus, pideFoto, pideDesc) {
+            selectEstatusEspecialPendiente = select;
+            const ticketId = select.dataset.ticketId;
+            document.getElementById('idEspecialTicket').value = ticketId;
+            document.getElementById('valEspecialEstatus').value = nuevoEstatus;
+            document.getElementById('txtTituloEstatusEspecial').textContent = nuevoEstatus;
+
+            const bloqueFoto = document.getElementById('bloqueEvidenciaEspecial');
+            const inFoto = document.getElementById('inputFotoEspecial');
+            if (pideFoto) {
+                bloqueFoto.style.display = 'block';
+                inFoto.required = true;
+            } else {
+                bloqueFoto.style.display = 'none';
+                inFoto.required = false;
+            }
+
+            const inJustif = document.getElementById('inputJustifEspecial');
+            const reqJustif = document.getElementById('reqJustifEspecial');
+            if (pideDesc === 'obligatoria') {
+                inJustif.required = true;
+                reqJustif.style.display = 'inline';
+            } else {
+                inJustif.required = false;
+                reqJustif.style.display = 'none';
+            }
+
+            document.getElementById('modalCambioEstatusEspecial').style.display = 'block';
+        }
+
+        function cancelarCambioEstatusEspecial() {
+            document.getElementById('modalCambioEstatusEspecial').style.display = 'none';
+            if (selectEstatusEspecialPendiente) {
+                selectEstatusEspecialPendiente.value = selectEstatusEspecialPendiente.dataset.originalStatus;
+                actualizarVisualizacionCambios();
+            }
         }
 
         function abrirVisorImagen(url, titulo) {

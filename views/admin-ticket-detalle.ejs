@@ -705,7 +705,7 @@
                             <span>Actualizar Estatus y Participación TI</span>
                         </h3>
 
-                        <form action="/admin/tickets/cambiar-estatus" method="POST" id="formCambiarEstatusDetalle" onsubmit="const b=document.getElementById('btnGuardarEstatusDetalle'); if(b){b.disabled=true; b.innerHTML='⏳ Guardando cambios...';}" class="space-y-4">
+                        <form action="/admin/tickets/cambiar-estatus" method="POST" id="formCambiarEstatusDetalle" enctype="multipart/form-data" onsubmit="const b=document.getElementById('btnGuardarEstatusDetalle'); if(b){b.disabled=true; b.innerHTML='⏳ Guardando cambios...';}" class="space-y-4">
                             <input type="hidden" name="ticket_id" value="<%= ticket.id %>">
                             <input type="hidden" name="origen" value="detalle">
 
@@ -721,11 +721,21 @@
                                         required
                                         class="w-full rounded-md border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 bg-white shadow-xs font-bold"
                                     >
-                                        <option value="Nuevo ticket" <%= ticket.estatus === 'Nuevo ticket' ? 'selected' : '' %>>Nuevo ticket</option>
-                                        <option value="En proceso" <%= ticket.estatus === 'En proceso' ? 'selected' : '' %>>En proceso</option>
-                                        <option value="Pendiente" <%= ticket.estatus === 'Pendiente' ? 'selected' : '' %>>Pendiente TI</option>
-                                        <option value="Pendiente por cliente" <%= ticket.estatus === 'Pendiente por cliente' ? 'selected' : '' %>>Pendiente por cliente</option>
-                                        <option value="Resuelto" <%= ticket.estatus === 'Resuelto' ? 'selected' : '' %>>Resuelto</option>
+                                        <% (typeof estatusTicketsList !== 'undefined' && estatusTicketsList.length > 0 ? estatusTicketsList : [
+                                            { nombre: 'Nuevo ticket', color: '#38bdf8' },
+                                            { nombre: 'En proceso', color: '#f59e0b' },
+                                            { nombre: 'Pendiente', color: '#f43f5e' },
+                                            { nombre: 'Pendiente por cliente', color: '#ea580c' },
+                                            { nombre: 'Resuelto', color: '#10b981' }
+                                        ]).forEach(est => { %>
+                                            <option 
+                                                value="<%= est.nombre %>" 
+                                                data-pide-evidencia="<%= est.pide_evidencia ? '1' : '0' %>"
+                                                data-pide-descripcion="<%= est.pide_descripcion || 'opcional' %>"
+                                                data-pausa-tiempo="<%= est.pausa_tiempo ? '1' : '0' %>"
+                                                <%= ticket.estatus === est.nombre ? 'selected' : '' %>
+                                            ><%= est.nombre %></option>
+                                        <% }) %>
                                     </select>
                                 </div>
 
@@ -743,13 +753,22 @@
                                 </div>
                             </div>
 
+                            <div id="bloqueEvidenciaDetalle" style="display: none;" class="p-3 bg-sky-50/70 border border-sky-200 rounded-md space-y-1.5">
+                                <label class="block text-xs font-bold text-sky-900">
+                                    📸 Foto / Evidencia Requerida <span class="text-brand-600" id="reqFotoDetalle">*</span>:
+                                </label>
+                                <input type="file" name="imagen" id="inputFotoDetalle" accept="image/*" class="w-full text-xs text-slate-700 bg-white p-1 rounded border border-slate-300">
+                                <small class="text-[10px] text-sky-700 block">Sube foto de la pieza, equipo, comprobante de compra o reporte de avance.</small>
+                            </div>
+
                             <div>
                                 <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                                    Nota / Detalle de esta etapa (Para la bitácora):
+                                    Nota / Detalle de esta etapa (Para la bitácora) <span class="text-brand-600" id="reqNotaDetalle" style="display: none;">*</span>:
                                 </label>
                                 <input 
                                     type="text" 
                                     name="detalle_etapa" 
+                                    id="inputDetalleEtapa"
                                     placeholder="Ej. Se adelantó revisión de hardware; listo para pruebas o entrega..."
                                     class="w-full rounded-md border border-slate-300 px-3 py-2 text-xs text-slate-900 bg-white shadow-xs"
                                 >
@@ -821,17 +840,19 @@
                                         class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs text-slate-900 bg-white shadow-xs font-bold"
                                     >
                                         <% (typeof categoriasResolucion !== 'undefined' && categoriasResolucion.length > 0 ? categoriasResolucion : [
-                                            { nombre: 'Mantenimiento', requiere_equipo: 0 },
-                                            { nombre: 'Cambio de pieza', requiere_equipo: 0 },
-                                            { nombre: 'Reemplazo', requiere_equipo: 1 }
+                                            { nombre: 'Mantenimiento', requiere_equipo: 0, pide_evidencia: 0, pide_descripcion: 'opcional' },
+                                            { nombre: 'Cambio de pieza', requiere_equipo: 0, pide_evidencia: 0, pide_descripcion: 'opcional' },
+                                            { nombre: 'Reemplazo', requiere_equipo: 1, pide_evidencia: 0, pide_descripcion: 'opcional' }
                                         ]).forEach(cr => { %>
-                                            <option value="<%= cr.nombre %>" data-requiere-equipo="<%= cr.requiere_equipo ? '1' : '0' %>" <%= ticket.categoria_resolucion === cr.nombre ? 'selected' : '' %>><%= cr.nombre %></option>
+                                            <option value="<%= cr.nombre %>" data-requiere-equipo="<%= cr.requiere_equipo ? '1' : '0' %>" data-pide-evidencia="<%= cr.pide_evidencia ? '1' : '0' %>" data-pide-descripcion="<%= cr.pide_descripcion || 'opcional' %>" <%= ticket.categoria_resolucion === cr.nombre ? 'selected' : '' %>><%= cr.nombre %></option>
                                         <% }) %>
                                     </select>
                                 </div>
 
                                 <div>
-                                    <label class="block text-[11px] font-bold text-emerald-800 mb-1">Comentario de la solución:</label>
+                                    <label class="block text-[11px] font-bold text-emerald-800 mb-1">
+                                        Comentario de la solución <span class="text-brand-600" id="reqComentarioDetalle" style="display: none;">*</span>:
+                                    </label>
                                     <textarea 
                                         name="comentario_resolucion" 
                                         id="inputComentarioDetalle" 
@@ -1315,9 +1336,17 @@
         function evaluarEstatusDetalle() {
             const select = document.getElementById('selectEstatusDetalle');
             if (!select) return;
+            const optEst = select.selectedOptions ? select.selectedOptions[0] : null;
+            const pideFotoEst = optEst ? (optEst.dataset.pideEvidencia === '1') : false;
+            const pideDescEst = optEst ? optEst.dataset.pideDescripcion : 'opcional';
+
             const bloqueRes = document.getElementById('bloqueResolucionDetalle');
             const bloqueCli = document.getElementById('bloquePendienteClienteDetalle');
             const inputTecnico = document.getElementById('inputTecnicoDetalle');
+            const bloqueEvidencia = document.getElementById('bloqueEvidenciaDetalle');
+            const inFoto = document.getElementById('inputFotoDetalle');
+            const inNota = document.getElementById('inputDetalleEtapa');
+            const reqNota = document.getElementById('reqNotaDetalle');
 
             if (select.value === 'Resuelto') {
                 if (bloqueRes) bloqueRes.style.display = 'block';
@@ -1328,10 +1357,29 @@
                 if (bloqueRes) bloqueRes.style.display = 'none';
                 if (bloqueCli) bloqueCli.style.display = 'block';
                 if (inputTecnico) inputTecnico.required = false;
+                if (bloqueEvidencia) bloqueEvidencia.style.display = pideFotoEst ? 'block' : 'none';
+                if (inFoto) inFoto.required = pideFotoEst;
             } else {
                 if (bloqueRes) bloqueRes.style.display = 'none';
                 if (bloqueCli) bloqueCli.style.display = 'none';
                 if (inputTecnico) inputTecnico.required = false;
+                if (bloqueEvidencia) bloqueEvidencia.style.display = pideFotoEst ? 'block' : 'none';
+                if (inFoto) inFoto.required = pideFotoEst;
+            }
+
+            // Si es resuelto, la evidencia la gestiona la categoría de resolución; si no, el estatus
+            if (select.value === 'Resuelto') {
+                evaluarReemplazoDetalle();
+            } else {
+                if (inNota) {
+                    if (pideDescEst === 'obligatoria') {
+                        inNota.required = true;
+                        if (reqNota) reqNota.style.display = 'inline';
+                    } else {
+                        inNota.required = false;
+                        if (reqNota) reqNota.style.display = 'none';
+                    }
+                }
             }
         }
 
@@ -1340,9 +1388,36 @@
             if (!selectCat) return;
             const opt = selectCat.selectedOptions ? selectCat.selectedOptions[0] : null;
             const requiereEquipo = (opt && opt.dataset.requiereEquipo === '1') || selectCat.value === 'Reemplazo';
+            const pideEvidencia = opt ? (opt.dataset.pideEvidencia === '1') : false;
+            const pideDesc = opt ? opt.dataset.pideDescripcion : 'opcional';
+
             const bloqueReemp = document.getElementById('bloqueReemplazoDetalle');
             if (bloqueReemp) {
                 bloqueReemp.style.display = requiereEquipo ? 'block' : 'none';
+            }
+
+            const bloqueEvidencia = document.getElementById('bloqueEvidenciaDetalle');
+            const inFoto = document.getElementById('inputFotoDetalle');
+            if (bloqueEvidencia && inFoto) {
+                if (pideEvidencia) {
+                    bloqueEvidencia.style.display = 'block';
+                    inFoto.required = true;
+                } else {
+                    bloqueEvidencia.style.display = 'none';
+                    inFoto.required = false;
+                }
+            }
+
+            const inComent = document.getElementById('inputComentarioDetalle');
+            const reqComent = document.getElementById('reqComentarioDetalle');
+            if (inComent) {
+                if (pideDesc === 'obligatoria') {
+                    inComent.required = true;
+                    if (reqComent) reqComent.style.display = 'inline';
+                } else {
+                    inComent.required = false;
+                    if (reqComent) reqComent.style.display = 'none';
+                }
             }
         }
 

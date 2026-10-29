@@ -398,6 +398,49 @@ db.serialize(() => {
         });
     });
 
+    // Migraciones para categorias_resolucion
+    db.run(`ALTER TABLE categorias_resolucion ADD COLUMN pide_evidencia INTEGER DEFAULT 0`, () => {});
+    db.run(`ALTER TABLE categorias_resolucion ADD COLUMN pide_descripcion TEXT DEFAULT 'opcional'`, () => {});
+
+    // Tabla para Estatus dinámicos y personalizables de tickets
+    db.run(`
+        CREATE TABLE IF NOT EXISTS estatus_tickets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT UNIQUE NOT NULL,
+            color TEXT DEFAULT '#3b82f6',
+            color_bg TEXT DEFAULT '#eff6ff',
+            color_texto TEXT DEFAULT '#1e40af',
+            color_borde TEXT DEFAULT '#bfdbfe',
+            pausa_tiempo INTEGER DEFAULT 0,
+            pide_evidencia INTEGER DEFAULT 0,
+            pide_descripcion TEXT DEFAULT 'opcional',
+            es_sistema INTEGER DEFAULT 0,
+            es_cierre INTEGER DEFAULT 0,
+            orden INTEGER DEFAULT 0,
+            activo INTEGER DEFAULT 1,
+            fecha_creacion DATETIME DEFAULT (datetime('now', '-6 hours'))
+        )
+    `, () => {
+        db.get('SELECT COUNT(*) AS total FROM estatus_tickets', (errCount, rowCount) => {
+            if (!errCount && rowCount && rowCount.total === 0) {
+                const defaultsEstatus = [
+                    { nombre: 'Nuevo ticket', color: '#0284c7', color_bg: '#f0f9ff', color_texto: '#0369a1', color_borde: '#bae6fd', pausa_tiempo: 0, pide_evidencia: 0, pide_descripcion: 'ninguno', es_sistema: 1, es_cierre: 0, orden: 1 },
+                    { nombre: 'En proceso', color: '#d97706', color_bg: '#fffbeb', color_texto: '#b45309', color_borde: '#fde68a', pausa_tiempo: 0, pide_evidencia: 0, pide_descripcion: 'opcional', es_sistema: 1, es_cierre: 0, orden: 2 },
+                    { nombre: 'Pendiente', color: '#e11d48', color_bg: '#fff1f2', color_texto: '#be123c', color_borde: '#fecdd3', pausa_tiempo: 0, pide_evidencia: 0, pide_descripcion: 'opcional', es_sistema: 1, es_cierre: 0, orden: 3 },
+                    { nombre: 'Pendiente por cliente', color: '#ea580c', color_bg: '#fff7ed', color_texto: '#c2410c', color_borde: '#ffedd5', pausa_tiempo: 1, pide_evidencia: 0, pide_descripcion: 'opcional', es_sistema: 1, es_cierre: 0, orden: 4 },
+                    { nombre: 'Resuelto', color: '#059669', color_bg: '#ecfdf5', color_texto: '#047857', color_borde: '#a7f3d0', pausa_tiempo: 1, pide_evidencia: 0, pide_descripcion: 'opcional', es_sistema: 1, es_cierre: 1, orden: 5 }
+                ];
+                defaultsEstatus.forEach(e => {
+                    db.run(
+                        `INSERT OR IGNORE INTO estatus_tickets (nombre, color, color_bg, color_texto, color_borde, pausa_tiempo, pide_evidencia, pide_descripcion, es_sistema, es_cierre, orden)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                        [e.nombre, e.color, e.color_bg, e.color_texto, e.color_borde, e.pausa_tiempo, e.pide_evidencia, e.pide_descripcion, e.es_sistema, e.es_cierre, e.orden]
+                    );
+                });
+            }
+        });
+    });
+
     // Tabla de configuraciones globales del sistema (ej. tolerancia de alertas)
     db.run(`
         CREATE TABLE IF NOT EXISTS configuraciones (

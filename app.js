@@ -774,12 +774,13 @@ function formatearDuracion(ms) {
 }
 
 // Función auxiliar para calcular milisegundos que un ticket estuvo pausado en 'Pendiente por cliente'
-function calcularTiempoPausadoCliente(historialTicket, fechaFinTicket) {
+function calcularTiempoPausadoCliente(historialTicket, fechaFinTicket, estatusPausadosSet) {
     if (!historialTicket || historialTicket.length === 0) return 0;
+    const pausados = estatusPausadosSet || new Set(['Pendiente por cliente']);
     let totalPausadoMs = 0;
     for (let i = 0; i < historialTicket.length; i++) {
         const item = historialTicket[i];
-        if (item.estatus === 'Pendiente por cliente') {
+        if (pausados.has(item.estatus) || item.estatus === 'Pendiente por cliente') {
             const inicioPausa = item.fecha;
             let finPausa = null;
             if (i + 1 < historialTicket.length) {
@@ -1355,7 +1356,8 @@ function verDetalleTicket(req, res) {
 
                     obtenerCategoriasConSubcategorias((categoriasAgrupadas) => {
                         db.all('SELECT * FROM categorias_resolucion WHERE activo = 1 ORDER BY id ASC', [], (errCR, categoriasResolucion) => {
-                            res.render('admin-ticket-detalle', {
+                            db.all('SELECT * FROM estatus_tickets WHERE activo = 1 ORDER BY orden ASC, id ASC', [], (errET, estatusTicketsList) => {
+                                res.render('admin-ticket-detalle', {
                                 usuarioActual: usuarioActual,
                                 usuarioActualNombre: usuarioActual.nombre,
                                 adminNombre: esAdmin ? usuarioActual.nombre : null,
@@ -1367,8 +1369,11 @@ function verDetalleTicket(req, res) {
                                 usuariosActivos: usuariosActivos,
                                 categorias: categoriasAgrupadas,
                                 categoriasResolucion: categoriasResolucion || [],
+                                                                    estatusTicketsList: estatusTicketsList || [],
+                                estatusTicketsList: estatusTicketsList || [],
                                 mensaje: mensajeFlash,
                                 error: errorFlash
+                                });
                             });
                         });
                     });
@@ -1469,7 +1474,8 @@ function obtenerDatosAdmin(req, res, mensaje = null, error = null) {
                                                             ORDER BY fecha_programada ASC
                                                         `, [], (errRec, recordatorios) => {
                                                             db.all('SELECT * FROM categorias_resolucion WHERE activo = 1 ORDER BY id ASC', [], (errCR, categoriasResolucion) => {
-                                                                res.render('admin-dashboard', {
+                                                                db.all('SELECT * FROM estatus_tickets WHERE activo = 1 ORDER BY orden ASC, id ASC', [], (errET, estatusTicketsList) => {
+                                                                    res.render('admin-dashboard', {
                                                                     adminNombre: req.session.usuario.nombre,
                                                                     adminPuesto: req.session.usuario.puesto || 'Especialista TI',
                                                                     adminId: req.session.usuario.id,
@@ -1494,6 +1500,7 @@ function obtenerDatosAdmin(req, res, mensaje = null, error = null) {
                                                         });
                                                     });
                                                     });
+                                                });
                                                 });
                                             });
                                         });
@@ -1862,7 +1869,7 @@ app.post('/admin/tickets/crear', esAdmin, upload.single('imagen'), (req, res) =>
 });
 
 // Cambiar estatus de ticket y guardar campos de resolución + trazabilidad por etapas (Punto 5)
-app.post('/admin/tickets/cambiar-estatus', esAdmin, (req, res) => {
+app.post('/admin/tickets/cambiar-estatus', esAdmin, upload.single('imagen'), (req, res) => {
     const { 
         ticket_id, 
         estatus, 
@@ -1970,6 +1977,22 @@ app.post('/admin/tickets/cambiar-estatus', esAdmin, (req, res) => {
                 INSERT INTO historial_tickets (ticket_id, estatus, usuario_nombre, usuario_puesto, detalle, fecha) 
                 VALUES (?, ?, ?, ?, ?, datetime('now', '-6 hours'))
             `;
+
+            // Si se adjuntó foto de evidencia en este cambio de estatus
+            const imagenEvidencia = req.file ? req.file.filename : null;
+            if (req.file) {
+                persistirArchivoEnBD(req.file.filename, req.file.path, req.file.mimetype);
+            }
+
+            if (imagenEvidencia || (detalleHist && detalleHist.trim())) {
+                const msgNotaEvidencia = (detalleHist && detalleHist.trim()) ? detalleHist.trim() : ('Cambio de estatus a: ' + estatus + ' con evidencia adjunta.');
+                db.run(
+                    `INSERT INTO ticket_comentarios (ticket_id, usuario_id, autor_nombre, autor_rol, autor_puesto, mensaje, imagen, tipo_intervencion, leido_admin, leido_usuario, fecha)
+                     VALUES (?, ?, ?, 'admin', ?, ?, ?, 'avance', 1, 0, datetime('now', '-6 hours'))`,
+                    [ticket_id, req.session.usuario ? req.session.usuario.id : 1, adminActualNombre, adminActualPuesto, msgNotaEvidencia, imagenEvidencia],
+                    () => {}
+                );
+            }
 
             db.run(insertHistorial, [ticket_id, estatus, adminActualNombre, adminActualPuesto, detalleHist], function(errHist) {
                 if (estatus === 'Pendiente por cliente') {
@@ -3195,11 +3218,121 @@ app.post('/admin/tickets/eliminar-definitivo', esAdmin, (req, res) => {
 });
 
 
+
+// ---------------------- GESTIÓN DINÁMICA DE ESTATUS DE TICKETS ----------------------
+
+const PALETA_ESTATUS_PRESETS = {
+    '#0284c7': { bg: '#f0f9ff', texto: '#0369a1', borde: '#bae6fd' }, // Azul cielo
+    '#3b82f6': { bg: '#eff6ff', texto: '#1d4ed8', borde: '#bfdbfe' }, // Azul clásico
+    '#8b5cf6': { bg: '#f5f3ff', texto: '#6d28d9', borde: '#ddd6fe' }, // Morado
+    '#6366f1': { bg: '#eef2ff', texto: '#4338ca', borde: '#c7d2fe' }, // Índigo
+    '#d97706': { bg: '#fffbeb', texto: '#b45309', borde: '#fde68a' }, // Ámbar / Naranja dorado
+    '#f97316': { bg: '#fff7ed', texto: '#c2410c', borde: '#ffedd5' }, // Naranja
+    '#e11d48': { bg: '#fff1f2', texto: '#be123c', borde: '#fecdd3' }, // Rojo rosa
+    '#ef4444': { bg: '#fef2f2', texto: '#b91c1c', borde: '#fecaca' }, // Rojo fuerte
+    '#10b981': { bg: '#ecfdf5', texto: '#047857', borde: '#a7f3d0' }, // Esmeralda / Verde
+    '#06b6d4': { bg: '#ecfeff', texto: '#0e7490', borde: '#a5f3fc' }, // Cian
+    '#ec4899': { bg: '#fdf2f8', texto: '#be185d', borde: '#fbcfe8' }, // Rosa
+    '#64748b': { bg: '#f8fafc', texto: '#334155', borde: '#cbd5e1' }  // Pizarra / Gris
+};
+
+// Crear Estatus Personalizado
+app.post('/admin/estatus-tickets/crear', esAdmin, (req, res) => {
+    const { nombre, color, pausa_tiempo, pide_evidencia, pide_descripcion } = req.body;
+    const nombreLimpio = nombre ? nombre.trim() : '';
+
+    if (!nombreLimpio) {
+        return obtenerDatosAdmin(req, res, null, 'El nombre del estatus es obligatorio.');
+    }
+
+    const hex = color || '#8b5cf6';
+    const preset = PALETA_ESTATUS_PRESETS[hex] || { bg: '#f8fafc', texto: '#1e293b', borde: '#cbd5e1' };
+    const pausa = (pausa_tiempo === '1' || pausa_tiempo === 1 || pausa_tiempo === 'on') ? 1 : 0;
+    const evidencia = (pide_evidencia === '1' || pide_evidencia === 1 || pide_evidencia === 'on') ? 1 : 0;
+    const desc = ['ninguno', 'opcional', 'obligatoria'].includes(pide_descripcion) ? pide_descripcion : 'opcional';
+
+    db.run(
+        `INSERT INTO estatus_tickets (nombre, color, color_bg, color_texto, color_borde, pausa_tiempo, pide_evidencia, pide_descripcion, es_sistema, orden)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 10)`,
+        [nombreLimpio, hex, preset.bg, preset.texto, preset.borde, pausa, evidencia, desc],
+        function(err) {
+            if (err) {
+                const msg = err.message && err.message.includes('UNIQUE')
+                    ? 'Ya existe un estatus con ese nombre.'
+                    : 'Error al registrar el estatus: ' + err.message;
+                return obtenerDatosAdmin(req, res, null, msg);
+            }
+            req.session.mensajeFlash = `Estatus "${nombreLimpio}" creado exitosamente.`;
+            res.redirect('/admin#estatus');
+        }
+    );
+});
+
+// Editar Estatus Personalizado
+app.post('/admin/estatus-tickets/editar', esAdmin, (req, res) => {
+    const { id, nombre, color, pausa_tiempo, pide_evidencia, pide_descripcion } = req.body;
+    const nombreLimpio = nombre ? nombre.trim() : '';
+
+    if (!id || !nombreLimpio) {
+        return obtenerDatosAdmin(req, res, null, 'ID y nombre son obligatorios.');
+    }
+
+    const hex = color || '#8b5cf6';
+    const preset = PALETA_ESTATUS_PRESETS[hex] || { bg: '#f8fafc', texto: '#1e293b', borde: '#cbd5e1' };
+    const pausa = (pausa_tiempo === '1' || pausa_tiempo === 1 || pausa_tiempo === 'on') ? 1 : 0;
+    const evidencia = (pide_evidencia === '1' || pide_evidencia === 1 || pide_evidencia === 'on') ? 1 : 0;
+    const desc = ['ninguno', 'opcional', 'obligatoria'].includes(pide_descripcion) ? pide_descripcion : 'opcional';
+
+    db.run(
+        `UPDATE estatus_tickets 
+         SET nombre = ?, color = ?, color_bg = ?, color_texto = ?, color_borde = ?, pausa_tiempo = ?, pide_evidencia = ?, pide_descripcion = ?
+         WHERE id = ?`,
+        [nombreLimpio, hex, preset.bg, preset.texto, preset.borde, pausa, evidencia, desc, id],
+        function(err) {
+            if (err) {
+                const msg = err.message && err.message.includes('UNIQUE')
+                    ? 'Ya existe otro estatus con ese nombre.'
+                    : 'Error al actualizar estatus: ' + err.message;
+                return obtenerDatosAdmin(req, res, null, msg);
+            }
+            req.session.mensajeFlash = `Estatus "${nombreLimpio}" actualizado exitosamente.`;
+            res.redirect('/admin#estatus');
+        }
+    );
+});
+
+// Eliminar Estatus Personalizado
+app.post('/admin/estatus-tickets/eliminar', esAdmin, (req, res) => {
+    const { id } = req.body;
+    if (!id) return obtenerDatosAdmin(req, res, null, 'ID no especificado.');
+
+    db.get('SELECT * FROM estatus_tickets WHERE id = ?', [id], (errGet, est) => {
+        if (!est) return obtenerDatosAdmin(req, res, null, 'Estatus no encontrado.');
+        if (est.es_sistema === 1) {
+            return obtenerDatosAdmin(req, res, null, 'Los estatus base del sistema no pueden eliminarse.');
+        }
+
+        db.run('DELETE FROM estatus_tickets WHERE id = ?', [id], function(err) {
+            if (err) return obtenerDatosAdmin(req, res, null, 'Error al eliminar estatus: ' + err.message);
+            req.session.mensajeFlash = `Estatus "${est.nombre}" eliminado exitosamente.`;
+            res.redirect('/admin#estatus');
+        });
+    });
+});
+
+// API para consultar estatus en JSON
+app.get('/api/estatus-tickets', esAdmin, (req, res) => {
+    db.all('SELECT * FROM estatus_tickets WHERE activo = 1 ORDER BY orden ASC, id ASC', [], (err, rows) => {
+        if (err) return res.status(500).json({ ok: false, error: err.message });
+        res.json({ ok: true, estatus: rows || [] });
+    });
+});
+
 // ---------------------- GESTIÓN DE CATEGORÍAS DE RESOLUCIÓN (ESTATUS RESUELTO) ----------------------
 
 // Crear categoría de resolución
 app.post('/admin/categorias-resolucion/crear', esAdmin, (req, res) => {
-    const { nombre, descripcion, requiere_equipo, origen, ticket_id } = req.body;
+    const { nombre, descripcion, requiere_equipo, pide_evidencia, pide_descripcion, origen, ticket_id } = req.body;
     const nombreLimpio = nombre ? nombre.trim() : '';
 
     if (!nombreLimpio) {
@@ -3210,11 +3343,13 @@ app.post('/admin/categorias-resolucion/crear', esAdmin, (req, res) => {
     }
 
     const reqEq = (requiere_equipo === '1' || requiere_equipo === 1 || requiere_equipo === 'on') ? 1 : 0;
+    const evidencia = (pide_evidencia === '1' || pide_evidencia === 1 || pide_evidencia === 'on') ? 1 : 0;
+    const descExig = ['opcional', 'obligatoria', 'ninguno'].includes(pide_descripcion) ? pide_descripcion : 'opcional';
     const desc = descripcion ? descripcion.trim() : '';
 
     db.run(
-        'INSERT INTO categorias_resolucion (nombre, descripcion, requiere_equipo) VALUES (?, ?, ?)',
-        [nombreLimpio, desc, reqEq],
+        'INSERT INTO categorias_resolucion (nombre, descripcion, requiere_equipo, pide_evidencia, pide_descripcion) VALUES (?, ?, ?, ?, ?)',
+        [nombreLimpio, desc, reqEq, evidencia, descExig],
         function(err) {
             if (err) {
                 const msg = err.message && err.message.includes('UNIQUE') 
@@ -3243,7 +3378,7 @@ app.post('/admin/categorias-resolucion/crear', esAdmin, (req, res) => {
 
 // Editar categoría de resolución
 app.post('/admin/categorias-resolucion/editar', esAdmin, (req, res) => {
-    const { id, nombre, descripcion, requiere_equipo } = req.body;
+    const { id, nombre, descripcion, requiere_equipo, pide_evidencia, pide_descripcion } = req.body;
     const nombreLimpio = nombre ? nombre.trim() : '';
 
     if (!id || !nombreLimpio) {
@@ -3251,11 +3386,13 @@ app.post('/admin/categorias-resolucion/editar', esAdmin, (req, res) => {
     }
 
     const reqEq = (requiere_equipo === '1' || requiere_equipo === 1 || requiere_equipo === 'on') ? 1 : 0;
+    const evidencia = (pide_evidencia === '1' || pide_evidencia === 1 || pide_evidencia === 'on') ? 1 : 0;
+    const descExig = ['opcional', 'obligatoria', 'ninguno'].includes(pide_descripcion) ? pide_descripcion : 'opcional';
     const desc = descripcion ? descripcion.trim() : '';
 
     db.run(
-        'UPDATE categorias_resolucion SET nombre = ?, descripcion = ?, requiere_equipo = ? WHERE id = ?',
-        [nombreLimpio, desc, reqEq, id],
+        'UPDATE categorias_resolucion SET nombre = ?, descripcion = ?, requiere_equipo = ?, pide_evidencia = ?, pide_descripcion = ? WHERE id = ?',
+        [nombreLimpio, desc, reqEq, evidencia, descExig, id],
         function(err) {
             if (err) {
                 const msg = err.message && err.message.includes('UNIQUE') 

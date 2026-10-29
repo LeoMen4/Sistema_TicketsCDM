@@ -430,13 +430,15 @@
                                     </thead>
                                     <tbody class="divide-y divide-slate-100">
                                         <% 
-                                            const estatusItems = [
-                                                { label: 'Nuevos', count: estatusStats.nuevos, color: '#0284c7' },
-                                                { label: 'En proceso', count: estatusStats.enProceso, color: '#d97706' },
-                                                { label: 'Pendientes TI', count: estatusStats.pendientes, color: '#dc2626' },
-                                                { label: 'Pendiente Cliente', count: estatusStats.pendientesCliente || 0, color: '#ea580c' },
-                                                { label: 'Resueltos', count: estatusStats.resueltos, color: '#16a34a' }
-                                            ];
+                                            const estatusItems = (typeof listaEstatusDinamicos !== 'undefined' && listaEstatusDinamicos.length > 0)
+                                                ? listaEstatusDinamicos.map(e => ({ label: e.nombre, count: e.count, color: e.color }))
+                                                : [
+                                                    { label: 'Nuevos', count: estatusStats.nuevos, color: '#0284c7' },
+                                                    { label: 'En proceso', count: estatusStats.enProceso, color: '#d97706' },
+                                                    { label: 'Pendientes TI', count: estatusStats.pendientes, color: '#dc2626' },
+                                                    { label: 'Pendiente Cliente', count: estatusStats.pendientesCliente || 0, color: '#ea580c' },
+                                                    { label: 'Resueltos', count: estatusStats.resueltos, color: '#16a34a' }
+                                                ];
                                         %>
                                         <% estatusItems.forEach(item => { %>
                                             <% const pct = totalTickets > 0 ? ((item.count / totalTickets) * 100).toFixed(1) : '0.0'; %>
@@ -972,16 +974,17 @@
             return hRest > 0 ? `${dias}d ${hRest}h` : `${dias} días`;
         }
 
+        const listaEstatusConfig = <%- JSON.stringify(typeof listaEstatusDinamicos !== 'undefined' ? listaEstatusDinamicos : []) %>;
         const datosEstatus = {
-            labels: ['Nuevos', 'En proceso', 'Pendientes TI', 'Pendiente por cliente', 'Resueltos'],
-            counts: [
+            labels: listaEstatusConfig.length > 0 ? listaEstatusConfig.map(e => e.nombre) : ['Nuevos', 'En proceso', 'Pendientes TI', 'Pendiente por cliente', 'Resueltos'],
+            counts: listaEstatusConfig.length > 0 ? listaEstatusConfig.map(e => e.count) : [
                 <%= estatusStats.nuevos %>,
                 <%= estatusStats.enProceso %>,
                 <%= estatusStats.pendientes %>,
                 <%= estatusStats.pendientesCliente || 0 %>,
                 <%= estatusStats.resueltos %>
             ],
-            colors: ['#0284c7', '#d97706', '#dc2626', '#ea580c', '#16a34a']
+            colors: listaEstatusConfig.length > 0 ? listaEstatusConfig.map(e => e.color) : ['#0284c7', '#d97706', '#dc2626', '#ea580c', '#16a34a']
         };
 
         const datosPrioridad = {
