@@ -1488,6 +1488,7 @@ function obtenerDatosAdmin(req, res, mensaje = null, error = null) {
                                                                     recordatorios: recordatorios || [],
                                                                     categorias: categorias || [],
                                                                     categoriasResolucion: categoriasResolucion || [],
+                                                                    estatusTicketsList: estatusTicketsList || [],
                                                                 equipos: equipos || [],
                                                                 guias: guias || [],
                                                                 configCorreo: configCorreo || {},
