@@ -274,6 +274,16 @@ db.serialize(() => {
         )
     `);
 
+    // Tabla para almacenamiento y persistencia permanente de imágenes y evidencias en la nube (Turso)
+    db.run(`
+        CREATE TABLE IF NOT EXISTS archivos_almacenados (
+            nombre TEXT PRIMARY KEY,
+            mimetype TEXT NOT NULL,
+            datos TEXT NOT NULL,
+            fecha DATETIME DEFAULT (datetime('now', '-6 hours'))
+        )
+    `);
+
     // Tabla de configuraciones globales del sistema (ej. tolerancia de alertas, banderas de inicialización)
     db.run(`
         CREATE TABLE IF NOT EXISTS configuraciones (

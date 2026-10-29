@@ -872,13 +872,19 @@
                                         <!-- Evidencia -->
                                         <td class="py-3 px-4 text-center whitespace-nowrap">
                                             <% if (t.imagen) { %>
-                                                <a href="/uploads/<%= t.imagen %>" target="_blank" class="inline-block group" title="Ver imagen de evidencia">
+                                                <button 
+                                                    type="button" 
+                                                    onclick="abrirVisorImagen('/uploads/<%= t.imagen %>', 'Evidencia Ticket #<%= t.id %> - <%= t.titulo %>')" 
+                                                    class="inline-block group cursor-pointer focus:outline-none" 
+                                                    title="Haz clic para ver imagen en tamaño completo"
+                                                >
                                                     <img 
                                                         src="/uploads/<%= t.imagen %>" 
                                                         alt="Evidencia" 
-                                                        class="w-10 h-10 object-cover rounded border border-slate-200 group-hover:border-brand-500 shadow-2xs transition-all"
+                                                        class="w-11 h-11 object-cover rounded-md border border-slate-200 group-hover:border-brand-500 group-hover:shadow-md shadow-2xs transition-all hover:scale-105"
+                                                        onerror="this.onerror=null; this.src='/uploads/placeholder-error.svg';"
                                                     >
-                                                </a>
+                                                </button>
                                             <% } else { %>
                                                 <span class="text-slate-400 text-[10px] italic">Sin imagen</span>
                                             <% } %>
@@ -1033,6 +1039,20 @@
                                                     <option value="En proceso" class="bg-amber-50 text-amber-800 font-bold" <%= t.estatus === 'En proceso' ? 'selected' : '' %>>En proceso</option>
                                                     <option value="Resuelto" class="bg-emerald-50 text-emerald-800 font-bold" <%= t.estatus === 'Resuelto' ? 'selected' : '' %>>Resuelto</option>
                                                 </select>
+
+                                                <div class="flex items-center gap-1.5 mt-1">
+                                                    <span id="statusIndicator-<%= t.id %>" class="text-[10px] font-bold"></span>
+                                                    <button 
+                                                        type="button" 
+                                                        id="btnGuardarFila-<%= t.id %>" 
+                                                        onclick="guardarEstatusTicketFila('<%= t.id %>')" 
+                                                        style="display: none;" 
+                                                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs transition-colors cursor-pointer"
+                                                        title="Guardar estatus ahora"
+                                                    >
+                                                        <span>Guardar</span>
+                                                    </button>
+                                                </div>
 
                                                 <div class="flex flex-wrap items-center gap-1">
 
@@ -4617,6 +4637,7 @@
             const nuevoEstatus = select.value;
             const ticketId = select.dataset.ticketId;
             const btnFila = document.getElementById('btnGuardarFila-' + ticketId);
+            const ind = document.getElementById('statusIndicator-' + ticketId);
 
             if (nuevoEstatus === 'Resuelto') {
                 if (btnFila) btnFila.style.display = 'none';
@@ -4645,19 +4666,19 @@
                 return;
             }
 
-            if (btnFila) {
-                if (nuevoEstatus !== select.dataset.originalStatus) {
-                    btnFila.style.display = 'inline-flex';
-                } else {
-                    btnFila.style.display = 'none';
-                }
+            if (nuevoEstatus === select.dataset.originalStatus) {
+                if (btnFila) btnFila.style.display = 'none';
+                if (ind) ind.textContent = '';
+                actualizarVisualizacionCambios();
+                return;
             }
 
-            actualizarVisualizacionCambios();
+            // Guardar automáticamente a la primera
+            guardarEstatusTicketFila(ticketId);
         }
 
         function guardarEstatusTicketFila(ticketId) {
-            const sel = document.querySelector(`.select-estatus-ticket[data-ticket-id="${ticketId}"]`);
+            const sel = document.getElementById('selectEstatusFila-' + ticketId) || document.querySelector(`.select-estatus-ticket[data-ticket-id="${ticketId}"]`);
             if (!sel) return;
             const nuevoEstatus = sel.value;
             if (nuevoEstatus === sel.dataset.originalStatus) return;
@@ -4668,10 +4689,16 @@
             }
 
             const btnFila = document.getElementById('btnGuardarFila-' + ticketId);
+            const ind = document.getElementById('statusIndicator-' + ticketId);
             if (btnFila) {
                 btnFila.disabled = true;
                 btnFila.innerHTML = '<span>⏳ Guardando...</span>';
             }
+            if (ind) {
+                ind.className = 'text-[10px] font-bold text-amber-600 animate-pulse';
+                ind.textContent = '⏳ Guardando...';
+            }
+            sel.dataset.guardando = 'true';
 
             const params = new URLSearchParams();
             params.append('ticket_id', ticketId);
@@ -4685,22 +4712,41 @@
             })
             .then(r => r.json())
             .then(data => {
+                sel.dataset.guardando = 'false';
                 if (btnFila) {
                     btnFila.disabled = false;
                     btnFila.innerHTML = '<span>Guardar</span>';
                     btnFila.style.display = 'none';
                 }
                 if (data && data.ok) {
+                    sel.dataset.originalStatus = nuevoEstatus;
+                    if (ind) {
+                        ind.className = 'text-[10px] font-bold text-emerald-600';
+                        ind.textContent = '✓ Guardado';
+                        setTimeout(() => { if (ind && ind.textContent === '✓ Guardado') ind.textContent = ''; }, 3000);
+                    }
                     actualizarEstatusTicketEnTabla(data);
+                    actualizarVisualizacionCambios();
                 } else {
+                    if (ind) {
+                        ind.className = 'text-[10px] font-bold text-rose-600';
+                        ind.textContent = '✗ Error';
+                    }
                     alert(data?.error || 'Error al actualizar el estatus');
+                    sel.value = sel.dataset.originalStatus;
+                    actualizarVisualizacionCambios();
                 }
             })
             .catch(err => {
+                sel.dataset.guardando = 'false';
                 console.error(err);
                 if (btnFila) {
                     btnFila.disabled = false;
                     btnFila.innerHTML = '<span>Guardar</span>';
+                }
+                if (ind) {
+                    ind.className = 'text-[10px] font-bold text-rose-600';
+                    ind.textContent = '✗ Error';
                 }
             });
         }
@@ -7238,7 +7284,9 @@
             const inputActivo = document.activeElement && 
                                 (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') && 
                                 document.activeElement.id !== 'buscarTicketsAdmin';
-            if (modalAbierto || inputActivo) return;
+            const guardandoActivo = document.querySelector('.select-estatus-ticket[data-guardando="true"]');
+            const selectConCambio = Array.from(document.querySelectorAll('.select-estatus-ticket')).some(s => s.value !== s.dataset.originalStatus);
+            if (modalAbierto || inputActivo || guardandoActivo || selectConCambio) return;
 
             sincronizandoTableroAdmin = true;
             try {
@@ -7500,5 +7548,51 @@
         }
     </script>
 
+
+    <!-- Modal Visor de Imagen en Alta Resolución / Pantalla Completa -->
+    <div id="modalVisorImagen" class="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-xs flex items-center justify-center p-4" style="display: none;" onclick="cerrarVisorImagen()">
+        <div class="relative max-w-4xl max-h-[92vh] bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between px-4 py-3 bg-slate-900 text-white">
+                <span class="text-xs font-bold tracking-wide flex items-center gap-2">
+                    <span>📸</span>
+                    <span id="visorImagenTitulo">Evidencia del Ticket</span>
+                </span>
+                <div class="flex items-center gap-2">
+                    <a id="visorBtnDescargar" href="#" download class="px-2.5 py-1 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-white rounded transition-colors" title="Descargar imagen">
+                        ⬇️ Descargar
+                    </a>
+                    <a id="visorBtnNuevaPestana" href="#" target="_blank" class="px-2.5 py-1 text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white rounded transition-colors" title="Abrir en pestaña nueva">
+                        ↗ Abrir original
+                    </a>
+                    <button type="button" onclick="cerrarVisorImagen()" class="text-slate-400 hover:text-white text-base font-bold px-2 py-1" title="Cerrar">
+                        ✕
+                    </button>
+                </div>
+            </div>
+            <div class="p-3 bg-slate-100 flex items-center justify-center overflow-auto max-h-[calc(90vh-60px)]">
+                <img id="visorImagenTag" src="" alt="Evidencia" class="max-w-full max-h-[78vh] object-contain rounded shadow-xs" onerror="this.src='/uploads/placeholder-error.svg'">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function abrirVisorImagen(url, titulo) {
+            const modal = document.getElementById('modalVisorImagen');
+            const img = document.getElementById('visorImagenTag');
+            const tit = document.getElementById('visorImagenTitulo');
+            const btnDesc = document.getElementById('visorBtnDescargar');
+            const btnPest = document.getElementById('visorBtnNuevaPestana');
+            if (!modal || !img) return;
+            img.src = url;
+            if (tit) tit.textContent = titulo || 'Evidencia de Ticket';
+            if (btnDesc) btnDesc.href = url;
+            if (btnPest) btnPest.href = url;
+            modal.style.display = 'flex';
+        }
+        function cerrarVisorImagen() {
+            const modal = document.getElementById('modalVisorImagen');
+            if (modal) modal.style.display = 'none';
+        }
+    </script>
 </body>
 </html>

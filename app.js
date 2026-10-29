@@ -92,6 +92,73 @@ try {
         fs.mkdirSync(uploadsDir, { recursive: true });
     }
 } catch (e) {}
+
+// Función para persistir archivos permanentemente en Turso Cloud SQLite
+function persistirArchivoEnBD(filename, filepath, mimetype) {
+    if (!filename) return;
+    const ruta = filepath || path.join(uploadsDir, filename);
+    try {
+        if (fs.existsSync(ruta)) {
+            const buffer = fs.readFileSync(ruta);
+            const b64 = buffer.toString('base64');
+            const mime = mimetype || 'image/jpeg';
+            db.run(
+                `INSERT OR REPLACE INTO archivos_almacenados (nombre, mimetype, datos) VALUES (?, ?, ?)`,
+                [filename, mime, b64],
+                (err) => {
+                    if (err) console.error('[Archivo Nube] Error persistiendo imagen:', err.message);
+                }
+            );
+        }
+    } catch (e) {
+        console.error('[Archivo Nube] Excepción al leer imagen para BD:', e.message);
+    }
+}
+
+// Servir archivos / imágenes con respaldo persistente en la nube (Turso)
+app.get('/uploads/:filename', (req, res) => {
+    const filename = path.basename(req.params.filename);
+    const localPath = path.join(uploadsDir, filename);
+
+    // 1. Si existe localmente en el disco del contenedor, servirlo inmediatamente
+    if (fs.existsSync(localPath)) {
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        return res.sendFile(localPath);
+    }
+
+    // 2. Si no existe en disco (ej. contenedor Render reiniciado o nuevo deploy), consultar en Turso
+    db.get('SELECT mimetype, datos FROM archivos_almacenados WHERE nombre = ?', [filename], (err, row) => {
+        if (!err && row && row.datos) {
+            try {
+                const buffer = Buffer.from(row.datos, 'base64');
+                // Guardar en disco para acelerar futuras peticiones
+                try {
+                    fs.writeFileSync(localPath, buffer);
+                } catch (eFs) {}
+
+                res.setHeader('Content-Type', row.mimetype || 'image/jpeg');
+                res.setHeader('Cache-Control', 'public, max-age=86400');
+                return res.send(buffer);
+            } catch (eBuf) {
+                console.error('[Uploads] Error al decodificar imagen desde Turso:', eBuf);
+            }
+        }
+
+        // 3. Fallback SVG limpio e informativo en caso de archivo previo no disponible
+        res.setHeader('Content-Type', 'image/svg+xml');
+        res.setHeader('Cache-Control', 'no-cache');
+        return res.status(200).send(`<svg xmlns="http://www.w3.org/2000/svg" width="380" height="220" viewBox="0 0 380 220" fill="none">
+            <rect width="380" height="220" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2"/>
+            <circle cx="190" cy="75" r="30" fill="#fee2e2"/>
+            <path d="M178 68C178 66.5 179.5 65 181 65H199C200.5 65 202 66.5 202 68V69H205C207 69 209 71 209 73V89C209 91 207 93 205 93H175C173 93 171 91 171 89V73C171 71 173 69 175 69H178V68Z" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="190" cy="80" r="5" stroke="#ef4444" stroke-width="2"/>
+            <text x="190" y="132" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#334155">Evidencia de Falla</text>
+            <text x="190" y="152" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#64748b">Imagen no disponible en servidor</text>
+            <text x="190" y="170" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#94a3b8">(Ticket reportado antes del guardado permanente)</text>
+        </svg>`);
+    });
+});
+
 app.use('/uploads', express.static(uploadsDir));
 
 // Inicialización del Bot de Discord para chat y soporte bidireccional
@@ -101,7 +168,7 @@ try {
     console.error('Error al inicializar el Bot de Discord:', eDiscord);
 }
 
-// Configuración de Multer para la subida de imágenes
+// Configuración de Multer para la subida de imágenes (ampliado hasta 25MB y formatos móviles)
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, uploadsDir);
@@ -113,11 +180,14 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ 
     storage: storage,
+    limits: { fileSize: 25 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
-        if (file.mimetype.startsWith('image/')) {
+        const ext = path.extname(file.originalname).toLowerCase();
+        const validExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg', '.heic', '.heif', '.avif', '.tiff'];
+        if (file.mimetype.startsWith('image/') || validExts.includes(ext)) {
             cb(null, true);
         } else {
-            cb(new Error('Solo se permiten archivos de imagen'));
+            cb(new Error('Formato de imagen no compatible. Sube un archivo PNG, JPG o WEBP.'));
         }
     }
 });
@@ -359,6 +429,9 @@ app.post('/tickets/crear', esUsuario, upload.single('imagen'), (req, res) => {
     const { titulo, tipo_falla, subcategoria, prioridad, descripcion } = req.body;
     const usuarioId = req.session.usuario.id;
     const imagenNombre = req.file ? req.file.filename : null;
+    if (req.file) {
+        persistirArchivoEnBD(req.file.filename, req.file.path, req.file.mimetype);
+    }
 
     if (!titulo || !tipo_falla || !descripcion) {
         req.session.errorFlash = 'Todos los campos marcados son obligatorios.';
@@ -490,6 +563,9 @@ const procesarEdicionTicketUsuario = (req, res) => {
         const prioFinal = prioridad || 'Media';
         const descFinal = descripcion.trim();
         const imagenFinal = req.file ? req.file.filename : ticket.imagen;
+        if (req.file) {
+            persistirArchivoEnBD(req.file.filename, req.file.path, req.file.mimetype);
+        }
 
         db.run(
             `UPDATE tickets 

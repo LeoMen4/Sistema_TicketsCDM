@@ -275,6 +275,14 @@ function inicializarDiscord(io, db, uploadsDir) {
                                         const respuesta = await fetch(primerAdjunto.url);
                                         const buffer = Buffer.from(await respuesta.arrayBuffer());
                                         fs.writeFileSync(destino, buffer);
+                                        try {
+                                            const b64 = buffer.toString('base64');
+                                            db.run(
+                                                `INSERT OR REPLACE INTO archivos_almacenados (nombre, mimetype, datos) VALUES (?, ?, ?)`,
+                                                [imagenNombre, primerAdjunto.contentType || 'image/jpeg', b64],
+                                                () => {}
+                                            );
+                                        } catch (ePers) {}
                                     } catch (errAdj) {
                                         console.error('[Discord Bot] Error al guardar imagen de Discord:', errAdj.message);
                                         imagenNombre = null;

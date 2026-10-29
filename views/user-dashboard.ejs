@@ -654,13 +654,19 @@
                                         <!-- Evidencia -->
                                         <td class="py-3.5 px-4 text-center whitespace-nowrap">
                                             <% if (t.imagen) { %>
-                                                <a href="/uploads/<%= t.imagen %>" target="_blank" class="inline-block group" title="Ver imagen de evidencia">
+                                                <button 
+                                                    type="button" 
+                                                    onclick="abrirVisorImagen('/uploads/<%= t.imagen %>', 'Evidencia Ticket #<%= t.id %> - <%= t.titulo %>')" 
+                                                    class="inline-block group cursor-pointer focus:outline-none" 
+                                                    title="Haz clic para ver imagen en tamaño completo"
+                                                >
                                                     <img 
                                                         src="/uploads/<%= t.imagen %>" 
                                                         alt="Captura Falla" 
-                                                        class="w-11 h-11 object-cover rounded-md border border-slate-200 group-hover:border-brand-500 shadow-xs transition-all"
+                                                        class="w-12 h-12 object-cover rounded-md border border-slate-200 group-hover:border-brand-500 group-hover:shadow-md shadow-xs transition-all hover:scale-105"
+                                                        onerror="this.onerror=null; this.src='/uploads/placeholder-error.svg';"
                                                     >
-                                                </a>
+                                                </button>
                                             <% } else { %>
                                                 <span class="text-slate-400 text-[11px] italic">Sin imagen</span>
                                             <% } %>
@@ -2345,6 +2351,52 @@
 
             reiniciarContadorInactividad();
         })();
+    </script>
+
+    <!-- Modal Visor de Imagen en Alta Resolución / Pantalla Completa -->
+    <div id="modalVisorImagen" class="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-xs flex items-center justify-center p-4" style="display: none;" onclick="cerrarVisorImagen()">
+        <div class="relative max-w-4xl max-h-[92vh] bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between px-4 py-3 bg-slate-900 text-white">
+                <span class="text-xs font-bold tracking-wide flex items-center gap-2">
+                    <span>📸</span>
+                    <span id="visorImagenTitulo">Evidencia del Ticket</span>
+                </span>
+                <div class="flex items-center gap-2">
+                    <a id="visorBtnDescargar" href="#" download class="px-2.5 py-1 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-white rounded transition-colors" title="Descargar imagen">
+                        ⬇️ Descargar
+                    </a>
+                    <a id="visorBtnNuevaPestana" href="#" target="_blank" class="px-2.5 py-1 text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white rounded transition-colors" title="Abrir en pestaña nueva">
+                        ↗ Abrir original
+                    </a>
+                    <button type="button" onclick="cerrarVisorImagen()" class="text-slate-400 hover:text-white text-base font-bold px-2 py-1" title="Cerrar">
+                        ✕
+                    </button>
+                </div>
+            </div>
+            <div class="p-3 bg-slate-100 flex items-center justify-center overflow-auto max-h-[calc(90vh-60px)]">
+                <img id="visorImagenTag" src="" alt="Evidencia" class="max-w-full max-h-[78vh] object-contain rounded shadow-xs" onerror="this.src='/uploads/placeholder-error.svg'">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function abrirVisorImagen(url, titulo) {
+            const modal = document.getElementById('modalVisorImagen');
+            const img = document.getElementById('visorImagenTag');
+            const tit = document.getElementById('visorImagenTitulo');
+            const btnDesc = document.getElementById('visorBtnDescargar');
+            const btnPest = document.getElementById('visorBtnNuevaPestana');
+            if (!modal || !img) return;
+            img.src = url;
+            if (tit) tit.textContent = titulo || 'Evidencia de Ticket';
+            if (btnDesc) btnDesc.href = url;
+            if (btnPest) btnPest.href = url;
+            modal.style.display = 'flex';
+        }
+        function cerrarVisorImagen() {
+            const modal = document.getElementById('modalVisorImagen');
+            if (modal) modal.style.display = 'none';
+        }
     </script>
 </body>
 </html>

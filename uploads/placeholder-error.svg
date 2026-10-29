@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="380" height="220" viewBox="0 0 380 220" fill="none">
+    <rect width="380" height="220" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2"/>
+    <circle cx="190" cy="75" r="30" fill="#fee2e2"/>
+    <path d="M178 68C178 66.5 179.5 65 181 65H199C200.5 65 202 66.5 202 68V69H205C207 69 209 71 209 73V89C209 91 207 93 205 93H175C173 93 171 91 171 89V73C171 71 173 69 175 69H178V68Z" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="190" cy="80" r="5" stroke="#ef4444" stroke-width="2"/>
+    <text x="190" y="132" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#334155">Evidencia de Ticket</text>
+    <text x="190" y="152" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#64748b">Imagen no disponible en servidor</text>
+    <text x="190" y="170" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#94a3b8">(Ticket reportado antes del guardado permanente)</text>
+</svg>
