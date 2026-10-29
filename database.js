@@ -370,6 +370,34 @@ db.serialize(() => {
     db.run(`ALTER TABLE categorias ADD COLUMN tiempo_base_horas REAL DEFAULT 24`, (err) => {});
     db.run(`ALTER TABLE subcategorias ADD COLUMN tiempo_base_horas REAL DEFAULT 24`, (err) => {});
 
+    // Tabla para Categorías dinámicas de Resolución (Estatus Resuelto)
+    db.run(`
+        CREATE TABLE IF NOT EXISTS categorias_resolucion (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT UNIQUE NOT NULL,
+            descripcion TEXT DEFAULT '',
+            requiere_equipo INTEGER DEFAULT 0,
+            activo INTEGER DEFAULT 1,
+            fecha_creacion DATETIME DEFAULT (datetime('now', '-6 hours'))
+        )
+    `, () => {
+        db.get('SELECT COUNT(*) AS total FROM categorias_resolucion', (errCR, rowCR) => {
+            if (!errCR && rowCR && rowCR.total === 0) {
+                const defaultsResolucion = [
+                    { nombre: 'Mantenimiento', descripcion: 'Servicio preventivo o correctivo sin sustitución de equipo', requiere_equipo: 0 },
+                    { nombre: 'Cambio de pieza', descripcion: 'Sustitución de partes o componentes internos', requiere_equipo: 0 },
+                    { nombre: 'Reemplazo', descripcion: 'Reemplazo total de equipo asignado', requiere_equipo: 1 }
+                ];
+                defaultsResolucion.forEach(dr => {
+                    db.run(
+                        `INSERT OR IGNORE INTO categorias_resolucion (nombre, descripcion, requiere_equipo) VALUES (?, ?, ?)`,
+                        [dr.nombre, dr.descripcion, dr.requiere_equipo]
+                    );
+                });
+            }
+        });
+    });
+
     // Tabla de configuraciones globales del sistema (ej. tolerancia de alertas)
     db.run(`
         CREATE TABLE IF NOT EXISTS configuraciones (

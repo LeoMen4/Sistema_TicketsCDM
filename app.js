@@ -1354,19 +1354,22 @@ function verDetalleTicket(req, res) {
                     }
 
                     obtenerCategoriasConSubcategorias((categoriasAgrupadas) => {
-                        res.render('admin-ticket-detalle', {
-                            usuarioActual: usuarioActual,
-                            usuarioActualNombre: usuarioActual.nombre,
-                            adminNombre: esAdmin ? usuarioActual.nombre : null,
-                            esAdmin: esAdmin,
-                            ticket: ticket,
-                            historial: historial,
-                            comentarios: comentarios,
-                            especialistasTI: especialistasTI,
-                            usuariosActivos: usuariosActivos,
-                            categorias: categoriasAgrupadas,
-                            mensaje: mensajeFlash,
-                            error: errorFlash
+                        db.all('SELECT * FROM categorias_resolucion WHERE activo = 1 ORDER BY id ASC', [], (errCR, categoriasResolucion) => {
+                            res.render('admin-ticket-detalle', {
+                                usuarioActual: usuarioActual,
+                                usuarioActualNombre: usuarioActual.nombre,
+                                adminNombre: esAdmin ? usuarioActual.nombre : null,
+                                esAdmin: esAdmin,
+                                ticket: ticket,
+                                historial: historial,
+                                comentarios: comentarios,
+                                especialistasTI: especialistasTI,
+                                usuariosActivos: usuariosActivos,
+                                categorias: categoriasAgrupadas,
+                                categoriasResolucion: categoriasResolucion || [],
+                                mensaje: mensajeFlash,
+                                error: errorFlash
+                            });
                         });
                     });
                 });
@@ -1465,18 +1468,20 @@ function obtenerDatosAdmin(req, res, mensaje = null, error = null) {
                                                             WHERE deleted_at IS NULL AND completado = 0
                                                             ORDER BY fecha_programada ASC
                                                         `, [], (errRec, recordatorios) => {
-                                                            res.render('admin-dashboard', {
-                                                                adminNombre: req.session.usuario.nombre,
-                                                                adminPuesto: req.session.usuario.puesto || 'Especialista TI',
-                                                                adminId: req.session.usuario.id,
-                                                                adminEmail: req.session.usuario.email,
-                                                                usuarios: usuarios || [],
-                                                                usuariosEliminados: usuariosEliminados || [],
-                                                                ticketsEliminados: ticketsEliminados || [],
-                                                                tickets: ticketsConHistorial,
-                                                                ticketsProgramados: ticketsProgramados || [],
-                                                                recordatorios: recordatorios || [],
-                                                                categorias: categorias || [],
+                                                            db.all('SELECT * FROM categorias_resolucion WHERE activo = 1 ORDER BY id ASC', [], (errCR, categoriasResolucion) => {
+                                                                res.render('admin-dashboard', {
+                                                                    adminNombre: req.session.usuario.nombre,
+                                                                    adminPuesto: req.session.usuario.puesto || 'Especialista TI',
+                                                                    adminId: req.session.usuario.id,
+                                                                    adminEmail: req.session.usuario.email,
+                                                                    usuarios: usuarios || [],
+                                                                    usuariosEliminados: usuariosEliminados || [],
+                                                                    ticketsEliminados: ticketsEliminados || [],
+                                                                    tickets: ticketsConHistorial,
+                                                                    ticketsProgramados: ticketsProgramados || [],
+                                                                    recordatorios: recordatorios || [],
+                                                                    categorias: categorias || [],
+                                                                    categoriasResolucion: categoriasResolucion || [],
                                                                 equipos: equipos || [],
                                                                 guias: guias || [],
                                                                 configCorreo: configCorreo || {},
@@ -1487,6 +1492,7 @@ function obtenerDatosAdmin(req, res, mensaje = null, error = null) {
                                                                 error: errorFinal
                                                             });
                                                         });
+                                                    });
                                                     });
                                                 });
                                             });
@@ -3185,6 +3191,105 @@ app.post('/admin/tickets/eliminar-definitivo', esAdmin, (req, res) => {
                 });
             });
         });
+    });
+});
+
+
+// ---------------------- GESTIÓN DE CATEGORÍAS DE RESOLUCIÓN (ESTATUS RESUELTO) ----------------------
+
+// Crear categoría de resolución
+app.post('/admin/categorias-resolucion/crear', esAdmin, (req, res) => {
+    const { nombre, descripcion, requiere_equipo, origen, ticket_id } = req.body;
+    const nombreLimpio = nombre ? nombre.trim() : '';
+
+    if (!nombreLimpio) {
+        if (req.xhr || (req.headers.accept && req.headers.accept.includes('json'))) {
+            return res.status(400).json({ ok: false, error: 'El nombre de la categoría es obligatorio.' });
+        }
+        return obtenerDatosAdmin(req, res, null, 'El nombre de la categoría de resolución es obligatorio.');
+    }
+
+    const reqEq = (requiere_equipo === '1' || requiere_equipo === 1 || requiere_equipo === 'on') ? 1 : 0;
+    const desc = descripcion ? descripcion.trim() : '';
+
+    db.run(
+        'INSERT INTO categorias_resolucion (nombre, descripcion, requiere_equipo) VALUES (?, ?, ?)',
+        [nombreLimpio, desc, reqEq],
+        function(err) {
+            if (err) {
+                const msg = err.message && err.message.includes('UNIQUE') 
+                    ? 'Ya existe una categoría de resolución con ese nombre.' 
+                    : 'Error al registrar categoría: ' + err.message;
+                if (req.xhr || (req.headers.accept && req.headers.accept.includes('json'))) {
+                    return res.status(400).json({ ok: false, error: msg });
+                }
+                return obtenerDatosAdmin(req, res, null, msg);
+            }
+
+            if (req.xhr || (req.headers.accept && req.headers.accept.includes('json'))) {
+                return res.json({ ok: true, id: this.lastID, nombre: nombreLimpio, descripcion: desc, requiere_equipo: reqEq });
+            }
+
+            if (origen === 'detalle' && ticket_id) {
+                req.session.mensajeFlash = `Categoría de resolución "${nombreLimpio}" creada exitosamente.`;
+                return res.redirect(`/admin/tickets/${ticket_id}`);
+            }
+
+            req.session.mensajeFlash = `Categoría de resolución "${nombreLimpio}" creada exitosamente.`;
+            res.redirect('/admin#categorias');
+        }
+    );
+});
+
+// Editar categoría de resolución
+app.post('/admin/categorias-resolucion/editar', esAdmin, (req, res) => {
+    const { id, nombre, descripcion, requiere_equipo } = req.body;
+    const nombreLimpio = nombre ? nombre.trim() : '';
+
+    if (!id || !nombreLimpio) {
+        return obtenerDatosAdmin(req, res, null, 'ID y nombre son obligatorios para editar.');
+    }
+
+    const reqEq = (requiere_equipo === '1' || requiere_equipo === 1 || requiere_equipo === 'on') ? 1 : 0;
+    const desc = descripcion ? descripcion.trim() : '';
+
+    db.run(
+        'UPDATE categorias_resolucion SET nombre = ?, descripcion = ?, requiere_equipo = ? WHERE id = ?',
+        [nombreLimpio, desc, reqEq, id],
+        function(err) {
+            if (err) {
+                const msg = err.message && err.message.includes('UNIQUE') 
+                    ? 'Ya existe otra categoría de resolución con ese nombre.' 
+                    : 'Error al actualizar categoría: ' + err.message;
+                return obtenerDatosAdmin(req, res, null, msg);
+            }
+            req.session.mensajeFlash = `Categoría de resolución "${nombreLimpio}" actualizada exitosamente.`;
+            res.redirect('/admin#categorias');
+        }
+    );
+});
+
+// Eliminar categoría de resolución
+app.post('/admin/categorias-resolucion/eliminar', esAdmin, (req, res) => {
+    const { id } = req.body;
+    if (!id) {
+        return obtenerDatosAdmin(req, res, null, 'ID de categoría no especificado.');
+    }
+
+    db.run('DELETE FROM categorias_resolucion WHERE id = ?', [id], function(err) {
+        if (err) {
+            return obtenerDatosAdmin(req, res, null, 'Error al eliminar categoría de resolución: ' + err.message);
+        }
+        req.session.mensajeFlash = 'Categoría de resolución eliminada exitosamente.';
+        res.redirect('/admin#categorias');
+    });
+});
+
+// Endpoint API para consultar categorías de resolución en vivo
+app.get('/api/categorias-resolucion', esAdmin, (req, res) => {
+    db.all('SELECT * FROM categorias_resolucion WHERE activo = 1 ORDER BY id ASC', [], (err, rows) => {
+        if (err) return res.status(500).json({ ok: false, error: err.message });
+        res.json({ ok: true, categorias: rows || [] });
     });
 });
 

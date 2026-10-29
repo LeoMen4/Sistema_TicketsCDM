@@ -1522,6 +1522,79 @@
                         </table>
                     </div>
                 </div>
+
+                <!-- BLOQUE 2: GESTIÓN DE CATEGORÍAS DE RESOLUCIÓN (ESTATUS RESUELTO) -->
+                <div class="bg-white rounded-md shadow-xs border border-slate-200 p-6 border-t-4 border-t-emerald-600 space-y-4">
+                    <div class="flex justify-between items-center pb-3 border-b border-slate-100 flex-wrap gap-3">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                                <span>Categorías de Resolución de Tickets</span>
+                            </h3>
+                            <p class="text-xs text-slate-500 mt-0.5">Crea, edita o elimina las categorías que los administradores pueden seleccionar al marcar un ticket como "Resuelto".</p>
+                        </div>
+                        <button 
+                            type="button" 
+                            onclick="abrirModalCrearCategoriaResolucion()" 
+                            class="inline-flex items-center gap-1.5 py-1.5 px-3.5 rounded-md text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-xs transition-all cursor-pointer"
+                        >
+                            + Nueva Categoría de Resolución
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto w-full rounded-md border border-slate-200">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                                    <th class="py-3 px-4 w-1/4">Categoría de Resolución</th>
+                                    <th class="py-3 px-4 w-2/5">Descripción / Alcance</th>
+                                    <th class="py-3 px-4 text-center">Registro de Equipo</th>
+                                    <th class="py-3 px-4 text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <% (typeof categoriasResolucion !== 'undefined' && categoriasResolucion.length > 0 ? categoriasResolucion : []).forEach(cr => { %>
+                                    <tr class="hover:bg-slate-50 transition-colors">
+                                        <td class="py-3 px-4 font-bold text-slate-900">
+                                            <%= cr.nombre %>
+                                        </td>
+                                        <td class="py-3 px-4 text-slate-600">
+                                            <%= cr.descripcion || '<span class="text-slate-400 italic">Sin descripción</span>' %>
+                                        </td>
+                                        <td class="py-3 px-4 text-center">
+                                            <% if (cr.requiere_equipo) { %>
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                                                    Requiere serie / modelo
+                                                </span>
+                                            <% } else { %>
+                                                <span class="text-slate-400 text-[11px]">Estándar</span>
+                                            <% } %>
+                                        </td>
+                                        <td class="py-3 px-4 text-right whitespace-nowrap">
+                                            <div class="inline-flex items-center gap-1.5">
+                                                <button 
+                                                    type="button" 
+                                                    onclick="abrirModalEditarCategoriaResolucion('<%= cr.id %>', '<%= cr.nombre %>', '<%= (cr.descripcion || '').replace(/'/g, "\\'") %>', <%= cr.requiere_equipo ? 1 : 0 %>)" 
+                                                    class="px-2.5 py-1 text-[11px] font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded border border-slate-300 transition-colors cursor-pointer"
+                                                    title="Editar categoría"
+                                                >
+                                                    Editar
+                                                </button>
+                                                <button 
+                                                    type="button" 
+                                                    onclick="abrirModalEliminarCategoriaResolucion('<%= cr.id %>', '<%= cr.nombre %>')" 
+                                                    class="px-2.5 py-1 text-[11px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded border border-rose-200 transition-colors cursor-pointer"
+                                                    title="Eliminar categoría"
+                                                >
+                                                    Eliminar
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </section>
 
             <!-- MÓDULO 4: USUARIOS REGISTRADOS -->
@@ -3460,19 +3533,32 @@
                 </datalist>
 
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                        Categoría de Resolución <span class="text-brand-600">*</span>:
-                    </label>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="text-xs font-bold uppercase tracking-wider text-slate-700">
+                            Categoría de Resolución <span class="text-brand-600">*</span>:
+                        </label>
+                        <button 
+                            type="button" 
+                            onclick="abrirModalCrearCategoriaResolucion('modal')" 
+                            class="text-[11px] font-bold text-brand-600 hover:text-brand-800 underline cursor-pointer"
+                        >
+                            + Nueva Categoría
+                        </button>
+                    </div>
                     <select 
                         name="categoria_resolucion" 
                         id="categoriaResolucionSelect" 
                         onchange="evaluarCategoriaResolucion()" 
                         required
-                        class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:border-brand-600 focus:outline-none shadow-2xs bg-white"
+                        class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:border-brand-600 focus:outline-none shadow-2xs bg-white font-semibold"
                     >
-                        <option value="Mantenimiento">Mantenimiento</option>
-                        <option value="Cambio de pieza">Cambio de pieza</option>
-                        <option value="Reemplazo">Reemplazo</option>
+                        <% (typeof categoriasResolucion !== 'undefined' && categoriasResolucion.length > 0 ? categoriasResolucion : [
+                            { nombre: 'Mantenimiento', requiere_equipo: 0 },
+                            { nombre: 'Cambio de pieza', requiere_equipo: 0 },
+                            { nombre: 'Reemplazo', requiere_equipo: 1 }
+                        ]).forEach(cr => { %>
+                            <option value="<%= cr.nombre %>" data-requiere-equipo="<%= cr.requiere_equipo ? '1' : '0' %>"><%= cr.nombre %></option>
+                        <% }) %>
                     </select>
                 </div>
 
@@ -4752,22 +4838,27 @@
         }
 
         function evaluarCategoriaResolucion() {
-            const cat = document.getElementById('categoriaResolucionSelect').value;
+            const sel = document.getElementById('categoriaResolucionSelect');
+            if (!sel) return;
+            const opt = sel.selectedOptions ? sel.selectedOptions[0] : null;
+            const requiereEquipo = (opt && opt.dataset.requiereEquipo === '1') || sel.value === 'Reemplazo';
             const campos = document.getElementById('camposReemplazo');
             const tipoInput = document.getElementById('inputTipoNuevo');
             const modelInput = document.getElementById('inputModeloNuevo');
             const serieInput = document.getElementById('inputSerieNueva');
 
-            if (cat === 'Reemplazo') {
-                campos.style.display = 'block';
-                tipoInput.required = true;
-                modelInput.required = true;
-                serieInput.required = true;
-            } else {
-                campos.style.display = 'none';
-                tipoInput.required = false;
-                modelInput.required = false;
-                serieInput.required = false;
+            if (campos) {
+                if (requiereEquipo) {
+                    campos.style.display = 'block';
+                    if (tipoInput) tipoInput.required = true;
+                    if (modelInput) modelInput.required = true;
+                    if (serieInput) serieInput.required = true;
+                } else {
+                    campos.style.display = 'none';
+                    if (tipoInput) tipoInput.required = false;
+                    if (modelInput) modelInput.required = false;
+                    if (serieInput) serieInput.required = false;
+                }
             }
         }
 
@@ -7549,6 +7640,91 @@
     </script>
 
 
+    
+    <!-- MODAL CREAR CATEGORÍA DE RESOLUCIÓN -->
+    <div id="modalCrearCategoriaResolucion" class="modal">
+        <div class="modal-content">
+            <div class="flex items-center gap-2 mb-2 text-emerald-600">
+                <span class="text-xl">✨</span>
+                <h4 class="text-base font-bold text-slate-900 m-0">Crear Categoría de Resolución</h4>
+            </div>
+            <p class="text-xs text-slate-500 mb-3">Esta categoría estará disponible al momento de cerrar tickets como "Resuelto".</p>
+            <form action="/admin/categorias-resolucion/crear" method="POST" id="formCrearCatResolucion" class="space-y-3">
+                <input type="hidden" name="origen" id="inputOrigenCatResolucion" value="lista">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Nombre de la Categoría <span class="text-brand-600">*</span>:</label>
+                    <input type="text" name="nombre" id="inputNombreCatResolucion" required placeholder="Ej. Instalación de Software, Reconfiguración, Préstamo temporal..." class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:border-emerald-600 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Descripción / Notas de Alcance (Opcional):</label>
+                    <input type="text" name="descripcion" id="inputDescCatResolucion" placeholder="Breve explicación de cuándo aplica esta solución..." class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:border-emerald-600 focus:outline-none">
+                </div>
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="requiere_equipo" value="1" id="chkReqEquipoCatResolucion" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                        <span class="text-xs font-bold text-slate-800">¿Requiere registrar datos de nuevo equipo?</span>
+                    </label>
+                    <p class="text-[11px] text-slate-500 ml-5 mt-0.5">Si se activa, el formulario pedirá obligatoriamente el Tipo, Modelo y Número de Serie nuevo al resolver.</p>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" onclick="cerrarModalCrearCategoriaResolucion()" class="px-3.5 py-1.5 rounded text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200">Cancelar</button>
+                    <button type="submit" class="px-3.5 py-1.5 rounded text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-xs">Crear Categoría</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL EDITAR CATEGORÍA DE RESOLUCIÓN -->
+    <div id="modalEditarCategoriaResolucion" class="modal">
+        <div class="modal-content">
+            <div class="flex items-center gap-2 mb-2 text-emerald-600">
+                <span class="text-xl">✏️</span>
+                <h4 class="text-base font-bold text-slate-900 m-0">Editar Categoría de Resolución</h4>
+            </div>
+            <form action="/admin/categorias-resolucion/editar" method="POST" class="space-y-3">
+                <input type="hidden" name="id" id="idCatResolucionEditar">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Nombre de la Categoría <span class="text-brand-600">*</span>:</label>
+                    <input type="text" name="nombre" id="nombreCatResolucionEditar" required class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:border-emerald-600 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Descripción / Notas de Alcance:</label>
+                    <input type="text" name="descripcion" id="descCatResolucionEditar" class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:border-emerald-600 focus:outline-none">
+                </div>
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="requiere_equipo" value="1" id="chkReqEquipoCatResolucionEditar" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                        <span class="text-xs font-bold text-slate-800">¿Requiere registrar datos de nuevo equipo?</span>
+                    </label>
+                    <p class="text-[11px] text-slate-500 ml-5 mt-0.5">Si se activa, pedirá Tipo, Modelo y Serie al resolver con esta categoría.</p>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" onclick="cerrarModalEditarCategoriaResolucion()" class="px-3.5 py-1.5 rounded text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200">Cancelar</button>
+                    <button type="submit" class="px-3.5 py-1.5 rounded text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-xs">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL ELIMINAR CATEGORÍA DE RESOLUCIÓN -->
+    <div id="modalEliminarCategoriaResolucion" class="modal">
+        <div class="modal-content">
+            <div class="flex items-center gap-2 mb-2 text-rose-600">
+                <span class="text-xl">🗑️</span>
+                <h4 class="text-base font-bold text-slate-900 m-0">Confirmar Eliminación</h4>
+            </div>
+            <p class="text-xs text-slate-600 mb-1">¿Estás seguro de eliminar la categoría de resolución <strong id="nombreCatResolucionEliminar" class="text-slate-900"></strong>?</p>
+            <p class="text-[11px] text-slate-500 mb-3">Los tickets previamente cerrados con esta categoría conservarán su historial intacto.</p>
+            <form action="/admin/categorias-resolucion/eliminar" method="POST">
+                <input type="hidden" name="id" id="idCatResolucionEliminar">
+                <div class="modal-actions">
+                    <button type="button" onclick="cerrarModalEliminarCategoriaResolucion()" class="px-3.5 py-1.5 rounded text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200">Cancelar</button>
+                    <button type="submit" class="px-3.5 py-1.5 rounded text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-xs">Sí, Eliminar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Modal Visor de Imagen en Alta Resolución / Pantalla Completa -->
     <div id="modalVisorImagen" class="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-xs flex items-center justify-center p-4" style="display: none;" onclick="cerrarVisorImagen()">
         <div class="relative max-w-4xl max-h-[92vh] bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col" onclick="event.stopPropagation()">
@@ -7576,6 +7752,40 @@
     </div>
 
     <script>
+        
+        function abrirModalCrearCategoriaResolucion(origen = 'lista') {
+            const inOrg = document.getElementById('inputOrigenCatResolucion');
+            if (inOrg) inOrg.value = origen;
+            const inNom = document.getElementById('inputNombreCatResolucion');
+            if (inNom) inNom.value = '';
+            const inDesc = document.getElementById('inputDescCatResolucion');
+            if (inDesc) inDesc.value = '';
+            const chk = document.getElementById('chkReqEquipoCatResolucion');
+            if (chk) chk.checked = false;
+            document.getElementById('modalCrearCategoriaResolucion').style.display = 'block';
+        }
+        function cerrarModalCrearCategoriaResolucion() {
+            document.getElementById('modalCrearCategoriaResolucion').style.display = 'none';
+        }
+        function abrirModalEditarCategoriaResolucion(id, nombre, desc, reqEq) {
+            document.getElementById('idCatResolucionEditar').value = id;
+            document.getElementById('nombreCatResolucionEditar').value = nombre;
+            document.getElementById('descCatResolucionEditar').value = desc;
+            document.getElementById('chkReqEquipoCatResolucionEditar').checked = Boolean(reqEq);
+            document.getElementById('modalEditarCategoriaResolucion').style.display = 'block';
+        }
+        function cerrarModalEditarCategoriaResolucion() {
+            document.getElementById('modalEditarCategoriaResolucion').style.display = 'none';
+        }
+        function abrirModalEliminarCategoriaResolucion(id, nombre) {
+            document.getElementById('idCatResolucionEliminar').value = id;
+            document.getElementById('nombreCatResolucionEliminar').textContent = nombre;
+            document.getElementById('modalEliminarCategoriaResolucion').style.display = 'block';
+        }
+        function cerrarModalEliminarCategoriaResolucion() {
+            document.getElementById('modalEliminarCategoriaResolucion').style.display = 'none';
+        }
+
         function abrirVisorImagen(url, titulo) {
             const modal = document.getElementById('modalVisorImagen');
             const img = document.getElementById('visorImagenTag');
