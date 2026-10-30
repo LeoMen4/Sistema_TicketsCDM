@@ -1262,6 +1262,46 @@ app.get('/admin/dashboards', esAdmin, (req, res) => {
 });
 
 // Ruta para actualizar porcentaje de tolerancia para alertas de velocidad
+
+// Guardar configuración global de intervalos de alertas
+app.post('/admin/configuracion/intervalos-alertas', esAdmin, (req, res) => {
+    const { intervalos } = req.body || {};
+    if (!intervalos || !Array.isArray(intervalos)) {
+        return res.status(400).json({ ok: false, error: 'Intervalos no válidos' });
+    }
+
+    const jsonStr = JSON.stringify(intervalos);
+    db.run(
+        `INSERT INTO configuraciones (clave, valor) VALUES ('intervalos_alertas', ?)
+         ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor`,
+        [jsonStr],
+        function(err) {
+            if (err) {
+                console.error('Error al guardar intervalos de alertas:', err);
+                return res.status(500).json({ ok: false, error: err.message });
+            }
+            io.emit('config:intervalos_alertas_actualizados', { intervalos });
+            return res.json({ ok: true, mensaje: 'Configuración de alertas guardada exitosamente', intervalos });
+        }
+    );
+});
+
+// Endpoint público para obtener intervalos de alertas actualizados
+app.get('/api/admin/intervalos-alertas', esAdmin, (req, res) => {
+    db.get("SELECT valor FROM configuraciones WHERE clave = 'intervalos_alertas'", [], (err, row) => {
+        let intervalos = [
+            { id: '1', valor: 1, unidad: 'dias', label: '1 día antes' },
+            { id: '2', valor: 4, unidad: 'horas', label: '4 horas antes' },
+            { id: '3', valor: 1, unidad: 'horas', label: '1 hora antes' },
+            { id: '4', valor: 15, unidad: 'minutos', label: '15 minutos antes' }
+        ];
+        if (!err && row && row.valor) {
+            try { intervalos = JSON.parse(row.valor); } catch(e){}
+        }
+        res.json({ ok: true, intervalos });
+    });
+});
+
 app.post('/admin/dashboards/actualizar-tolerancia', esAdmin, (req, res) => {
     const { tolerancia_pct } = req.body || {};
     const pct = parseFloat(tolerancia_pct);
@@ -1434,14 +1474,16 @@ async function verDetalleTicket(req, res) {
             usuariosActivos,
             categoriasAgrupadas,
             categoriasResolucion,
-            estatusTicketsList
+            estatusTicketsList,
+            rowIntervalosAlertas
         ] = await Promise.all([
             dbAllAsync('SELECT * FROM historial_tickets WHERE ticket_id = ? ORDER BY fecha ASC', [ticketId]),
             dbAllAsync('SELECT * FROM ticket_comentarios WHERE ticket_id = ? ORDER BY fecha ASC, id ASC', [ticketId]),
             dbAllAsync("SELECT id, nombre, email, puesto, rol FROM usuarios WHERE deleted_at IS NULL ORDER BY CASE WHEN rol = 'admin' THEN 0 ELSE 1 END, nombre ASC", []),
             obtenerCategoriasConSubcategoriasAsync(),
             dbAllAsync('SELECT * FROM categorias_resolucion WHERE activo = 1 ORDER BY id ASC', []),
-            dbAllAsync('SELECT * FROM estatus_tickets WHERE activo = 1 ORDER BY orden ASC, id ASC', [])
+            dbAllAsync('SELECT * FROM estatus_tickets WHERE activo = 1 ORDER BY orden ASC, id ASC', []),
+            dbGetAsync("SELECT valor FROM configuraciones WHERE clave = 'intervalos_alertas'", [])
         ]);
 
         const listaUsuarios = usuariosActivos || [];
@@ -1594,6 +1636,12 @@ async function obtenerDatosAdmin(req, res, mensaje = null, error = null) {
             categorias: categorias || [],
             categoriasResolucion: categoriasResolucion || [],
             estatusTicketsList: estatusTicketsList || [],
+            intervalosAlertas: (rowIntervalosAlertas && rowIntervalosAlertas.valor) ? JSON.parse(rowIntervalosAlertas.valor) : [
+                { id: '1', valor: 1, unidad: 'dias', label: '1 día antes' },
+                { id: '2', valor: 4, unidad: 'horas', label: '4 horas antes' },
+                { id: '3', valor: 1, unidad: 'horas', label: '1 hora antes' },
+                { id: '4', valor: 15, unidad: 'minutos', label: '15 minutos antes' }
+            ],
             equipos: equipos || [],
             guias: guias || [],
             configCorreo: configCorreo || {},

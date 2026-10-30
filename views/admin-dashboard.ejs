@@ -99,9 +99,9 @@
         .menu-item {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 9px 14px;
-            font-size: 13px;
+            gap: 8px;
+            padding: 7px 10px;
+            font-size: 12px;
             font-weight: 600;
             border-radius: 6px;
             transition: all 0.15s ease;
@@ -279,7 +279,7 @@
     <div class="flex flex-col md:flex-row w-full min-h-[calc(100vh-4rem)] flex-1">
         
         <!-- MENÚ LATERAL IZQUIERDO -->
-        <aside class="w-full md:w-72 flex-shrink-0 bg-white border-r border-slate-200 p-4 space-y-1.5 shadow-2xs">
+        <aside class="w-full md:w-60 lg:w-64 flex-shrink-0 bg-white border-r border-slate-200 p-3 space-y-1 shadow-2xs">
             <div class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 px-3 py-2 border-b border-slate-100 mb-2">
                 Menú de Administración
             </div>
@@ -418,19 +418,44 @@
                 <span class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded">Activo</span>
             </button>
 
-            <!-- RECORDATORIOS Y CITAS PROGRAMADAS (ESQUINA INFERIOR IZQUIERDA) -->
-            <div id="contenedorCitasSidebar" class="pt-3 mt-3 border-t border-slate-200">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-[11px] font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                        <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                        Citas y Recordatorios
+            <!-- RECORDATORIOS Y CITAS PROGRAMADAS (ESQUINA INFERIOR IZQUIERDA - EXPANDIDA Y VISIBLE) -->
+            <div id="contenedorCitasSidebar" class="pt-3 mt-3 border-t border-slate-200 space-y-2">
+                <div class="flex items-center justify-between gap-1">
+                    <span class="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                        <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+                        <span>Alertas y Recordatorios</span>
                     </span>
-                    <span id="badgeTotalCitasSidebar" class="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-indigo-100 text-indigo-900 border border-indigo-200">
-                        <%= ((typeof ticketsProgramados !== 'undefined' && ticketsProgramados) ? ticketsProgramados.length : 0) + ((typeof recordatorios !== 'undefined' && recordatorios) ? recordatorios.length : 0) %>
-                    </span>
+                    <div class="flex items-center gap-1">
+                        <span id="badgeTotalCitasSidebar" class="text-[11px] font-black px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-900 border border-indigo-200">
+                            <%= ((typeof ticketsProgramados !== 'undefined' && ticketsProgramados) ? ticketsProgramados.length : 0) + ((typeof recordatorios !== 'undefined' && recordatorios) ? recordatorios.length : 0) %>
+                        </span>
+                        <!-- Botón Configurar Tiempos de Alertas Globales -->
+                        <button 
+                            type="button" 
+                            onclick="abrirModalConfigAlertas()" 
+                            class="p-1 rounded text-slate-500 hover:text-purple-700 hover:bg-purple-50 transition-colors cursor-pointer" 
+                            title="Configurar intervalos de tiempo de las alertas"
+                        >
+                            ⚙️
+                        </button>
+                    </div>
                 </div>
 
-                <div id="listaCitasSidebar" class="space-y-2 max-h-64 overflow-y-auto pr-1">
+                <!-- Barra de herramientas: Botón ordenar por fecha más reciente + recordatorio nuevo -->
+                <div class="flex items-center justify-between gap-1.5 text-[11px]">
+                    <button 
+                        type="button" 
+                        onclick="ordenarAlertasPorFechaReciente()" 
+                        class="inline-flex items-center gap-1 px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold border border-slate-200 transition-colors cursor-pointer shadow-2xs"
+                        title="Ordenar todas las alertas poniendo la fecha más próxima o reciente primero"
+                    >
+                        <span>⇅</span>
+                        <span>Más próxima</span>
+                    </button>
+                    <span class="text-[10px] text-slate-400 italic">Arrastra para priorizar</span>
+                </div>
+
+                <div id="listaCitasSidebar" class="space-y-2.5 max-h-80 overflow-y-auto pr-1">
                     <% 
                     const hayTickets = typeof ticketsProgramados !== 'undefined' && ticketsProgramados && ticketsProgramados.length > 0;
                     const hayRecs = typeof recordatorios !== 'undefined' && recordatorios && recordatorios.length > 0;
@@ -3434,7 +3459,54 @@
         </div>
     </div>
 
-    <!-- MODAL PARA CREAR NUEVO RECORDATORIO TI -->
+
+    <!-- MODAL PARA CONFIGURACIÓN GLOBAL DE INTERVALOS DE ALERTAS -->
+    <div id="modalConfigAlertas" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 520px; border-top: 4px solid #8b5cf6;">
+            <div class="flex items-center justify-between mb-3 border-b border-slate-100 pb-2.5">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">⚙️</span>
+                    <div>
+                        <h4 class="text-base font-bold text-slate-900 m-0">Configuración Global de Alertas</h4>
+                        <p class="text-[11px] text-slate-500 m-0">Define con cuánta anticipación y cuántas alertas quieres que el sistema dispare para citas y recordatorios.</p>
+                    </div>
+                </div>
+                <button type="button" onclick="cerrarModalConfigAlertas()" class="text-slate-400 hover:text-slate-600 text-lg font-bold cursor-pointer">&times;</button>
+            </div>
+
+            <div class="space-y-3.5">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-100">
+                    <span class="text-xs font-bold text-slate-800">Intervalos de Alerta Configurados:</span>
+                    <button 
+                        type="button" 
+                        onclick="agregarFilaIntervaloAlerta()" 
+                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-purple-50 text-purple-700 hover:bg-purple-100 font-bold text-xs border border-purple-200 transition-colors cursor-pointer"
+                    >
+                        + Agregar Alerta
+                    </button>
+                </div>
+
+                <div id="contenedorFilasIntervalos" class="space-y-2 max-h-60 overflow-y-auto p-1">
+                    <!-- Filas dinámicas generadas por JS -->
+                </div>
+
+                <div class="p-2.5 rounded bg-amber-50 border border-amber-200 text-[11px] text-amber-900">
+                    💡 <strong>¿Cómo funciona?</strong> Esta configuración aplica para <strong>todas</strong> las citas y recordatorios del sistema en general. Cada vez que una cita se acerque a cualquiera de estos tiempos, recibirás la alerta visual, sonora y de Windows correspondiente.
+                </div>
+
+                <div class="modal-actions pt-2">
+                    <button type="button" onclick="cerrarModalConfigAlertas()" class="px-3.5 py-2 rounded text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer">
+                        Cancelar
+                    </button>
+                    <button type="button" onclick="guardarConfiguracionIntervalosAlertas()" class="px-4 py-2 rounded text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 transition-colors shadow-xs cursor-pointer flex items-center gap-1.5">
+                        <span>Guardar Configuración</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <!-- MODAL PARA CREAR NUEVO RECORDATORIO TI -->
     <div id="modalCrearRecordatorio" class="modal" style="display: none;">
         <div class="modal-content" style="max-width: 500px; border-top: 4px solid #6366f1;">
             <div class="flex items-center justify-between mb-3 border-b border-slate-100 pb-2.5">
@@ -6799,8 +6871,125 @@
         }
 
         // ==========================================
-        // PROCESADOR DE ALERTAS DE CITAS PROGRAMADAS
-        // (Alerta Windows 1 día antes y 1 hora antes)
+        // CONFIGURACIÓN DINÁMICA DE INTERVALOS DE ALERTAS
+        // ==========================================
+        let listaIntervalosAlertasGlobal = <%- JSON.stringify(typeof intervalosAlertas !== 'undefined' ? intervalosAlertas : [
+            { id: '1', valor: 1, unidad: 'dias', label: '1 día antes' },
+            { id: '2', valor: 4, unidad: 'horas', label: '4 horas antes' },
+            { id: '3', valor: 1, unidad: 'horas', label: '1 hora antes' },
+            { id: '4', valor: 15, unidad: 'minutos', label: '15 minutos antes' }
+        ]) %>;
+
+        // Escuchar actualizaciones en tiempo real de la configuración de intervalos
+        if (typeof socketAdmin !== 'undefined' && socketAdmin) {
+            socketAdmin.on('config:intervalos_alertas_actualizados', function(data) {
+                if (data && Array.isArray(data.intervalos)) {
+                    listaIntervalosAlertasGlobal = data.intervalos;
+                }
+            });
+        }
+
+        function abrirModalConfigAlertas() {
+            renderizarFilasIntervalosModal();
+            const modal = document.getElementById('modalConfigAlertas');
+            if (modal) modal.style.display = 'block';
+        }
+
+        function cerrarModalConfigAlertas() {
+            const modal = document.getElementById('modalConfigAlertas');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function renderizarFilasIntervalosModal() {
+            const cont = document.getElementById('contenedorFilasIntervalos');
+            if (!cont) return;
+            cont.innerHTML = '';
+
+            listaIntervalosAlertasGlobal.forEach((item, index) => {
+                const fila = document.createElement('div');
+                fila.className = 'flex items-center gap-2 p-2 rounded bg-slate-50 border border-slate-200';
+                fila.innerHTML = `
+                    <span class="text-xs font-bold text-slate-500 w-6 text-center">#${index + 1}</span>
+                    <input type="number" min="1" max="365" value="${item.valor}" class="input-val-alerta w-20 rounded border border-slate-300 px-2 py-1 text-xs text-slate-900 font-bold bg-white focus:border-purple-600 focus:outline-none" required>
+                    <select class="select-unidad-alerta rounded border border-slate-300 px-2 py-1 text-xs text-slate-800 bg-white font-semibold">
+                        <option value="minutos" ${item.unidad === 'minutos' ? 'selected' : ''}>Minuto(s) antes</option>
+                        <option value="horas" ${item.unidad === 'horas' ? 'selected' : ''}>Hora(s) antes</option>
+                        <option value="dias" ${item.unidad === 'dias' ? 'selected' : ''}>Día(s) antes</option>
+                    </select>
+                    <button type="button" onclick="eliminarFilaIntervaloAlerta(${index})" class="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded transition-colors cursor-pointer ml-auto" title="Quitar esta alerta">
+                        ✕
+                    </button>
+                `;
+                cont.appendChild(fila);
+            });
+        }
+
+        function agregarFilaIntervaloAlerta() {
+            listaIntervalosAlertasGlobal.push({
+                id: String(Date.now()),
+                valor: 30,
+                unidad: 'minutos',
+                label: '30 minutos antes'
+            });
+            renderizarFilasIntervalosModal();
+        }
+
+        function eliminarFilaIntervaloAlerta(index) {
+            if (listaIntervalosAlertasGlobal.length <= 1) {
+                alert('Debes mantener al menos una alerta configurada.');
+                return;
+            }
+            listaIntervalosAlertasGlobal.splice(index, 1);
+            renderizarFilasIntervalosModal();
+        }
+
+        async function guardarConfiguracionIntervalosAlertas() {
+            const cont = document.getElementById('contenedorFilasIntervalos');
+            if (!cont) return;
+
+            const inputsVal = cont.querySelectorAll('.input-val-alerta');
+            const selectsUni = cont.querySelectorAll('.select-unidad-alerta');
+
+            const nuevosIntervalos = [];
+            for (let i = 0; i < inputsVal.length; i++) {
+                const val = parseInt(inputsVal[i].value, 10);
+                const uni = selectsUni[i].value;
+                if (isNaN(val) || val <= 0) {
+                    alert('Todos los tiempos deben ser números mayores a 0.');
+                    return;
+                }
+                const labelUni = uni === 'dias' ? (val === 1 ? '1 día antes' : val + ' días antes') : (uni === 'horas' ? (val === 1 ? '1 hora antes' : val + ' horas antes') : (val + ' minutos antes'));
+                nuevosIntervalos.push({
+                    id: String(i + 1),
+                    valor: val,
+                    unidad: uni,
+                    label: labelUni
+                });
+            }
+
+            try {
+                const resp = await fetch('/admin/configuracion/intervalos-alertas', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({ intervalos: nuevosIntervalos })
+                });
+                const resJson = await resp.json();
+                if (resJson.ok) {
+                    listaIntervalosAlertasGlobal = nuevosIntervalos;
+                    cerrarModalConfigAlertas();
+                    mostrarToastNotificacionAdmin('Alertas actualizadas', 'Configuración de tiempos guardada para todo el sistema', null, 'recordatorio');
+                    verificarNotificacionesLiveAdmin();
+                } else {
+                    alert('Error: ' + (resJson.error || 'No se pudo guardar la configuración'));
+                }
+            } catch(e) {
+                console.error(e);
+                alert('Error al comunicarse con el servidor');
+            }
+        }
+
+        // ==========================================
+        // PROCESADOR DINÁMICO DE ALERTAS DE CITAS Y RECORDATORIOS
         // ==========================================
         function procesarAlertasCitasProgramadas(ticketsProgramados, recordatorios) {
             ticketsProgramados = Array.isArray(ticketsProgramados) ? ticketsProgramados : [];
@@ -6820,47 +7009,35 @@
 
                 const horaStr = dCita.toLocaleTimeString('es-MX', { timeZone: 'America/Mexico_City', hour: '2-digit', minute: '2-digit' });
 
-                // Alerta 1 día antes (entre 1.2 hrs y 26 hrs de anticipación)
-                const key1Dia = 'notif_cita_1dia_' + tp.id + '_' + tp.fecha_programada_cliente;
-                if (diffHours > 1.2 && diffHours <= 26) {
-                    if (!localStorage.getItem(key1Dia)) {
-                        localStorage.setItem(key1Dia, '1');
-                        dispararNotificacionEscritorioAdmin(
-                            `Recordatorio: Programación para Mañana (Ticket #${tp.id})`,
-                            `El día de mañana tienes programada la resolución de un ticket (Ticket #${tp.id} - ${horaStr} hrs con ${tp.usuario_nombre || 'Usuario'}: ${tp.titulo})`,
-                            tp.id,
-                            'cita-1dia'
-                        );
-                        mostrarToastNotificacionAdmin(
-                            `El día de mañana tienes programada la resolución de un ticket (#${tp.id})`,
-                            `A las ${horaStr} hrs con ${tp.usuario_nombre || 'Usuario'} • "${tp.titulo}"`,
-                            tp.id,
-                            'cita'
-                        );
-                        reproducirSonidoAlertaAdmin('ticket');
-                    }
-                }
+                // Evaluación dinámica según los intervalos configurados por el administrador
+                listaIntervalosAlertasGlobal.forEach(interv => {
+                    let minutosObjetivo = interv.valor;
+                    if (interv.unidad === 'horas') minutosObjetivo = interv.valor * 60;
+                    if (interv.unidad === 'dias') minutosObjetivo = interv.valor * 1440;
 
-                // Alerta 1 hora antes (entre 0 y 65 minutos de anticipación)
-                const key1Hora = 'notif_cita_1hora_' + tp.id + '_' + tp.fecha_programada_cliente;
-                if (diffMinutes > 0 && diffMinutes <= 65) {
-                    if (!localStorage.getItem(key1Hora)) {
-                        localStorage.setItem(key1Hora, '1');
-                        dispararNotificacionEscritorioAdmin(
-                            `Aviso Urgente: Programación en 1 hora (Ticket #${tp.id})`,
-                            `En una hora tienes programada la resolución de un ticket (Ticket #${tp.id} - ${horaStr} hrs con ${tp.usuario_nombre || 'Usuario'}: ${tp.titulo})`,
-                            tp.id,
-                            'cita-1hora'
-                        );
-                        mostrarToastNotificacionAdmin(
-                            `En una hora tienes programada la resolución de un ticket (#${tp.id})`,
-                            `A las ${horaStr} hrs con ${tp.usuario_nombre || 'Usuario'} • "${tp.titulo}"`,
-                            tp.id,
-                            'cita'
-                        );
-                        reproducirSonidoAlertaAdmin('ticket');
+                    // Ventana de disparo: cuando falte entre minutosObjetivo y minutosObjetivo + margen de tolerancia
+                    const margen = Math.max(10, Math.floor(minutosObjetivo * 0.15));
+                    const keyAlerta = 'notif_cita_dyn_' + interv.id + '_' + tp.id + '_' + tp.fecha_programada_cliente;
+
+                    if (diffMinutes > 0 && diffMinutes <= (minutosObjetivo + margen) && diffMinutes >= (minutosObjetivo - 5)) {
+                        if (!localStorage.getItem(keyAlerta)) {
+                            localStorage.setItem(keyAlerta, '1');
+                            dispararNotificacionEscritorioAdmin(
+                                `Aviso de Cita (${interv.label}): Ticket #${tp.id}`,
+                                `Cita programada (${interv.label} a las ${horaStr} hrs) con ${tp.usuario_nombre || 'Usuario'}: "${tp.titulo}"`,
+                                tp.id,
+                                'cita-dyn'
+                            );
+                            mostrarToastNotificacionAdmin(
+                                `Cita en ${interv.label} (Ticket #${tp.id})`,
+                                `A las ${horaStr} hrs con ${tp.usuario_nombre || 'Usuario'} • "${tp.titulo}"`,
+                                tp.id,
+                                'cita'
+                            );
+                            reproducirSonidoAlertaAdmin('ticket');
+                        }
                     }
-                }
+                });
             });
 
             // 2. Revisar y disparar alertas de escritorio para Recordatorios Personalizados
@@ -6871,51 +7048,35 @@
 
                 const diffMs = dRec.getTime() - ahora;
                 const diffMinutes = Math.floor(diffMs / 60000);
-                const diffHours = diffMs / 3600000;
-
                 const horaStr = dRec.toLocaleTimeString('es-MX', { timeZone: 'America/Mexico_City', hour: '2-digit', minute: '2-digit' });
 
-                // Alerta 1 día antes
-                const key1Dia = 'notif_rec_1dia_' + rec.id + '_' + rec.fecha_programada;
-                if (diffHours > 1.2 && diffHours <= 26) {
-                    if (!localStorage.getItem(key1Dia)) {
-                        localStorage.setItem(key1Dia, '1');
-                        dispararNotificacionEscritorioAdmin(
-                            `Recordatorio TI para Mañana: ${rec.destinatario}`,
-                            `Para mañana a las ${horaStr} hrs: "${rec.descripcion}" (Destinatario: ${rec.destinatario})`,
-                            null,
-                            'rec-1dia'
-                        );
-                        mostrarToastNotificacionAdmin(
-                            `Recordatorio programado para mañana (${horaStr} hrs)`,
-                            `Para ${rec.destinatario} • "${rec.descripcion}"`,
-                            null,
-                            'recordatorio'
-                        );
-                        reproducirSonidoAlertaAdmin('ticket');
-                    }
-                }
+                listaIntervalosAlertasGlobal.forEach(interv => {
+                    let minutosObjetivo = interv.valor;
+                    if (interv.unidad === 'horas') minutosObjetivo = interv.valor * 60;
+                    if (interv.unidad === 'dias') minutosObjetivo = interv.valor * 1440;
 
-                // Alerta 1 hora antes
-                const key1Hora = 'notif_rec_1hora_' + rec.id + '_' + rec.fecha_programada;
-                if (diffMinutes > 0 && diffMinutes <= 65) {
-                    if (!localStorage.getItem(key1Hora)) {
-                        localStorage.setItem(key1Hora, '1');
-                        dispararNotificacionEscritorioAdmin(
-                            `Aviso Urgente: Recordatorio en 1 hora (${rec.destinatario})`,
-                            `En una hora a las ${horaStr} hrs: "${rec.descripcion}" (Destinatario: ${rec.destinatario})`,
-                            null,
-                            'rec-1hora'
-                        );
-                        mostrarToastNotificacionAdmin(
-                            `Recordatorio en 1 hora (${horaStr} hrs)`,
-                            `Para ${rec.destinatario} • "${rec.descripcion}"`,
-                            null,
-                            'recordatorio'
-                        );
-                        reproducirSonidoAlertaAdmin('ticket');
+                    const margen = Math.max(10, Math.floor(minutosObjetivo * 0.15));
+                    const keyAlerta = 'notif_rec_dyn_' + interv.id + '_' + rec.id + '_' + rec.fecha_programada;
+
+                    if (diffMinutes > 0 && diffMinutes <= (minutosObjetivo + margen) && diffMinutes >= (minutosObjetivo - 5)) {
+                        if (!localStorage.getItem(keyAlerta)) {
+                            localStorage.setItem(keyAlerta, '1');
+                            dispararNotificacionEscritorioAdmin(
+                                `Recordatorio (${interv.label}): ${rec.destinatario}`,
+                                `Para las ${horaStr} hrs (${interv.label}): "${rec.descripcion}" (Destinatario: ${rec.destinatario})`,
+                                null,
+                                'rec-dyn'
+                            );
+                            mostrarToastNotificacionAdmin(
+                                `Recordatorio en ${interv.label} (${horaStr} hrs)`,
+                                `Para ${rec.destinatario} • "${rec.descripcion}"`,
+                                null,
+                                'recordatorio'
+                            );
+                            reproducirSonidoAlertaAdmin('ticket');
+                        }
                     }
-                }
+                });
             });
 
             // 3. Refrescar widget de la esquina inferior izquierda
@@ -7061,6 +7222,82 @@
                     listaSidebar.innerHTML = htmlContenido;
                 }
             }
+        }
+
+
+        // ==========================================
+        // GESTIÓN DE ORDEN PERSONALIZADO Y ARRASTRE DE ALERTAS
+        // ==========================================
+        let alertaElementoArrastrado = null;
+
+        function iniciarArrastreAlerta(e) {
+            alertaElementoArrastrado = e.currentTarget;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', e.currentTarget.dataset.id);
+            e.currentTarget.classList.add('opacity-40');
+        }
+
+        function permitirSoltarAlerta(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        function soltarAlerta(e) {
+            e.preventDefault();
+            const destino = e.currentTarget.closest('.tarjeta-alerta-drag');
+            if (alertaElementoArrastrado) {
+                alertaElementoArrastrado.classList.remove('opacity-40');
+            }
+            if (!destino || !alertaElementoArrastrado || destino === alertaElementoArrastrado) return;
+
+            const contenedor = document.getElementById('listaCitasSidebar');
+            if (!contenedor) return;
+
+            const tarjetas = Array.from(contenedor.querySelectorAll('.tarjeta-alerta-drag'));
+            const idxOrigen = tarjetas.indexOf(alertaElementoArrastrado);
+            const idxDestino = tarjetas.indexOf(destino);
+
+            if (idxOrigen < idxDestino) {
+                destino.after(alertaElementoArrastrado);
+            } else {
+                destino.before(alertaElementoArrastrado);
+            }
+
+            guardarOrdenPersonalizadoAlertas();
+        }
+
+        function guardarOrdenPersonalizadoAlertas() {
+            const contenedor = document.getElementById('listaCitasSidebar');
+            if (!contenedor) return;
+            const tarjetas = Array.from(contenedor.querySelectorAll('.tarjeta-alerta-drag'));
+            const ordenIds = tarjetas.map(t => t.dataset.id).filter(Boolean);
+            localStorage.setItem('sistema_orden_alertas_custom', JSON.stringify(ordenIds));
+        }
+
+        function obtenerOrdenPersonalizadoAlertas() {
+            try {
+                const guardado = localStorage.getItem('sistema_orden_alertas_custom');
+                return guardado ? JSON.parse(guardado) : null;
+            } catch(e) {
+                return null;
+            }
+        }
+
+        function ordenarAlertasPorFechaReciente() {
+            const contenedor = document.getElementById('listaCitasSidebar');
+            if (!contenedor) return;
+            const tarjetas = Array.from(contenedor.querySelectorAll('.tarjeta-alerta-drag'));
+            if (tarjetas.length === 0) return;
+
+            tarjetas.sort((a, b) => {
+                const tA = Number(a.dataset.timestamp) || 0;
+                const tB = Number(b.dataset.timestamp) || 0;
+                return tA - tB; // Próximos o más recientes primero
+            });
+
+            tarjetas.forEach(t => contenedor.appendChild(t));
+            guardarOrdenPersonalizadoAlertas();
+            mostrarToastNotificacionAdmin('Orden actualizado', 'Alertas organizadas por fecha más próxima', null, 'recordatorio');
         }
 
         // ==========================================

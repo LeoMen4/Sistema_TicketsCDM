@@ -292,6 +292,7 @@ db.serialize(() => {
         )
     `, () => {
         db.run(`INSERT OR IGNORE INTO configuraciones (clave, valor) VALUES ('tolerancia_alerta_pct', '25')`);
+    db.run(`INSERT OR IGNORE INTO configuraciones (clave, valor) VALUES ('intervalos_alertas', '[{"id":"1","valor":1,"unidad":"dias","label":"1 día antes"},{"id":"2","valor":4,"unidad":"horas","label":"4 horas antes"},{"id":"3","valor":1,"unidad":"horas","label":"1 hora antes"},{"id":"4","valor":15,"unidad":"minutos","label":"15 minutos antes"}]')`);
 
         // Sembrar guías rápidas iniciales SOLO una vez en la primera instalación
         db.get("SELECT valor FROM configuraciones WHERE clave = 'guias_inicializadas'", (errCfg, rowCfg) => {
