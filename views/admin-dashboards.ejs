@@ -1828,7 +1828,24 @@
 
         window.addEventListener('DOMContentLoaded', () => {
         if (typeof io !== 'undefined') {
-            const socketDash = io({ transports: ['websocket', 'polling'] });
+            const socketDash = io({ 
+                transports: ['websocket', 'polling'],
+                reconnection: true,
+                reconnectionAttempts: Infinity,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000,
+                timeout: 20000
+            });
+
+            socketDash.io.on('reconnect', function() {
+                console.log('[WebSocket Métricas] Reconectado tras corte de red. Refrescando métricas...');
+                window.location.reload();
+            });
+
+            window.addEventListener('online', function() {
+                if (socketDash && !socketDash.connected) socketDash.connect();
+                window.location.reload();
+            });
             let tRefresh = null;
             socketDash.on('ticket:cambio_global', () => {
                 if (tRefresh) clearTimeout(tRefresh);

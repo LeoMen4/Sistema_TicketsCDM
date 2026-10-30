@@ -2248,6 +2248,28 @@
                     verificarNotificacionesVivoUsuario();
                 });
 
+                // Blindaje contra caídas de red o suspensión de laptop (reconexión automática garantizada)
+                socketUser.io.on('reconnect', function(attemptNumber) {
+                    console.log('[WebSocket Usuario] Reconectado exitosamente tras corte de red (intento ' + attemptNumber + ')');
+                    refrescarTableroUsuarioEnVivo();
+                    verificarNotificacionesVivoUsuario();
+                });
+
+                document.addEventListener('visibilitychange', function() {
+                    if (document.visibilityState === 'visible') {
+                        // Al reabrir la laptop o volver a la pestaña, sincronizar de inmediato
+                        refrescarTableroUsuarioEnVivo();
+                        verificarNotificacionesVivoUsuario();
+                    }
+                });
+
+                window.addEventListener('online', function() {
+                    console.log('[Red] Conexión a internet restablecida en esta PC');
+                    if (socketUser && !socketUser.connected) socketUser.connect();
+                    refrescarTableroUsuarioEnVivo();
+                    verificarNotificacionesVivoUsuario();
+                });
+
                 // Detección de nueva versión tras reinicio/despliegue en Render (Opción A: Auto-recarga silenciosa)
                 socketUser.on('sistema:version', function(data) {
                     if (!data || !data.buildVersion) return;

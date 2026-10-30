@@ -7617,6 +7617,28 @@
                     verificarNotificacionesLiveAdmin();
                 });
 
+                // Blindaje contra caídas de red o suspensión de laptop (reconexión automática garantizada)
+                socketAdmin.io.on('reconnect', function(attemptNumber) {
+                    console.log('[WebSocket Admin] Reconectado exitosamente tras corte de red (intento ' + attemptNumber + ')');
+                    refrescarTableroAdminEnVivo();
+                    verificarNotificacionesLiveAdmin();
+                });
+
+                document.addEventListener('visibilitychange', function() {
+                    if (document.visibilityState === 'visible') {
+                        // Al reabrir la laptop o volver a la pestaña, sincronizar de inmediato
+                        refrescarTableroAdminEnVivo();
+                        verificarNotificacionesLiveAdmin();
+                    }
+                });
+
+                window.addEventListener('online', function() {
+                    console.log('[Red] Conexión a internet restablecida en esta PC');
+                    if (socketAdmin && !socketAdmin.connected) socketAdmin.connect();
+                    refrescarTableroAdminEnVivo();
+                    verificarNotificacionesLiveAdmin();
+                });
+
                 // Detección de nueva versión tras reinicio/despliegue en Render (Opción A: Auto-recarga silenciosa)
                 socketAdmin.on('sistema:version', function(data) {
                     if (!data || !data.buildVersion) return;

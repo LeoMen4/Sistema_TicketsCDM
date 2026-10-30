@@ -1713,6 +1713,21 @@
             });
             socketTicket.emit('unirse_ticket', '<%= ticket.id %>');
 
+            // Volver a unirse a la sala y sincronizar en caso de reconexión tras corte de red
+            socketTicket.on('connect', function() {
+                socketTicket.emit('unirse_ticket', '<%= ticket.id %>');
+            });
+
+            socketTicket.io.on('reconnect', function() {
+                console.log('[WebSocket Detalle] Reconectado tras corte de red. Reuniendo a la sala del ticket...');
+                socketTicket.emit('unirse_ticket', '<%= ticket.id %>');
+            });
+
+            window.addEventListener('online', function() {
+                if (socketTicket && !socketTicket.connected) socketTicket.connect();
+                socketTicket.emit('unirse_ticket', '<%= ticket.id %>');
+            });
+
             // Auto-recarga por nueva versión desplegada
             socketTicket.on('sistema:version', function(data) {
                 if (!data || !data.buildVersion) return;
