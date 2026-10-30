@@ -452,7 +452,7 @@
                         <span>⇅</span>
                         <span>Más próxima</span>
                     </button>
-                    <span class="text-[10px] text-slate-400 italic">Arrastra para priorizar</span>
+                    
                 </div>
 
                 <div id="listaCitasSidebar" class="space-y-2.5 max-h-80 overflow-y-auto pr-1">
@@ -479,21 +479,21 @@
                                     }
                                 }
                             %>
-                                <div id="cita_<%= tc.id %>" data-id="cita_<%= tc.id %>" data-timestamp="<%= tsCita %>" draggable="true" ondragstart="iniciarArrastreAlerta(event)" ondragover="permitirSoltarAlerta(event)" ondrop="soltarAlerta(event)" class="tarjeta-alerta-drag p-3 rounded-lg bg-amber-50 border-2 border-amber-300 text-xs hover:bg-amber-100/90 hover:border-amber-400 transition-all shadow-sm group relative cursor-grab active:cursor-grabbing select-none">
+                                <div id="cita_<%= tc.id %>" data-id="cita_<%= tc.id %>" data-timestamp="<%= tsCita %>" class="tarjeta-alerta-item p-3 rounded-lg bg-amber-50 border-2 border-amber-300 text-xs hover:bg-amber-100/90 transition-all shadow-xs group relative">
                                     <div class="flex items-center justify-between gap-1.5 mb-1.5">
                                         <div class="flex items-center gap-1.5">
-                                            <span class="cursor-grab text-amber-500 font-bold text-sm leading-none" title="Arrastra para mover de lugar">⋮⋮</span>
                                             <span class="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-amber-900 bg-amber-200 px-2 py-0.5 rounded border border-amber-300">
                                                 <span>Cita Ticket</span>
                                             </span>
+                                            <div class="inline-flex items-center bg-amber-200/60 rounded border border-amber-300/80">
+                                                <button type="button" onclick="moverAlertaUnPaso('cita_<%= tc.id %>', 'arriba')" class="text-amber-900 hover:text-black hover:bg-amber-300 px-1 py-0.5 rounded-l font-black text-[11px] leading-none" title="Subir alerta">▲</button>
+                                                <button type="button" onclick="moverAlertaUnPaso('cita_<%= tc.id %>', 'abajo')" class="text-amber-900 hover:text-black hover:bg-amber-300 px-1 py-0.5 rounded-r font-black text-[11px] leading-none" title="Bajar alerta">▼</button>
+                                            </div>
                                         </div>
                                         <div class="flex items-center gap-1.5">
                                             <a href="/admin/tickets/<%= tc.id %>" target="_blank" class="text-xs font-black bg-white text-amber-950 hover:bg-amber-50 px-2 py-0.5 rounded border border-amber-300 shadow-2xs" title="Abrir ticket completo">
                                                 #<%= tc.id %>
                                             </a>
-                                            <!-- Botones Mover Arriba / Abajo con 1 Clic -->
-                                            <button type="button" onclick="moverAlertaUnPaso('cita_<%= tc.id %>', 'arriba')" class="text-amber-800 hover:text-amber-950 hover:bg-amber-200 p-1 rounded font-bold text-xs" title="Mover arriba">▲</button>
-                                            <button type="button" onclick="moverAlertaUnPaso('cita_<%= tc.id %>', 'abajo')" class="text-amber-800 hover:text-amber-950 hover:bg-amber-200 p-1 rounded font-bold text-xs" title="Mover abajo">▼</button>
                                             <!-- Botón Editar Cita Ticket -->
                                             <button 
                                                 type="button" 
@@ -554,18 +554,18 @@
                                     }
                                 }
                             %>
-                                <div id="rec_<%= rec.id %>" data-id="rec_<%= rec.id %>" data-timestamp="<%= tsRec %>" draggable="true" ondragstart="iniciarArrastreAlerta(event)" ondragover="permitirSoltarAlerta(event)" ondrop="soltarAlerta(event)" class="tarjeta-alerta-drag p-3 rounded-lg bg-indigo-50 border-2 border-indigo-200 text-xs hover:bg-indigo-100/90 hover:border-indigo-300 transition-all shadow-sm group relative cursor-grab active:cursor-grabbing select-none">
+                                <div id="rec_<%= rec.id %>" data-id="rec_<%= rec.id %>" data-timestamp="<%= tsRec %>" class="tarjeta-alerta-item p-3 rounded-lg bg-indigo-50 border-2 border-indigo-200 text-xs hover:bg-indigo-100/90 transition-all shadow-xs group relative">
                                     <div class="flex items-center justify-between gap-1.5 mb-1.5">
                                         <div class="flex items-center gap-1.5">
-                                            <span class="cursor-grab text-indigo-400 font-bold text-sm leading-none" title="Arrastra para mover de lugar">⋮⋮</span>
                                             <span class="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-indigo-900 bg-indigo-200/80 px-2 py-0.5 rounded border border-indigo-300">
                                                 <span>Recordatorio</span>
                                             </span>
+                                            <div class="inline-flex items-center bg-indigo-200/60 rounded border border-indigo-300/80">
+                                                <button type="button" onclick="moverAlertaUnPaso('rec_<%= rec.id %>', 'arriba')" class="text-indigo-900 hover:text-black hover:bg-indigo-300 px-1 py-0.5 rounded-l font-black text-[11px] leading-none" title="Subir recordatorio">▲</button>
+                                                <button type="button" onclick="moverAlertaUnPaso('rec_<%= rec.id %>', 'abajo')" class="text-indigo-900 hover:text-black hover:bg-indigo-300 px-1 py-0.5 rounded-r font-black text-[11px] leading-none" title="Bajar recordatorio">▼</button>
+                                            </div>
                                         </div>
                                         <div class="flex items-center gap-1.5">
-                                            <!-- Botones Mover Arriba / Abajo con 1 Clic -->
-                                            <button type="button" onclick="moverAlertaUnPaso('rec_<%= rec.id %>', 'arriba')" class="text-indigo-800 hover:text-indigo-950 hover:bg-indigo-200 p-1 rounded font-bold text-xs" title="Mover arriba">▲</button>
-                                            <button type="button" onclick="moverAlertaUnPaso('rec_<%= rec.id %>', 'abajo')" class="text-indigo-800 hover:text-indigo-950 hover:bg-indigo-200 p-1 rounded font-bold text-xs" title="Mover abajo">▼</button>
                                             <!-- Botón Editar Recordatorio -->
                                             <button 
                                                 type="button" 
@@ -608,7 +608,7 @@
                             Sin citas ni recordatorios pendientes
                         </div>
                     <% } %>
-                </div></div>
+                </div>
             </div>
         </aside>
 
@@ -800,7 +800,9 @@
                         <table class="w-full text-left border-collapse">
                             <thead>
                                 <tr class="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-600">
-                                    <th class="py-3 px-2 w-10 text-center" title="Arrastra para reordenar tickets">⇅</th>
+                                    <th class="py-3 px-2 w-12 text-center" title="Subir o bajar posición del ticket">
+                                        <button type="button" onclick="restablecerOrdenOriginalTickets()" class="text-slate-400 hover:text-red-500 font-bold text-xs" title="Restablecer orden por fecha">⇅</button>
+                                    </th>
                                     <th class="py-3 px-4 w-24">ID</th>
                                     <th class="py-3 px-4">Usuario</th>
                                     <th class="py-3 px-4">Título / Falla</th>
@@ -825,24 +827,17 @@
                                     <tr 
                                         id="filaTicket-<%= t.id %>"
                                         data-ticket-id="<%= t.id %>"
-                                        draggable="true"
-                                        ondragstart="iniciarArrastreFilaTicket(event)"
-                                        ondragover="permitirSoltarFilaTicket(event)"
-                                        ondrop="soltarFilaTicket(event)"
-                                        class="fila-ticket-admin hover:bg-slate-50 transition-colors cursor-grab active:cursor-grabbing select-none"
+                                        class="fila-ticket-admin hover:bg-slate-50 transition-colors"
                                         data-usuario-id="<%= t.usuario_id || '' %>"
                                         data-categoria="<%= (t.tipo_falla || '').toLowerCase() %>"
                                         data-prioridad="<%= (t.prioridad || '').toLowerCase() %>"
                                         data-search="<%= ('#' + t.id + ' ' + t.id + ' ' + (t.usuario_nombre || '') + ' ' + (t.usuario_puesto || '') + ' ' + (t.usuario_email || '') + ' ' + (t.titulo || '') + ' ' + (t.tipo_falla || '') + ' ' + (t.subcategoria || '') + ' ' + (t.descripcion || '') + ' ' + (t.estatus || '') + ' ' + (t.creado_por_admin || '') + ' ' + (t.atendido_por || '') + ' ' + (t.entregado_por || '') + ' ' + (t.participantes_ti || '')).toLowerCase() %>"
                                     >
-                                        <!-- Columna Agarradera para arrastrar / subir / bajar -->
-                                        <td class="py-3 px-2 text-center text-slate-400 hover:text-slate-700 whitespace-nowrap">
-                                            <div class="flex items-center justify-center gap-1">
-                                                <span class="cursor-grab font-bold text-sm leading-none" title="Arrastra esta fila hacia arriba o abajo">⋮⋮</span>
-                                                <div class="flex flex-col text-[9px] leading-tight text-slate-400">
-                                                    <button type="button" onclick="moverFilaTicketUnPaso('<%= t.id %>', 'arriba')" class="hover:text-brand-600 font-bold" title="Subir un lugar">▲</button>
-                                                    <button type="button" onclick="moverFilaTicketUnPaso('<%= t.id %>', 'abajo')" class="hover:text-brand-600 font-bold" title="Bajar un lugar">▼</button>
-                                                </div>
+                                        <!-- Columna para subir / bajar ticket de posición -->
+                                        <td class="py-2.5 px-2 text-center whitespace-nowrap">
+                                            <div class="inline-flex items-center gap-0.5 bg-slate-100 rounded p-0.5 border border-slate-200">
+                                                <button type="button" onclick="moverFilaTicketUnPaso('<%= t.id %>', 'arriba')" class="text-slate-500 hover:text-brand-600 hover:bg-white rounded px-1 py-0.5 text-[11px] font-black leading-none transition-colors" title="Subir ticket">▲</button>
+                                                <button type="button" onclick="moverFilaTicketUnPaso('<%= t.id %>', 'abajo')" class="text-slate-500 hover:text-brand-600 hover:bg-white rounded px-1 py-0.5 text-[11px] font-black leading-none transition-colors" title="Bajar ticket">▼</button>
                                             </div>
                                         </td>
                                         <!-- ID y botón eliminar -->
@@ -7176,21 +7171,21 @@
                         const fechaEsc = (tc.fecha_programada_cliente || '').replace(/'/g, "\\'");
 
                         htmlContenido += `
-                            <div id="cita_${tc.id}" data-id="cita_${tc.id}" data-timestamp="${tsCita}" draggable="true" ondragstart="iniciarArrastreAlerta(event)" ondragover="permitirSoltarAlerta(event)" ondrop="soltarAlerta(event)" class="tarjeta-alerta-drag p-3 rounded-lg bg-amber-50 border-2 border-amber-300 text-xs hover:bg-amber-100/90 hover:border-amber-400 transition-all shadow-sm group relative cursor-grab active:cursor-grabbing select-none">
+                            <div id="cita_${tc.id}" data-id="cita_${tc.id}" data-timestamp="${tsCita}" class="tarjeta-alerta-item p-3 rounded-lg bg-amber-50 border-2 border-amber-300 text-xs hover:bg-amber-100/90 transition-all shadow-xs group relative">
                                 <div class="flex items-center justify-between gap-1.5 mb-1.5">
                                     <div class="flex items-center gap-1.5">
-                                        <span class="cursor-grab text-amber-500 font-bold text-sm leading-none" title="Arrastra para mover de lugar">⋮⋮</span>
                                         <span class="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-amber-900 bg-amber-200 px-2 py-0.5 rounded border border-amber-300">
                                             <span>Cita Ticket</span>
                                         </span>
+                                        <div class="inline-flex items-center bg-amber-200/60 rounded border border-amber-300/80">
+                                            <button type="button" onclick="moverAlertaUnPaso('cita_${tc.id}', 'arriba')" class="text-amber-900 hover:text-black hover:bg-amber-300 px-1 py-0.5 rounded-l font-black text-[11px] leading-none" title="Subir alerta">▲</button>
+                                            <button type="button" onclick="moverAlertaUnPaso('cita_${tc.id}', 'abajo')" class="text-amber-900 hover:text-black hover:bg-amber-300 px-1 py-0.5 rounded-r font-black text-[11px] leading-none" title="Bajar alerta">▼</button>
+                                        </div>
                                     </div>
                                     <div class="flex items-center gap-1.5">
                                         <a href="/admin/tickets/${tc.id}" target="_blank" class="text-xs font-black bg-white text-amber-950 hover:bg-amber-50 px-2 py-0.5 rounded border border-amber-300 shadow-2xs" title="Abrir ticket completo">
                                             #${tc.id}
                                         </a>
-                                        <!-- Botones Mover Arriba / Abajo con 1 Clic -->
-                                        <button type="button" onclick="moverAlertaUnPaso('cita_${tc.id}', 'arriba')" class="text-amber-800 hover:text-amber-950 hover:bg-amber-200 p-1 rounded font-bold text-xs" title="Mover arriba">▲</button>
-                                        <button type="button" onclick="moverAlertaUnPaso('cita_${tc.id}', 'abajo')" class="text-amber-800 hover:text-amber-950 hover:bg-amber-200 p-1 rounded font-bold text-xs" title="Mover abajo">▼</button>
                                         <!-- Botón Editar Cita Ticket -->
                                         <button 
                                             type="button" 
@@ -7251,18 +7246,18 @@
                         const fProgEsc = (rec.fecha_programada || '').replace(/'/g, "\\'");
 
                         htmlContenido += `
-                            <div id="rec_${rec.id}" data-id="rec_${rec.id}" data-timestamp="${tsRec}" draggable="true" ondragstart="iniciarArrastreAlerta(event)" ondragover="permitirSoltarAlerta(event)" ondrop="soltarAlerta(event)" class="tarjeta-alerta-drag p-3 rounded-lg bg-indigo-50 border-2 border-indigo-200 text-xs hover:bg-indigo-100/90 hover:border-indigo-300 transition-all shadow-sm group relative cursor-grab active:cursor-grabbing select-none">
+                            <div id="rec_${rec.id}" data-id="rec_${rec.id}" data-timestamp="${tsRec}" class="tarjeta-alerta-item p-3 rounded-lg bg-indigo-50 border-2 border-indigo-200 text-xs hover:bg-indigo-100/90 transition-all shadow-xs group relative">
                                 <div class="flex items-center justify-between gap-1.5 mb-1.5">
                                     <div class="flex items-center gap-1.5">
-                                        <span class="cursor-grab text-indigo-400 font-bold text-sm leading-none" title="Arrastra para mover de lugar">⋮⋮</span>
                                         <span class="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-indigo-900 bg-indigo-200/80 px-2 py-0.5 rounded border border-indigo-300">
                                             <span>Recordatorio</span>
                                         </span>
+                                        <div class="inline-flex items-center bg-indigo-200/60 rounded border border-indigo-300/80">
+                                            <button type="button" onclick="moverAlertaUnPaso('rec_${rec.id}', 'arriba')" class="text-indigo-900 hover:text-black hover:bg-indigo-300 px-1 py-0.5 rounded-l font-black text-[11px] leading-none" title="Subir recordatorio">▲</button>
+                                            <button type="button" onclick="moverAlertaUnPaso('rec_${rec.id}', 'abajo')" class="text-indigo-900 hover:text-black hover:bg-indigo-300 px-1 py-0.5 rounded-r font-black text-[11px] leading-none" title="Bajar recordatorio">▼</button>
+                                        </div>
                                     </div>
                                     <div class="flex items-center gap-1.5">
-                                        <!-- Botones Mover Arriba / Abajo con 1 Clic -->
-                                        <button type="button" onclick="moverAlertaUnPaso('rec_${rec.id}', 'arriba')" class="text-indigo-800 hover:text-indigo-950 hover:bg-indigo-200 p-1 rounded font-bold text-xs" title="Mover arriba">▲</button>
-                                        <button type="button" onclick="moverAlertaUnPaso('rec_${rec.id}', 'abajo')" class="text-indigo-800 hover:text-indigo-950 hover:bg-indigo-200 p-1 rounded font-bold text-xs" title="Mover abajo">▼</button>
                                         <!-- Botón Editar Recordatorio -->
                                         <button 
                                             type="button" 
@@ -7315,58 +7310,20 @@
 
 
         // ==========================================
-        // GESTIÓN DE ORDEN PERSONALIZADO Y ARRASTRE DE ALERTAS
+        // GESTIÓN DE ORDEN PERSONALIZADO Y POSICIONAMIENTO DE ALERTAS
         // ==========================================
-        let alertaElementoArrastrado = null;
-
-        function iniciarArrastreAlerta(e) {
-            alertaElementoArrastrado = e.currentTarget;
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', e.currentTarget.dataset.id);
-            e.currentTarget.classList.add('opacity-40');
-        }
-
-        function permitirSoltarAlerta(e) {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-        }
-
-        function soltarAlerta(e) {
-            e.preventDefault();
-            const destino = e.currentTarget.closest('.tarjeta-alerta-drag');
-            if (alertaElementoArrastrado) {
-                alertaElementoArrastrado.classList.remove('opacity-40');
-            }
-            if (!destino || !alertaElementoArrastrado || destino === alertaElementoArrastrado) return;
-
-            const contenedor = document.getElementById('listaCitasSidebar');
-            if (!contenedor) return;
-
-            const tarjetas = Array.from(contenedor.querySelectorAll('.tarjeta-alerta-drag'));
-            const idxOrigen = tarjetas.indexOf(alertaElementoArrastrado);
-            const idxDestino = tarjetas.indexOf(destino);
-
-            if (idxOrigen < idxDestino) {
-                destino.after(alertaElementoArrastrado);
-            } else {
-                destino.before(alertaElementoArrastrado);
-            }
-
-            guardarOrdenPersonalizadoAlertas();
-        }
-
         function moverAlertaUnPaso(id, direccion) {
             const el = document.getElementById(id);
             if (!el) return;
             if (direccion === 'arriba') {
                 const prev = el.previousElementSibling;
-                if (prev && prev.classList.contains('tarjeta-alerta-drag')) {
+                if (prev && prev.classList.contains('tarjeta-alerta-item')) {
                     prev.before(el);
                     guardarOrdenPersonalizadoAlertas();
                 }
             } else if (direccion === 'abajo') {
                 const next = el.nextElementSibling;
-                if (next && next.classList.contains('tarjeta-alerta-drag')) {
+                if (next && next.classList.contains('tarjeta-alerta-item')) {
                     next.after(el);
                     guardarOrdenPersonalizadoAlertas();
                 }
@@ -7376,7 +7333,7 @@
         function guardarOrdenPersonalizadoAlertas() {
             const contenedor = document.getElementById('listaCitasSidebar');
             if (!contenedor) return;
-            const tarjetas = Array.from(contenedor.querySelectorAll('.tarjeta-alerta-drag'));
+            const tarjetas = Array.from(contenedor.querySelectorAll('.tarjeta-alerta-item'));
             const ordenIds = tarjetas.map(t => t.dataset.id).filter(Boolean);
             localStorage.setItem('sistema_orden_alertas_custom', JSON.stringify(ordenIds));
         }
@@ -7393,7 +7350,7 @@
         function ordenarAlertasPorFechaReciente() {
             const contenedor = document.getElementById('listaCitasSidebar');
             if (!contenedor) return;
-            const tarjetas = Array.from(contenedor.querySelectorAll('.tarjeta-alerta-drag'));
+            const tarjetas = Array.from(contenedor.querySelectorAll('.tarjeta-alerta-item'));
             if (tarjetas.length === 0) return;
 
             tarjetas.sort((a, b) => {
@@ -7408,45 +7365,8 @@
         }
 
         // ==========================================
-        // GESTIÓN DE ORDEN PERSONALIZADO Y ARRASTRE DE FILAS DE TICKETS
+        // GESTIÓN DE ORDEN PERSONALIZADO DE FILAS DE TICKETS
         // ==========================================
-        let filaTicketArrastrada = null;
-
-        function iniciarArrastreFilaTicket(e) {
-            filaTicketArrastrada = e.currentTarget.closest('.fila-ticket-admin');
-            if (!filaTicketArrastrada) return;
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', filaTicketArrastrada.dataset.ticketId || '');
-            filaTicketArrastrada.classList.add('opacity-40', 'bg-brand-50');
-        }
-
-        function permitirSoltarFilaTicket(e) {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-        }
-
-        function soltarFilaTicket(e) {
-            e.preventDefault();
-            const destino = e.currentTarget.closest('.fila-ticket-admin');
-            if (filaTicketArrastrada) {
-                filaTicketArrastrada.classList.remove('opacity-40', 'bg-brand-50');
-            }
-            if (!destino || !filaTicketArrastrada || destino === filaTicketArrastrada) return;
-
-            const tbody = destino.parentNode;
-            const filas = Array.from(tbody.querySelectorAll('.fila-ticket-admin'));
-            const idxOrigen = filas.indexOf(filaTicketArrastrada);
-            const idxDestino = filas.indexOf(destino);
-
-            if (idxOrigen < idxDestino) {
-                destino.after(filaTicketArrastrada);
-            } else {
-                destino.before(filaTicketArrastrada);
-            }
-
-            guardarOrdenPersonalizadoTickets();
-        }
-
         function moverFilaTicketUnPaso(ticketId, direccion) {
             const fila = document.getElementById('filaTicket-' + ticketId);
             if (!fila) return;
@@ -7494,13 +7414,13 @@
         }
 
         function restablecerOrdenOriginalTickets() {
-            if (confirm('¿Deseas restablecer el orden de los tickets al orden natural por fecha?')) {
+            if (confirm('¿Deseas restablecer el orden de los tickets al orden original?')) {
                 localStorage.removeItem('sistema_orden_tickets_custom');
                 window.location.reload();
             }
         }
 
-        function abrirModalCrearRecordatorio() {
+                function abrirModalCrearRecordatorio() {
             const form = document.getElementById('formModalCrearRecordatorio');
             if (form) form.reset();
             const inputFecha = document.getElementById('nuevoRecFecha');
