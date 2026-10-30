@@ -1558,7 +1558,8 @@ async function obtenerDatosAdmin(req, res, mensaje = null, error = null) {
             ticketsProgramados,
             recordatorios,
             categoriasResolucion,
-            estatusTicketsList
+            estatusTicketsList,
+            rowIntervalosAlertas
         ] = await Promise.all([
             dbAllAsync(queryTickets, params),
             dbAllAsync('SELECT * FROM historial_tickets ORDER BY fecha ASC', []),
@@ -1602,7 +1603,8 @@ async function obtenerDatosAdmin(req, res, mensaje = null, error = null) {
                 ORDER BY fecha_programada ASC
             `, []),
             dbAllAsync('SELECT * FROM categorias_resolucion WHERE activo = 1 ORDER BY id ASC', []),
-            dbAllAsync('SELECT * FROM estatus_tickets WHERE activo = 1 ORDER BY orden ASC, id ASC', [])
+            dbAllAsync('SELECT * FROM estatus_tickets WHERE activo = 1 ORDER BY orden ASC, id ASC', []),
+            dbGetAsync("SELECT valor FROM configuraciones WHERE clave = 'intervalos_alertas'", [])
         ]);
 
         // Mapear comentarios en memoria (instantáneo en milisegundos)
