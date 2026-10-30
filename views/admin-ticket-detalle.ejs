@@ -1713,6 +1713,19 @@
             });
             socketTicket.emit('unirse_ticket', '<%= ticket.id %>');
 
+            // Auto-recarga por nueva versión desplegada
+            socketTicket.on('sistema:version', function(data) {
+                if (!data || !data.buildVersion) return;
+                const clave = 'sistema_build_version_detalle';
+                const vPrev = sessionStorage.getItem(clave);
+                if (!vPrev) {
+                    sessionStorage.setItem(clave, data.buildVersion);
+                } else if (vPrev !== data.buildVersion) {
+                    sessionStorage.setItem(clave, data.buildVersion);
+                    setTimeout(() => { window.location.reload(); }, 600);
+                }
+            });
+
             socketTicket.on('comentario:nuevo', function(data) {
                 if (data && data.ticketId == '<%= ticket.id %>') {
                     agregarComentarioDetalleEnVivo(data.comentario);

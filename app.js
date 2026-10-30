@@ -36,8 +36,14 @@ function emitirCambioGlobalTickets(accion, datos = {}) {
     }
 }
 
+// Versión o marca de inicio única del servidor para recarga automática sin tocar nada (Opción A)
+const SERVER_BUILD_VERSION = String(Date.now());
+
 // Manejo de conexiones WebSocket para actualización instantánea
 io.on('connection', (socket) => {
+    // Enviar inmediatamente la versión activa del servidor al conectarse o reconectarse
+    socket.emit('sistema:version', { buildVersion: SERVER_BUILD_VERSION });
+
     socket.on('unirse_ticket', (ticketId) => {
         if (ticketId) socket.join('ticket_' + ticketId);
     });

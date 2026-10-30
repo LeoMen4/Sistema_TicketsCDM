@@ -1834,6 +1834,18 @@
                 if (tRefresh) clearTimeout(tRefresh);
                 tRefresh = setTimeout(() => { window.location.reload(); }, 2000);
             });
+            // Auto-recarga por nueva versión desplegada
+            socketDash.on('sistema:version', function(data) {
+                if (!data || !data.buildVersion) return;
+                const clave = 'sistema_build_version_dashboards';
+                const vPrev = sessionStorage.getItem(clave);
+                if (!vPrev) {
+                    sessionStorage.setItem(clave, data.buildVersion);
+                } else if (vPrev !== data.buildVersion) {
+                    sessionStorage.setItem(clave, data.buildVersion);
+                    setTimeout(() => { window.location.reload(); }, 600);
+                }
+            });
         }
 
             renderizarGrafica('estatus', 'pie', datosEstatus.labels, datosEstatus.counts, datosEstatus.colors, 'Estatus', false);

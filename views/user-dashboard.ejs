@@ -2248,6 +2248,20 @@
                     verificarNotificacionesVivoUsuario();
                 });
 
+                // Detección de nueva versión tras reinicio/despliegue en Render (Opción A: Auto-recarga silenciosa)
+                socketUser.on('sistema:version', function(data) {
+                    if (!data || !data.buildVersion) return;
+                    const claveAlmacen = 'sistema_build_version_user';
+                    const versionPrevia = sessionStorage.getItem(claveAlmacen);
+                    if (!versionPrevia) {
+                        sessionStorage.setItem(claveAlmacen, data.buildVersion);
+                    } else if (versionPrevia !== data.buildVersion) {
+                        sessionStorage.setItem(claveAlmacen, data.buildVersion);
+                        console.log('[Sistema] Nueva versión detectada en el servidor. Actualizando automáticamente...');
+                        setTimeout(() => { window.location.reload(); }, 600);
+                    }
+                });
+
                 socketUser.on('ticket:nuevo', function() {
                     refrescarTableroUsuarioEnVivo();
                     verificarNotificacionesVivoUsuario();
