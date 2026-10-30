@@ -7,6 +7,10 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const db = require('./database');
+const { promisify } = require('util');
+const dbAllAsync = promisify(db.all).bind(db);
+const dbGetAsync = promisify(db.get).bind(db);
+const dbRunAsync = promisify(db.run).bind(db);
 const mailer = require('./mailer');
 const ExcelJS = require('exceljs');
 const { generarExcelDashboards } = require('./excelReporter');
@@ -478,20 +482,28 @@ app.get('/usuario', esUsuario, (req, res) => {
     renderUserDashboardWithMsg(req, res, mensaje, error);
 });
 
-// Obtener categorías y sus subcategorías agrupadas
+// Obtener categorías y sus subcategorías agrupadas (optimizado en paralelo)
+async function obtenerCategoriasConSubcategoriasAsync() {
+    try {
+        const [categorias, subcategorias] = await Promise.all([
+            dbAllAsync('SELECT * FROM categorias ORDER BY nombre ASC', []),
+            dbAllAsync('SELECT * FROM subcategorias ORDER BY nombre ASC', [])
+        ]);
+        const listaCat = categorias || [];
+        const listaSub = subcategorias || [];
+        return listaCat.map(c => ({
+            id: c.id,
+            nombre: c.nombre,
+            subcategorias: listaSub.filter(s => s.categoria_id === c.id)
+        }));
+    } catch (e) {
+        console.error('Error al obtener categorías y subcategorías:', e);
+        return [];
+    }
+}
+
 function obtenerCategoriasConSubcategorias(callback) {
-    db.all('SELECT * FROM categorias ORDER BY nombre ASC', [], (errCat, categorias) => {
-        categorias = categorias || [];
-        db.all('SELECT * FROM subcategorias ORDER BY nombre ASC', [], (errSub, subcategorias) => {
-            subcategorias = subcategorias || [];
-            const agrupadas = categorias.map(c => ({
-                id: c.id,
-                nombre: c.nombre,
-                subcategorias: subcategorias.filter(s => s.categoria_id === c.id)
-            }));
-            callback(agrupadas);
-        });
-    });
+    obtenerCategoriasConSubcategoriasAsync().then(callback).catch(() => callback([]));
 }
 
 // Crear Ticket con soporte para subida de imagen (multer) y subcategoría
@@ -1369,9 +1381,9 @@ function combinarParticipantesTI(listaExistente, ...nuevosNombres) {
     return Array.from(conjunto).join(', ');
 }
 
-// Ruta para ver el detalle de un ticket individual en grande (pestaña aparte)
+// Ruta para ver el detalle de un ticket individual en grande (pestaña aparte) - OPTIMIZADA EN PARALELO
 // Accesible para Administradores (cualquier ticket) y para Usuarios (sus propios tickets)
-function verDetalleTicket(req, res) {
+async function verDetalleTicket(req, res) {
     if (!req.session || !req.session.usuario) {
         return res.redirect('/');
     }
@@ -1380,19 +1392,20 @@ function verDetalleTicket(req, res) {
     const usuarioActual = req.session.usuario;
     const esAdmin = usuarioActual.rol === 'admin';
 
-    const queryTicket = `
-        SELECT tickets.*, 
-               usuarios.nombre AS usuario_nombre, 
-               usuarios.email AS usuario_email,
-               usuarios.puesto AS usuario_puesto,
-               usuarios.rol AS usuario_rol
-        FROM tickets 
-        JOIN usuarios ON tickets.usuario_id = usuarios.id
-        WHERE tickets.id = ?
-    `;
+    try {
+        const queryTicket = `
+            SELECT tickets.*, 
+                   usuarios.nombre AS usuario_nombre, 
+                   usuarios.email AS usuario_email,
+                   usuarios.puesto AS usuario_puesto,
+                   usuarios.rol AS usuario_rol
+            FROM tickets 
+            JOIN usuarios ON tickets.usuario_id = usuarios.id
+            WHERE tickets.id = ?
+        `;
 
-    db.get(queryTicket, [ticketId], (err, ticket) => {
-        if (err || !ticket) {
+        const ticket = await dbGetAsync(queryTicket, [ticketId]);
+        if (!ticket) {
             req.session.errorFlash = 'El ticket solicitado no existe o no fue encontrado.';
             return res.redirect(esAdmin ? '/admin' : '/usuario');
         }
@@ -1407,56 +1420,61 @@ function verDetalleTicket(req, res) {
         const campoLeido = esAdmin ? 'leido_admin' : 'leido_usuario';
         db.run(`UPDATE ticket_comentarios SET ${campoLeido} = 1 WHERE ticket_id = ?`, [ticketId], () => {});
 
-        db.all('SELECT * FROM historial_tickets WHERE ticket_id = ? ORDER BY fecha ASC', [ticketId], (errH, historial) => {
-            historial = historial || [];
+        const mensajeFlash = (req.session && req.session.mensajeFlash) ? req.session.mensajeFlash : null;
+        const errorFlash = (req.session && req.session.errorFlash) ? req.session.errorFlash : null;
+        if (req.session) {
+            delete req.session.mensajeFlash;
+            delete req.session.errorFlash;
+        }
 
-            db.all('SELECT * FROM ticket_comentarios WHERE ticket_id = ? ORDER BY fecha ASC, id ASC', [ticketId], (errC, comentarios) => {
-                comentarios = comentarios || [];
+        // Consultas en paralelo simultáneas con Promise.all
+        const [
+            historial,
+            comentarios,
+            usuariosActivos,
+            categoriasAgrupadas,
+            categoriasResolucion,
+            estatusTicketsList
+        ] = await Promise.all([
+            dbAllAsync('SELECT * FROM historial_tickets WHERE ticket_id = ? ORDER BY fecha ASC', [ticketId]),
+            dbAllAsync('SELECT * FROM ticket_comentarios WHERE ticket_id = ? ORDER BY fecha ASC, id ASC', [ticketId]),
+            dbAllAsync("SELECT id, nombre, email, puesto, rol FROM usuarios WHERE deleted_at IS NULL ORDER BY CASE WHEN rol = 'admin' THEN 0 ELSE 1 END, nombre ASC", []),
+            obtenerCategoriasConSubcategoriasAsync(),
+            dbAllAsync('SELECT * FROM categorias_resolucion WHERE activo = 1 ORDER BY id ASC', []),
+            dbAllAsync('SELECT * FROM estatus_tickets WHERE activo = 1 ORDER BY orden ASC, id ASC', [])
+        ]);
 
-                db.all("SELECT id, nombre, email, puesto, rol FROM usuarios WHERE deleted_at IS NULL ORDER BY CASE WHEN rol = 'admin' THEN 0 ELSE 1 END, nombre ASC", [], (errUsers, usuariosActivos) => {
-                    usuariosActivos = usuariosActivos || [];
-                    const especialistasTI = usuariosActivos.filter(u => u.rol === 'admin');
+        const listaUsuarios = usuariosActivos || [];
+        const especialistasTI = listaUsuarios.filter(u => u.rol === 'admin');
 
-                    const mensajeFlash = (req.session && req.session.mensajeFlash) ? req.session.mensajeFlash : null;
-                    const errorFlash = (req.session && req.session.errorFlash) ? req.session.errorFlash : null;
-                    if (req.session) {
-                        delete req.session.mensajeFlash;
-                        delete req.session.errorFlash;
-                    }
-
-                    obtenerCategoriasConSubcategorias((categoriasAgrupadas) => {
-                        db.all('SELECT * FROM categorias_resolucion WHERE activo = 1 ORDER BY id ASC', [], (errCR, categoriasResolucion) => {
-                            db.all('SELECT * FROM estatus_tickets WHERE activo = 1 ORDER BY orden ASC, id ASC', [], (errET, estatusTicketsList) => {
-                                res.render('admin-ticket-detalle', {
-                                usuarioActual: usuarioActual,
-                                usuarioActualNombre: usuarioActual.nombre,
-                                adminNombre: esAdmin ? usuarioActual.nombre : null,
-                                esAdmin: esAdmin,
-                                ticket: ticket,
-                                historial: historial,
-                                comentarios: comentarios,
-                                especialistasTI: especialistasTI,
-                                usuariosActivos: usuariosActivos,
-                                categorias: categoriasAgrupadas,
-                                categoriasResolucion: categoriasResolucion || [],
-                                                                    estatusTicketsList: estatusTicketsList || [],
-                                estatusTicketsList: estatusTicketsList || [],
-                                mensaje: mensajeFlash,
-                                error: errorFlash
-                                });
-                            });
-                        });
-                    });
-                });
-            });
+        res.render('admin-ticket-detalle', {
+            usuarioActual: usuarioActual,
+            usuarioActualNombre: usuarioActual.nombre,
+            adminNombre: esAdmin ? usuarioActual.nombre : null,
+            esAdmin: esAdmin,
+            ticket: ticket,
+            historial: historial || [],
+            comentarios: comentarios || [],
+            especialistasTI: especialistasTI,
+            usuariosActivos: listaUsuarios,
+            categorias: categoriasAgrupadas || [],
+            categoriasResolucion: categoriasResolucion || [],
+            estatusTicketsList: estatusTicketsList || [],
+            mensaje: mensajeFlash,
+            error: errorFlash
         });
-    });
+    } catch (err) {
+        console.error('Error al cargar detalle de ticket:', err);
+        req.session.errorFlash = 'Ocurrió un error al cargar la información del ticket.';
+        return res.redirect(esAdmin ? '/admin' : '/usuario');
+    }
 }
 
 app.get('/tickets/:id', verDetalleTicket);
 app.get('/admin/tickets/:id', verDetalleTicket);
 
-function obtenerDatosAdmin(req, res, mensaje = null, error = null) {
+// Panel de Administración centralizado - OPTIMIZADO CON CONSULTAS EN PARALELO SIMULTÁNEAS
+async function obtenerDatosAdmin(req, res, mensaje = null, error = null) {
     const filtroEstatus = req.query.estatus || 'Todos';
     const mensajeFinal = mensaje || (req.session && req.session.mensajeFlash ? req.session.mensajeFlash : null);
     const errorFinal = error || (req.session && req.session.errorFlash ? req.session.errorFlash : null);
@@ -1479,111 +1497,116 @@ function obtenerDatosAdmin(req, res, mensaje = null, error = null) {
         queryTickets += ' AND tickets.estatus = ?';
         params.push(filtroEstatus);
     }
-
     queryTickets += ' ORDER BY tickets.fecha DESC';
 
-    db.all(queryTickets, params, (err, tickets) => {
-        tickets = tickets || [];
+    try {
+        // Lanzar TODAS las 14 consultas simultáneamente en paralelo
+        const [
+            tickets,
+            historial,
+            conteosCom,
+            usuarios,
+            usuariosEliminados,
+            ticketsEliminados,
+            categorias,
+            configCorreo,
+            plantillasCorreo,
+            equipos,
+            guias,
+            ticketsProgramados,
+            recordatorios,
+            categoriasResolucion,
+            estatusTicketsList
+        ] = await Promise.all([
+            dbAllAsync(queryTickets, params),
+            dbAllAsync('SELECT * FROM historial_tickets ORDER BY fecha ASC', []),
+            dbAllAsync(`
+                SELECT ticket_id, 
+                       COUNT(*) AS total_comentarios,
+                       SUM(CASE WHEN leido_admin = 0 AND autor_rol != 'admin' THEN 1 ELSE 0 END) AS no_leidos_admin
+                FROM ticket_comentarios
+                GROUP BY ticket_id
+            `, []),
+            dbAllAsync('SELECT id, nombre, email, puesto, password_plana, rol FROM usuarios WHERE deleted_at IS NULL ORDER BY nombre ASC', []),
+            dbAllAsync('SELECT id, nombre, email, puesto, rol, deleted_at FROM usuarios WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC', []),
+            dbAllAsync(`
+                SELECT tickets.*, COALESCE(usuarios.nombre, tickets.creado_por_admin, 'Usuario') AS usuario_nombre, usuarios.email AS usuario_email, usuarios.puesto AS usuario_puesto 
+                FROM tickets 
+                LEFT JOIN usuarios ON tickets.usuario_id = usuarios.id
+                WHERE tickets.deleted_at IS NOT NULL
+                ORDER BY tickets.deleted_at DESC
+            `, []),
+            obtenerCategoriasConSubcategoriasAsync(),
+            dbGetAsync('SELECT * FROM config_correo WHERE id = 1', []),
+            dbAllAsync('SELECT * FROM plantillas_correo ORDER BY id ASC', []),
+            dbAllAsync(`
+                SELECT equipos_usuario.*, usuarios.nombre AS usuario_nombre, usuarios.email AS usuario_email, usuarios.puesto AS usuario_puesto
+                FROM equipos_usuario
+                JOIN usuarios ON equipos_usuario.usuario_id = usuarios.id
+                WHERE usuarios.deleted_at IS NULL
+                ORDER BY usuarios.nombre ASC, equipos_usuario.tipo ASC, equipos_usuario.id DESC
+            `, []),
+            dbAllAsync('SELECT * FROM guias_rapidas ORDER BY destacada DESC, id DESC', []),
+            dbAllAsync(`
+                SELECT tickets.*, COALESCE(usuarios.nombre, tickets.creado_por_admin, 'Usuario') AS usuario_nombre, usuarios.email AS usuario_email, usuarios.puesto AS usuario_puesto
+                FROM tickets
+                LEFT JOIN usuarios ON tickets.usuario_id = usuarios.id
+                WHERE tickets.deleted_at IS NULL AND tickets.estatus = 'Pendiente por cliente' AND tickets.fecha_programada_cliente IS NOT NULL
+                ORDER BY tickets.fecha_programada_cliente ASC
+            `, []),
+            dbAllAsync(`
+                SELECT * FROM recordatorios
+                WHERE deleted_at IS NULL AND completado = 0
+                ORDER BY fecha_programada ASC
+            `, []),
+            dbAllAsync('SELECT * FROM categorias_resolucion WHERE activo = 1 ORDER BY id ASC', []),
+            dbAllAsync('SELECT * FROM estatus_tickets WHERE activo = 1 ORDER BY orden ASC, id ASC', [])
+        ]);
 
-        db.all('SELECT * FROM historial_tickets ORDER BY fecha ASC', [], (err, historial) => {
-            historial = historial || [];
-
-            db.all(
-                `SELECT ticket_id, 
-                        COUNT(*) AS total_comentarios,
-                        SUM(CASE WHEN leido_admin = 0 AND autor_rol != 'admin' THEN 1 ELSE 0 END) AS no_leidos_admin
-                 FROM ticket_comentarios
-                 GROUP BY ticket_id`,
-                [],
-                (errCom, conteosCom) => {
-                    const mapaCom = {};
-                    (conteosCom || []).forEach(c => {
-                        mapaCom[c.ticket_id] = {
-                            total: c.total_comentarios || 0,
-                            noLeidos: c.no_leidos_admin || 0
-                        };
-                    });
-
-                    const ticketsConHistorial = tickets.map(t => {
-                        t.historial = historial.filter(h => h.ticket_id === t.id);
-                        t.total_comentarios = mapaCom[t.id] ? mapaCom[t.id].total : 0;
-                        t.no_leidos_admin = mapaCom[t.id] ? mapaCom[t.id].noLeidos : 0;
-                        return t;
-                    });
-
-                    db.all('SELECT id, nombre, email, puesto, password_plana, rol FROM usuarios WHERE deleted_at IS NULL ORDER BY nombre ASC', [], (err, usuarios) => {
-                        db.all('SELECT id, nombre, email, puesto, rol, deleted_at FROM usuarios WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC', [], (err, usuariosEliminados) => {
-                            db.all(`
-                                SELECT tickets.*, COALESCE(usuarios.nombre, tickets.creado_por_admin, 'Usuario') AS usuario_nombre, usuarios.email AS usuario_email, usuarios.puesto AS usuario_puesto 
-                                FROM tickets 
-                                LEFT JOIN usuarios ON tickets.usuario_id = usuarios.id
-                                WHERE tickets.deleted_at IS NOT NULL
-                                ORDER BY tickets.deleted_at DESC
-                            `, [], (errTE, ticketsEliminados) => {
-                                obtenerCategoriasConSubcategorias((categorias) => {
-                                    db.get('SELECT * FROM config_correo WHERE id = 1', [], (errConf, configCorreo) => {
-                                        db.all('SELECT * FROM plantillas_correo ORDER BY id ASC', [], (errPlan, plantillasCorreo) => {
-                                            db.all(`
-                                                SELECT equipos_usuario.*, usuarios.nombre AS usuario_nombre, usuarios.email AS usuario_email, usuarios.puesto AS usuario_puesto
-                                                FROM equipos_usuario
-                                                JOIN usuarios ON equipos_usuario.usuario_id = usuarios.id
-                                                WHERE usuarios.deleted_at IS NULL
-                                                ORDER BY usuarios.nombre ASC, equipos_usuario.tipo ASC, equipos_usuario.id DESC
-                                            `, [], (errEq, equipos) => {
-                                                db.all('SELECT * FROM guias_rapidas ORDER BY destacada DESC, id DESC', [], (errGuias, guias) => {
-                                                    db.all(`
-                                                        SELECT tickets.*, COALESCE(usuarios.nombre, tickets.creado_por_admin, 'Usuario') AS usuario_nombre, usuarios.email AS usuario_email, usuarios.puesto AS usuario_puesto
-                                                        FROM tickets
-                                                        LEFT JOIN usuarios ON tickets.usuario_id = usuarios.id
-                                                        WHERE tickets.deleted_at IS NULL AND tickets.estatus = 'Pendiente por cliente' AND tickets.fecha_programada_cliente IS NOT NULL
-                                                        ORDER BY tickets.fecha_programada_cliente ASC
-                                                    `, [], (errProg, ticketsProgramados) => {
-                                                        db.all(`
-                                                            SELECT * FROM recordatorios
-                                                            WHERE deleted_at IS NULL AND completado = 0
-                                                            ORDER BY fecha_programada ASC
-                                                        `, [], (errRec, recordatorios) => {
-                                                            db.all('SELECT * FROM categorias_resolucion WHERE activo = 1 ORDER BY id ASC', [], (errCR, categoriasResolucion) => {
-                                                                db.all('SELECT * FROM estatus_tickets WHERE activo = 1 ORDER BY orden ASC, id ASC', [], (errET, estatusTicketsList) => {
-                                                                    res.render('admin-dashboard', {
-                                                                    adminNombre: req.session.usuario.nombre,
-                                                                    adminPuesto: req.session.usuario.puesto || 'Especialista TI',
-                                                                    adminId: req.session.usuario.id,
-                                                                    adminEmail: req.session.usuario.email,
-                                                                    usuarios: usuarios || [],
-                                                                    usuariosEliminados: usuariosEliminados || [],
-                                                                    ticketsEliminados: ticketsEliminados || [],
-                                                                    tickets: ticketsConHistorial,
-                                                                    ticketsProgramados: ticketsProgramados || [],
-                                                                    recordatorios: recordatorios || [],
-                                                                    categorias: categorias || [],
-                                                                    categoriasResolucion: categoriasResolucion || [],
-                                                                    estatusTicketsList: estatusTicketsList || [],
-                                                                equipos: equipos || [],
-                                                                guias: guias || [],
-                                                                configCorreo: configCorreo || {},
-                                                                plantillasCorreo: plantillasCorreo || [],
-                                                                discordInfo: discordBot.obtenerEstadoBot(),
-                                                                filtroActual: filtroEstatus,
-                                                                mensaje: mensajeFinal,
-                                                                error: errorFinal
-                                                            });
-                                                        });
-                                                    });
-                                                    });
-                                                });
-                                                });
-                                            });
-                                        });
-                                    });
-                                });
-                            });
-                        });
-                    });
-                }
-            );
+        // Mapear comentarios en memoria (instantáneo en milisegundos)
+        const mapaCom = {};
+        (conteosCom || []).forEach(c => {
+            mapaCom[c.ticket_id] = {
+                total: c.total_comentarios || 0,
+                noLeidos: c.no_leidos_admin || 0
+            };
         });
-    });
+
+        const listaHistorial = historial || [];
+        const ticketsConHistorial = (tickets || []).map(t => {
+            t.historial = listaHistorial.filter(h => h.ticket_id === t.id);
+            t.total_comentarios = mapaCom[t.id] ? mapaCom[t.id].total : 0;
+            t.no_leidos_admin = mapaCom[t.id] ? mapaCom[t.id].noLeidos : 0;
+            return t;
+        });
+
+        res.render('admin-dashboard', {
+            adminNombre: req.session.usuario.nombre,
+            adminPuesto: req.session.usuario.puesto || 'Especialista TI',
+            adminId: req.session.usuario.id,
+            adminEmail: req.session.usuario.email,
+            usuarios: usuarios || [],
+            usuariosEliminados: usuariosEliminados || [],
+            ticketsEliminados: ticketsEliminados || [],
+            tickets: ticketsConHistorial,
+            ticketsProgramados: ticketsProgramados || [],
+            recordatorios: recordatorios || [],
+            categorias: categorias || [],
+            categoriasResolucion: categoriasResolucion || [],
+            estatusTicketsList: estatusTicketsList || [],
+            equipos: equipos || [],
+            guias: guias || [],
+            configCorreo: configCorreo || {},
+            plantillasCorreo: plantillasCorreo || [],
+            discordInfo: discordBot.obtenerEstadoBot(),
+            filtroActual: filtroEstatus,
+            mensaje: mensajeFinal,
+            error: errorFinal
+        });
+    } catch (err) {
+        console.error('Error al obtener datos del panel de administración:', err);
+        res.status(500).send('Error al cargar el panel de administración. Por favor intenta nuevamente.');
+    }
 }
 
 // Crear usuario
