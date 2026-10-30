@@ -192,13 +192,77 @@ const upload = multer({
     }
 });
 
+// Almacén persistente de sesiones en Turso Cloud SQLite (evita cierres de sesión al reiniciar el servidor en Render)
+class TursoSessionStore extends session.Store {
+    constructor() {
+        super();
+        this.cleanupInterval = setInterval(() => this.cleanup(), 15 * 60 * 1000);
+        if (this.cleanupInterval.unref) this.cleanupInterval.unref();
+    }
+    get(sid, callback) {
+        db.get('SELECT sess, expired FROM sesiones WHERE sid = ?', [sid], (err, row) => {
+            if (err) return callback(err);
+            if (!row) return callback(null, null);
+            if (row.expired && Date.now() > row.expired) {
+                this.destroy(sid, () => {});
+                return callback(null, null);
+            }
+            try {
+                const sess = JSON.parse(row.sess);
+                callback(null, sess);
+            } catch (e) {
+                callback(e);
+            }
+        });
+    }
+    set(sid, sess, callback) {
+        try {
+            const maxAge = sess.cookie && sess.cookie.maxAge ? sess.cookie.maxAge : 365 * 24 * 60 * 60 * 1000;
+            const expired = Date.now() + maxAge;
+            const sessStr = JSON.stringify(sess);
+            db.run(
+                'INSERT INTO sesiones (sid, sess, expired) VALUES (?, ?, ?) ON CONFLICT(sid) DO UPDATE SET sess = excluded.sess, expired = excluded.expired',
+                [sid, sessStr, expired],
+                function(err) {
+                    if (callback) callback(err);
+                }
+            );
+        } catch (e) {
+            if (callback) callback(e);
+        }
+    }
+    destroy(sid, callback) {
+        db.run('DELETE FROM sesiones WHERE sid = ?', [sid], function(err) {
+            if (callback) callback(err);
+        });
+    }
+    touch(sid, sess, callback) {
+        try {
+            const maxAge = sess.cookie && sess.cookie.maxAge ? sess.cookie.maxAge : 365 * 24 * 60 * 60 * 1000;
+            const expired = Date.now() + maxAge;
+            db.run('UPDATE sesiones SET expired = ? WHERE sid = ?', [expired, sid], function(err) {
+                if (callback) callback(err);
+            });
+        } catch (e) {
+            if (callback) callback(e);
+        }
+    }
+    cleanup() {
+        db.run('DELETE FROM sesiones WHERE expired < ?', [Date.now()], () => {});
+    }
+}
+
+const sessionStore = new TursoSessionStore();
+
 app.use(session({
+    store: sessionStore,
     secret: 'clave_secreta_tickets_123',
     resave: false,
     saveUninitialized: false,
     cookie: {
         httpOnly: true,
-        sameSite: 'lax'
+        sameSite: 'lax',
+        maxAge: 365 * 24 * 60 * 60 * 1000 // 1 año por defecto (administrador permanente; usuario estándar protegido por inactividad)
     }
 }));
 

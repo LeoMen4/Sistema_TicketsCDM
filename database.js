@@ -450,6 +450,15 @@ db.serialize(() => {
     `);
     db.run(`INSERT OR IGNORE INTO configuraciones (clave, valor) VALUES ('tolerancia_alerta_pct', '25')`);
 
+    // Tabla para persistencia de sesiones de usuario en la base de datos (evita cierres de sesion al reiniciar el servidor)
+    db.run(`
+        CREATE TABLE IF NOT EXISTS sesiones (
+            sid TEXT PRIMARY KEY,
+            sess TEXT NOT NULL,
+            expired INTEGER NOT NULL
+        )
+    `);
+
     // Tabla para Equipos de Cómputo y Periféricos asignados a cada usuario
     db.run(`
         CREATE TABLE IF NOT EXISTS equipos_usuario (
