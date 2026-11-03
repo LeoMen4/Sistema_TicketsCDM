@@ -84,6 +84,17 @@ app.get(['/img/logo-cdm.png', '/img/logo-cdm.jpg'], (req, res) => {
         }
     } catch (e) {}
 
+    // Ruta directa y garantizada para favicon.ico
+    app.get('/favicon.ico', (req, res) => {
+        const icoPath = path.join(publicDir, 'favicon.ico');
+        if (fs.existsSync(icoPath)) {
+            res.setHeader('Content-Type', 'image/x-icon');
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+            return res.sendFile(icoPath);
+        }
+        return res.status(204).end();
+    });
+
     // Respaldo vectorial SVG idéntico al logo de CDM en caso de no encontrar el archivo físico
     res.setHeader('Content-Type', 'image/svg+xml');
     return res.send(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 100">
