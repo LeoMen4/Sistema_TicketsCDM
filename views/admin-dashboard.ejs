@@ -7067,17 +7067,26 @@
 
                 const horaStr = dCita.toLocaleTimeString('es-MX', { timeZone: 'America/Mexico_City', hour: '2-digit', minute: '2-digit' });
 
-                // Evaluación dinámica según los intervalos configurados por el administrador
+                // Evaluación dinámica según los intervalos configurados por el administrador (tiempos exactos)
                 listaIntervalosAlertasGlobal.forEach(interv => {
                     let minutosObjetivo = interv.valor;
                     if (interv.unidad === 'horas') minutosObjetivo = interv.valor * 60;
                     if (interv.unidad === 'dias') minutosObjetivo = interv.valor * 1440;
 
-                    // Ventana de disparo: cuando falte entre minutosObjetivo y minutosObjetivo + margen de tolerancia
-                    const margen = Math.max(10, Math.floor(minutosObjetivo * 0.15));
+                    const msObjetivo = minutosObjetivo * 60000;
+                    // Ventana de captura hacia atrás: mínimo 2 minutos para que el ciclo de sondeo de 15s la capture.
+                    // Se asegura que diffMs <= msObjetivo, es decir, NUNCA alertará antes del tiempo exacto programado.
+                    const ventanaMs = Math.max(120000, msObjetivo * 0.20);
                     const keyAlerta = 'notif_cita_dyn_' + interv.id + '_' + tp.id + '_' + tp.fecha_programada_cliente;
 
-                    if (diffMinutes > 0 && diffMinutes <= (minutosObjetivo + margen) && diffMinutes >= (minutosObjetivo - 5)) {
+                    let cumpleVentana = false;
+                    if (msObjetivo === 0) {
+                        cumpleVentana = (diffMs <= 0 && diffMs >= -120000);
+                    } else {
+                        cumpleVentana = (diffMs > 0 && diffMs <= msObjetivo && diffMs >= (msObjetivo - ventanaMs));
+                    }
+
+                    if (cumpleVentana) {
                         if (!localStorage.getItem(keyAlerta)) {
                             localStorage.setItem(keyAlerta, '1');
                             dispararNotificacionEscritorioAdmin(
@@ -7098,7 +7107,7 @@
                 });
             });
 
-            // 2. Revisar y disparar alertas de escritorio para Recordatorios Personalizados
+            // 2. Revisar y disparar alertas de escritorio para Recordatorios Personalizados (tiempos exactos)
             recordatorios.forEach(rec => {
                 if (!rec.fecha_programada) return;
                 const dRec = new Date(String(rec.fecha_programada).includes('T') ? rec.fecha_programada : String(rec.fecha_programada).replace(' ', 'T'));
@@ -7113,10 +7122,18 @@
                     if (interv.unidad === 'horas') minutosObjetivo = interv.valor * 60;
                     if (interv.unidad === 'dias') minutosObjetivo = interv.valor * 1440;
 
-                    const margen = Math.max(10, Math.floor(minutosObjetivo * 0.15));
+                    const msObjetivo = minutosObjetivo * 60000;
+                    const ventanaMs = Math.max(120000, msObjetivo * 0.20);
                     const keyAlerta = 'notif_rec_dyn_' + interv.id + '_' + rec.id + '_' + rec.fecha_programada;
 
-                    if (diffMinutes > 0 && diffMinutes <= (minutosObjetivo + margen) && diffMinutes >= (minutosObjetivo - 5)) {
+                    let cumpleVentana = false;
+                    if (msObjetivo === 0) {
+                        cumpleVentana = (diffMs <= 0 && diffMs >= -120000);
+                    } else {
+                        cumpleVentana = (diffMs > 0 && diffMs <= msObjetivo && diffMs >= (msObjetivo - ventanaMs));
+                    }
+
+                    if (cumpleVentana) {
                         if (!localStorage.getItem(keyAlerta)) {
                             localStorage.setItem(keyAlerta, '1');
                             dispararNotificacionEscritorioAdmin(
