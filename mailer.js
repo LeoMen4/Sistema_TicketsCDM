@@ -345,68 +345,103 @@ function notificarCambioEstatusUsuario(ticketId, nuevoEstatus, datosResolucion =
         `;
 
         db.get(queryTicket, [ticketId], (errTick, ticket) => {
-            if (errTick || !ticket || !ticket.usuario_email) {
-                console.log('[Correo] No se encontró el ticket o el usuario no tiene correo registrado.');
+            if (errTick || !ticket) {
+                console.log('[Correo] No se encontró el ticket.');
                 return;
             }
 
-            // Seleccionar clave de plantilla según el estatus
-            let clavePlantilla = 'estatus_en_proceso';
-            if (nuevoEstatus === 'En proceso') {
-                clavePlantilla = 'estatus_en_proceso';
-            } else if (nuevoEstatus === 'Pendiente') {
-                clavePlantilla = 'estatus_pendiente';
-            } else if (nuevoEstatus === 'Resuelto') {
-                clavePlantilla = 'estatus_resuelto';
-            }
+            // Consultar a todos los administradores activos para incluirlos en copia (CC)
+            db.all("SELECT email, nombre FROM usuarios WHERE rol = 'admin' AND deleted_at IS NULL", [], (errAdmins, admins) => {
+                const esRelayInterno = (!config.password_remitente || !config.password_remitente.trim()) && (config.smtp_host || '').includes('grupo-cdm');
+                const emailsAdmins = (admins || [])
+                    .map(a => (a.email || '').trim().toLowerCase())
+                    .filter(e => {
+                        if (!e) return false;
+                        if (esRelayInterno) return e.endsWith('@grupo-cdm.mx') || e.endsWith('@grupocdm.mx');
+                        return true;
+                    });
 
-            db.get('SELECT * FROM plantillas_correo WHERE clave = ?', [clavePlantilla], (errPl, plantilla) => {
-                if (!plantilla) {
-                    plantilla = {
-                        asunto: `[Ticket #{id}] Actualización de estatus: ${nuevoEstatus}`,
-                        cuerpo: `Hola {usuario},\n\nTu ticket #{id} ("{titulo}") ha cambiado de estatus a: ${nuevoEstatus}.`
-                    };
+                const destinatarioUsuario = (ticket.usuario_email && ticket.usuario_email.trim()) ? ticket.usuario_email.trim() : null;
+                const emailUsuarioLower = destinatarioUsuario ? destinatarioUsuario.toLowerCase() : '';
+
+                // Lista CC con todos los administradores (sin duplicar el correo del solicitante)
+                const listaCcAdmins = Array.from(new Set(emailsAdmins)).filter(e => e !== emailUsuarioLower);
+
+                // Destinatario principal: el usuario solicitante, o el primer admin si el ticket no tiene correo de usuario
+                const destinatarioPrincipal = destinatarioUsuario || (listaCcAdmins.length > 0 ? listaCcAdmins[0] : null);
+                if (!destinatarioPrincipal) {
+                    console.log('[Correo] No se encontró destinatario ni administradores para enviar cambio de estatus.');
+                    return;
                 }
 
-                const fechaFormateada = new Date().toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
+                // Seleccionar clave de plantilla según el estatus
+                let clavePlantilla = 'estatus_en_proceso';
+                if (nuevoEstatus === 'En proceso') {
+                    clavePlantilla = 'estatus_en_proceso';
+                } else if (nuevoEstatus === 'Pendiente') {
+                    clavePlantilla = 'estatus_pendiente';
+                } else if (nuevoEstatus === 'Pendiente por cliente') {
+                    clavePlantilla = 'estatus_pendiente_cliente';
+                } else if (nuevoEstatus === 'Resuelto') {
+                    clavePlantilla = 'estatus_resuelto';
+                }
 
-                const variables = {
-                    id: ticket.id,
-                    titulo: ticket.titulo || '',
-                    usuario: ticket.usuario_nombre || 'Usuario',
-                    email_usuario: ticket.usuario_email || '',
-                    tipo_falla: ticket.tipo_falla || 'General',
-                    subcategoria: ticket.subcategoria || 'Sin subcategoría',
-                    prioridad: ticket.prioridad || 'Media',
-                    estatus: nuevoEstatus,
-                    fecha: fechaFormateada,
-                    tecnico: datosResolucion.tecnico_resolvio || ticket.tecnico_resolvio || 'Personal técnico de sistemas',
-                    categoria_resolucion: datosResolucion.categoria_resolucion || ticket.categoria_resolucion || 'N/A',
-                    comentario_resolucion: datosResolucion.comentario_resolucion || ticket.comentario_resolucion || 'Sin comentarios adicionales',
-                    equipo_nuevo: datosResolucion.tipo_equipo_nuevo || ticket.tipo_equipo_nuevo || 'N/A',
-                    modelo_nuevo: datosResolucion.modelo_nuevo || ticket.modelo_nuevo || 'N/A',
-                    numero_serie_nuevo: datosResolucion.numero_serie_nuevo || ticket.numero_serie_nuevo || 'N/A'
-                };
-
-                const asuntoFinal = reemplazarVariables(plantilla.asunto, variables);
-                const cuerpoTextoFinal = reemplazarVariables(plantilla.cuerpo, variables);
-                const cuerpoHtmlFinal = generarHtml(asuntoFinal, cuerpoTextoFinal, variables, remitente);
-
-                const mailOptions = {
-                    from: `"${remitente.nombre}" <${remitente.email}>`,
-                    replyTo: remitente.email,
-                    to: ticket.usuario_email,
-                    subject: asuntoFinal,
-                    text: cuerpoTextoFinal,
-                    html: cuerpoHtmlFinal
-                };
-
-                transporter.sendMail(mailOptions, (error, info) => {
-                    if (error) {
-                        console.error(`[Correo] Error al enviar correo de cambio de estatus a ${ticket.usuario_email}:`, error.message);
-                    } else {
-                        console.log(`[Correo] Notificación enviada con éxito desde ${remitente.email} a ${ticket.usuario_email}:`, info.messageId);
+                db.get('SELECT * FROM plantillas_correo WHERE clave = ?', [clavePlantilla], (errPl, plantilla) => {
+                    if (!plantilla) {
+                        plantilla = {
+                            asunto: `[Ticket #{id}] Actualización de estatus: ${nuevoEstatus} - {titulo}`,
+                            cuerpo: `Hola {usuario},\n\nTu ticket #{id} ("{titulo}") ha cambiado de estatus a: ${nuevoEstatus}.`
+                        };
                     }
+
+                    const fechaFormateada = new Date().toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
+
+                    const variables = {
+                        id: ticket.id,
+                        titulo: ticket.titulo || '',
+                        usuario: ticket.usuario_nombre || 'Usuario',
+                        email_usuario: ticket.usuario_email || '',
+                        tipo_falla: ticket.tipo_falla || 'General',
+                        subcategoria: ticket.subcategoria || 'Sin subcategoría',
+                        prioridad: ticket.prioridad || 'Media',
+                        estatus: nuevoEstatus,
+                        fecha: fechaFormateada,
+                        tecnico: datosResolucion.tecnico_resolvio || ticket.tecnico_resolvio || 'Personal técnico de sistemas',
+                        categoria_resolucion: datosResolucion.categoria_resolucion || ticket.categoria_resolucion || 'N/A',
+                        comentario_resolucion: datosResolucion.comentario_resolucion || ticket.comentario_resolucion || 'Sin comentarios adicionales',
+                        equipo_nuevo: datosResolucion.tipo_equipo_nuevo || ticket.tipo_equipo_nuevo || 'N/A',
+                        modelo_nuevo: datosResolucion.modelo_nuevo || ticket.modelo_nuevo || 'N/A',
+                        numero_serie_nuevo: datosResolucion.numero_serie_nuevo || ticket.numero_serie_nuevo || 'N/A',
+                        motivo_pendiente_cliente: datosResolucion.motivo_pendiente_cliente || ticket.motivo_pendiente_cliente || '',
+                        fecha_programada_cliente: datosResolucion.fecha_programada_cliente || ticket.fecha_programada_cliente || ''
+                    };
+
+                    const asuntoFinal = reemplazarVariables(plantilla.asunto, variables);
+                    const cuerpoTextoFinal = reemplazarVariables(plantilla.cuerpo, variables);
+                    const cuerpoHtmlFinal = generarHtml(asuntoFinal, cuerpoTextoFinal, variables, remitente);
+
+                    // Lista final en CC (si el destinatario principal fue el usuario, los admins van en CC)
+                    const ccFinal = (destinatarioPrincipal === destinatarioUsuario && listaCcAdmins.length > 0)
+                        ? listaCcAdmins
+                        : (listaCcAdmins.slice(1).length > 0 ? listaCcAdmins.slice(1) : undefined);
+
+                    const mailOptions = {
+                        from: `"${remitente.nombre}" <${remitente.email}>`,
+                        replyTo: remitente.email,
+                        to: destinatarioPrincipal,
+                        cc: ccFinal,
+                        subject: asuntoFinal,
+                        text: cuerpoTextoFinal,
+                        html: cuerpoHtmlFinal
+                    };
+
+                    transporter.sendMail(mailOptions, (error, info) => {
+                        if (error) {
+                            console.error(`[Correo] Error al enviar correo de cambio de estatus a ${destinatarioPrincipal} (CC: ${listaCcAdmins.join(', ')}):`, error.message);
+                        } else {
+                            console.log(`[Correo] Notificación de cambio de estatus enviada a ${destinatarioPrincipal} con copia a [${listaCcAdmins.join(', ')}]:`, info.messageId);
+                        }
+                    });
                 });
             });
         });
