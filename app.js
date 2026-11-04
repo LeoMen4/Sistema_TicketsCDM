@@ -574,6 +574,7 @@ app.post('/tickets/crear', esUsuario, upload.single('imagen'), (req, res) => {
                                 subcategoria: subcatFinal,
                                 prioridad: prioFinal,
                                 descripcion: descFinal,
+                                imagen: imagenNombre,
                                 estatus: 'Nuevo ticket',
                                 usuario_nombre: req.session.usuario.nombre,
                                 usuario_email: req.session.usuario.email
@@ -588,6 +589,7 @@ app.post('/tickets/crear', esUsuario, upload.single('imagen'), (req, res) => {
                                     subcategoria: subcatFinal,
                                     prioridad: prioFinal,
                                     descripcion: descFinal,
+                                    imagen: imagenNombre,
                                     estatus: 'Nuevo ticket',
                                     fecha: new Date().toISOString(),
                                     usuario_id: usuarioId,
@@ -1915,6 +1917,11 @@ app.post('/admin/tickets/crear', esAdmin, upload.single('imagen'), (req, res) =>
     const imagenNombre = req.file ? req.file.filename : null;
     const adminNombre = (req.session && req.session.usuario && req.session.usuario.nombre) ? req.session.usuario.nombre : 'Administrador';
 
+    // Persistir imagen inmediatamente en Turso Cloud permanente
+    if (req.file) {
+        persistirArchivoEnBD(req.file.filename, req.file.path, req.file.mimetype);
+    }
+
     if (!usuario_id || !titulo || !tipo_falla || !descripcion) {
         req.session.errorFlash = 'Todos los campos obligatorios deben ser completados para levantar el ticket.';
         return res.redirect('/admin');
@@ -1972,6 +1979,7 @@ app.post('/admin/tickets/crear', esAdmin, upload.single('imagen'), (req, res) =>
                                     subcategoria: subcatFinal,
                                     prioridad: prioFinal,
                                     descripcion: descFinal,
+                                    imagen: imagenNombre,
                                     estatus: 'Nuevo ticket',
                                     usuario_nombre: usuarioDestino.nombre,
                                     usuario_email: usuarioDestino.email,
@@ -1988,6 +1996,7 @@ app.post('/admin/tickets/crear', esAdmin, upload.single('imagen'), (req, res) =>
                                         subcategoria: subcatFinal,
                                         prioridad: prioFinal,
                                         descripcion: descFinal,
+                                        imagen: imagenNombre,
                                         estatus: 'Nuevo ticket',
                                         fecha: new Date().toISOString(),
                                         usuario_id: usuarioDestino.id,
@@ -2709,6 +2718,9 @@ app.post('/api/tickets/:id/comentarios', upload.single('imagen'), (req, res) => 
         ? req.body.autor_nombre_custom.trim()
         : usuarioActual.nombre;
     const imagenNombre = req.file ? req.file.filename : null;
+    if (req.file) {
+        persistirArchivoEnBD(req.file.filename, req.file.path, req.file.mimetype);
+    }
 
     if (!mensajeTexto && !imagenNombre) {
         if (req.xhr || (req.headers.accept && req.headers.accept.includes('json'))) {
@@ -3034,6 +3046,9 @@ app.get('/api/usuario/notificaciones-live', esUsuario, (req, res) => {
 app.post('/admin/guias/crear', esAdmin, upload.single('imagen'), (req, res) => {
     const { titulo, categoria, resumen, contenido, pasos, visibilidad, visible_para, destacada } = req.body;
     const imagenNombre = req.file ? req.file.filename : null;
+    if (req.file) {
+        persistirArchivoEnBD(req.file.filename, req.file.path, req.file.mimetype);
+    }
     const autorNombre = req.session.usuario.nombre || 'Sistemas TI';
     const contenidoFinal = (contenido !== undefined && contenido !== '') ? contenido : pasos;
 
@@ -3063,6 +3078,9 @@ app.post('/admin/guias/crear', esAdmin, upload.single('imagen'), (req, res) => {
 app.post('/admin/guias/editar', esAdmin, upload.single('imagen'), (req, res) => {
     const { guia_id, titulo, categoria, resumen, contenido, pasos, visibilidad, visible_para, destacada, eliminar_imagen } = req.body;
     const nuevaImagen = req.file ? req.file.filename : null;
+    if (req.file) {
+        persistirArchivoEnBD(req.file.filename, req.file.path, req.file.mimetype);
+    }
     const contenidoFinal = (contenido !== undefined && contenido !== '') ? contenido : pasos;
 
     if (!guia_id || !titulo || !titulo.trim() || !contenidoFinal || !String(contenidoFinal).trim()) {

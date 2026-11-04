@@ -554,6 +554,19 @@ async function obtenerOCrearHiloTicket(ticketId, ticketData = null, usuarioData 
         const archivosAdjuntos = [];
         if (ticket.imagen && uploadsDirectory) {
             const rutaImg = path.join(uploadsDirectory, ticket.imagen);
+            // Si la imagen no está en disco local (ej. nuevo despliegue de contenedor), recuperar desde Turso Cloud
+            if (!fs.existsSync(rutaImg) && dbInstance) {
+                try {
+                    const rowArch = await new Promise(resolve => {
+                        dbInstance.get('SELECT datos FROM archivos_almacenados WHERE nombre = ?', [ticket.imagen], (err, r) => resolve(r));
+                    });
+                    if (rowArch && rowArch.datos) {
+                        fs.writeFileSync(rutaImg, Buffer.from(rowArch.datos, 'base64'));
+                    }
+                } catch (eRecup) {
+                    console.error('[Discord Bot] Error recuperando imagen desde Turso para hilo:', eRecup.message);
+                }
+            }
             if (fs.existsSync(rutaImg)) {
                 archivosAdjuntos.push({ attachment: rutaImg, name: ticket.imagen });
                 embedInicial.setImage(`attachment://${ticket.imagen}`);
@@ -618,6 +631,18 @@ async function enviarMensajeDesdeWeb({ ticketId, autorNombre, autorRol, autorPue
         const archivos = [];
         if (imagenFilename && uploadsDirectory) {
             const ruta = path.join(uploadsDirectory, imagenFilename);
+            if (!fs.existsSync(ruta) && dbInstance) {
+                try {
+                    const rowArch = await new Promise(resolve => {
+                        dbInstance.get('SELECT datos FROM archivos_almacenados WHERE nombre = ?', [imagenFilename], (err, r) => resolve(r));
+                    });
+                    if (rowArch && rowArch.datos) {
+                        fs.writeFileSync(ruta, Buffer.from(rowArch.datos, 'base64'));
+                    }
+                } catch (eRecup) {
+                    console.error('[Discord Bot] Error recuperando adjunto de mensaje desde Turso:', eRecup.message);
+                }
+            }
             if (fs.existsSync(ruta)) {
                 archivos.push({ attachment: ruta, name: imagenFilename });
             }
