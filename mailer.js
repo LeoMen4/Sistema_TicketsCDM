@@ -344,7 +344,7 @@ function asegurarPlantillaEstatusPersonalizado(nombreEstatus, callback) {
 
     const tituloSeccion = `Notificación al Usuario (Estatus: ${limpio})`;
     const destinatarioTipo = 'Usuario solicitante del Ticket y Administradores (CC)';
-    const asunto = `🔄 [Ticket #{id}] Actualización de estatus (${limpio}): {titulo}`;
+    const asunto = `[Ticket #{id}] Actualización de estatus (${limpio}): {titulo}`;
     const cuerpo = `Hola {usuario},\n\nTe informamos que tu ticket #{id} ("{titulo}") ha cambiado al estatus: ${limpio}.\n\n• Número de Ticket: #{id}\n• Estatus actual: {estatus}\n• Tipo de Falla: {tipo_falla}\n• Prioridad: {prioridad}\n• Detalle / Seguimiento: {detalle}\n• Fecha: {fecha}\n\nEl equipo de Sistemas TI continúa dando seguimiento a tu solicitud.`;
 
     db.run(
@@ -480,7 +480,7 @@ function notificarCambioEstatusUsuario(ticketId, nuevoEstatus, datosResolucion =
                         db.get('SELECT * FROM plantillas_correo WHERE clave = ?', [clavePlantilla], (errPl, plantilla) => {
                             if (!plantilla) {
                                 plantilla = {
-                                    asunto: `🔄 [Ticket #{id}] Actualización de estatus (${estatusVisibleCorreo}): {titulo}`,
+                                    asunto: `[Ticket #{id}] Actualización de estatus (${estatusVisibleCorreo}): {titulo}`,
                                     cuerpo: `Hola {usuario},\n\nTe informamos que tu ticket #{id} ("{titulo}") ha cambiado al estatus: ${estatusVisibleCorreo}.\n\n• Número de Ticket: #{id}\n• Estatus actual: {estatus}\n• Tipo de Falla: {tipo_falla}\n• Prioridad: {prioridad}\n• Detalle / Seguimiento: {detalle}\n• Fecha: {fecha}\n\nEl equipo de Sistemas TI continúa dando seguimiento a tu solicitud.`
                                 };
                             }

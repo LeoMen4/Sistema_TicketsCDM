@@ -565,35 +565,42 @@ db.serialize(() => {
             clave: 'ticket_nuevo',
             titulo_seccion: 'Notificación a Administradores (Nuevo Ticket Creado)',
             destinatario_tipo: 'Administradores del Sistema',
-            asunto: '🔔 [Ticket #{id}] Nuevo Ticket Reportado: {titulo}',
+            asunto: '[Ticket #{id}] Nuevo Ticket Reportado: {titulo}',
             cuerpo: `Hola Administrador,\n\nSe ha reportado un nuevo ticket de soporte en la plataforma:\n\n• Número de Ticket: #{id}\n• Solicitante: {usuario} ({email_usuario})\n• Título: {titulo}\n• Tipo de Falla: {tipo_falla}\n• Subcategoría / Dispositivo: {subcategoria}\n• Nivel de Prioridad: {prioridad}\n• Estatus Inicial: {estatus}\n• Fecha de reporte: {fecha}\n\nDescripción:\n{descripcion}\n\nPor favor ingresa al panel de administración para atender esta solicitud.`
         },
         {
             clave: 'estatus_en_proceso',
             titulo_seccion: 'Notificación al Usuario (Estatus: En proceso)',
-            destinatario_tipo: 'Usuario solicitante del Ticket',
-            asunto: '⏳ [Ticket #{id}] Tu ticket ya está en proceso: {titulo}',
+            destinatario_tipo: 'Usuario solicitante del Ticket y Administradores (CC)',
+            asunto: '[Ticket #{id}] Tu ticket ya está en proceso: {titulo}',
             cuerpo: `Hola {usuario},\n\nTe informamos que tu ticket #{id} ("{titulo}") ya se encuentra EN PROCESO de atención.\n\n• Número de Ticket: #{id}\n• Estatus actual: En proceso\n• Tipo de Falla: {tipo_falla}\n• Prioridad: {prioridad}\n• Fecha: {fecha}\n\nEstamos trabajando en resolver tu incidencia. Te mantendremos informado ante cualquier actualización.`
         },
         {
             clave: 'estatus_pendiente',
             titulo_seccion: 'Notificación al Usuario (Estatus: Pendiente)',
-            destinatario_tipo: 'Usuario solicitante del Ticket',
-            asunto: '⚠️ [Ticket #{id}] Tu ticket se encuentra pendiente: {titulo}',
+            destinatario_tipo: 'Usuario solicitante del Ticket y Administradores (CC)',
+            asunto: '[Ticket #{id}] Tu ticket se encuentra pendiente: {titulo}',
             cuerpo: `Hola {usuario},\n\nTu ticket #{id} ("{titulo}") ha sido marcado con estatus PENDIENTE.\n\n• Número de Ticket: #{id}\n• Estatus actual: Pendiente\n• Tipo de Falla: {tipo_falla}\n• Prioridad: {prioridad}\n• Fecha: {fecha}\n\nEl ticket se encuentra en espera de información adicional o partes necesarias para continuar con la atención.`
+        },
+        {
+            clave: 'estatus_pendiente_cliente',
+            titulo_seccion: 'Notificación al Usuario (Estatus: Pendiente por cliente)',
+            destinatario_tipo: 'Usuario solicitante del Ticket y Administradores (CC)',
+            asunto: '[Ticket #{id}] Tu ticket está Pendiente por cliente: {titulo}',
+            cuerpo: `Hola {usuario},\n\nTu ticket #{id} ("{titulo}") se encuentra en estatus PENDIENTE POR CLIENTE.\n\n• Número de Ticket: #{id}\n• Estatus actual: Pendiente por cliente\n• Tipo de Falla: {tipo_falla}\n• Prioridad: {prioridad}\n• Cita / Fecha acordada: {fecha_programada_cliente}\n• Motivo / Detalle: {motivo_pendiente_cliente}\n• Fecha: {fecha}\n\nQuedamos atentos a tu disponibilidad o confirmación para continuar con la atención de tu solicitud.`
         },
         {
             clave: 'estatus_resuelto',
             titulo_seccion: 'Notificación al Usuario (Estatus: Resuelto)',
-            destinatario_tipo: 'Usuario solicitante del Ticket',
-            asunto: '✅ [Ticket #{id}] ¡Tu ticket ha sido resuelto!: {titulo}',
+            destinatario_tipo: 'Usuario solicitante del Ticket y Administradores (CC)',
+            asunto: '[Ticket #{id}] ¡Tu ticket ha sido resuelto!: {titulo}',
             cuerpo: `Hola {usuario},\n\nNos complace informarte que tu ticket #{id} ("{titulo}") ha sido RESUELTO exitosamente.\n\n• Número de Ticket: #{id}\n• Estatus final: Resuelto\n• Técnico que atendió: {tecnico}\n• Tipo de resolución: {categoria_resolucion}\n• Comentario de resolución: {comentario_resolucion}\n• Fecha: {fecha}\n\nSi todo está operando adecuadamente, no necesitas realizar ninguna acción. ¡Gracias!`
         },
         {
             clave: 'ticket_creado_usuario',
             titulo_seccion: 'Confirmación al Usuario (Ticket Registrado)',
             destinatario_tipo: 'Usuario solicitante del Ticket',
-            asunto: '📋 [Ticket #{id}] Se ha registrado tu ticket de soporte: {titulo}',
+            asunto: '[Ticket #{id}] Se ha registrado tu ticket de soporte: {titulo}',
             cuerpo: `Hola {usuario},\n\nTe confirmamos que se ha registrado un nuevo ticket de soporte a tu nombre:\n\n• Número de Ticket: #{id}\n• Título: {titulo}\n• Tipo de Falla: {tipo_falla}\n• Subcategoría / Dispositivo: {subcategoria}\n• Nivel de Prioridad: {prioridad}\n• Estatus: {estatus}\n• Fecha de reporte: {fecha}\n\nDescripción del problema:\n{descripcion}\n\nEl equipo de sistemas ya tiene conocimiento de tu incidencia y se encuentra trabajando en atenderla. Te notificaremos por este medio cuando haya novedades sobre tu ticket.`
         }
     ];
@@ -603,6 +610,11 @@ db.serialize(() => {
             `INSERT OR IGNORE INTO plantillas_correo (clave, titulo_seccion, destinatario_tipo, asunto, cuerpo) VALUES (?, ?, ?, ?, ?)`,
             [p.clave, p.titulo_seccion, p.destinatario_tipo, p.asunto, p.cuerpo]
         );
+    });
+
+    // Limpiar símbolos/emojis iniciales (🔄, 🔔, ⏳, ⚠️, ✅, 📋) en los asuntos de las plantillas existentes
+    ['🔄 ', '🔔 ', '⏳ ', '⚠️ ', '✅ ', '📋 '].forEach(simbolo => {
+        db.run(`UPDATE plantillas_correo SET asunto = REPLACE(asunto, ?, '') WHERE asunto LIKE ?`, [simbolo, `${simbolo}%`], () => {});
     });
 
     // Sembrar cuentas de usuarios del Excel de nDesk (INSERT OR IGNORE para respetar ediciones posteriores)
