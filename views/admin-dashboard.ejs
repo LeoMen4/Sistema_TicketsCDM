@@ -1629,6 +1629,8 @@
                                     <th class="py-3 px-4 text-center">Pausa Tiempo</th>
                                     <th class="py-3 px-4 text-center">Pide Evidencia</th>
                                     <th class="py-3 px-4 text-center">Justificación</th>
+                                    <th class="py-3 px-4 text-center">Discord</th>
+                                    <th class="py-3 px-4 text-center">Correo</th>
                                     <th class="py-3 px-4 text-center">Tipo</th>
                                     <th class="py-3 px-4 text-right">Acciones</th>
                                 </tr>
@@ -1670,6 +1672,38 @@
                                             <% } %>
                                         </td>
                                         <td class="py-3 px-4 text-center">
+                                            <% if (est.notificar_discord !== 0) { %>
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-800 border border-indigo-200">
+                                                    💬 Activo
+                                                </span>
+                                            <% } else { %>
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                                                    🔇 Oculto
+                                                </span>
+                                            <% } %>
+                                        </td>
+                                        <td class="py-3 px-4 text-center">
+                                            <% if (est.notificar_correo !== 0) { %>
+                                                <% if (!est.es_sistema && est.modo_correo === 'en_proceso') { %>
+                                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200" title="Se envía al cliente como En proceso (sin duplicar si ya estaba en proceso)">
+                                                        ✉️ Como "En proceso"
+                                                    </span>
+                                                <% } else if (!est.es_sistema && est.modo_correo === 'solo_admins') { %>
+                                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-800 border border-purple-200" title="Solo se notifica por correo a los Administradores">
+                                                        ✉️ Solo Admins
+                                                    </span>
+                                                <% } else { %>
+                                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200" title="Envía correo con la plantilla de este estatus">
+                                                        ✉️ Activo
+                                                    </span>
+                                                <% } %>
+                                            <% } else { %>
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                                                    🔇 Desactivado
+                                                </span>
+                                            <% } %>
+                                        </td>
+                                        <td class="py-3 px-4 text-center">
                                             <% if (est.es_sistema) { %>
                                                 <span class="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">Sistema</span>
                                             <% } else { %>
@@ -1680,7 +1714,7 @@
                                             <div class="inline-flex items-center gap-1.5">
                                                 <button 
                                                     type="button" 
-                                                    onclick="abrirModalEditarEstatus('<%= est.id %>', '<%= est.nombre %>', '<%= est.color || '#3b82f6' %>', <%= est.pausa_tiempo ? 1 : 0 %>, <%= est.pide_evidencia ? 1 : 0 %>, '<%= est.pide_descripcion || 'opcional' %>', <%= est.es_sistema ? 1 : 0 %>)" 
+                                                    onclick="abrirModalEditarEstatus('<%= est.id %>', '<%= est.nombre %>', '<%= est.color || '#3b82f6' %>', <%= est.pausa_tiempo ? 1 : 0 %>, <%= est.pide_evidencia ? 1 : 0 %>, '<%= est.pide_descripcion || 'opcional' %>', <%= est.es_sistema ? 1 : 0 %>, <%= est.notificar_discord !== 0 ? 1 : 0 %>, <%= est.notificar_correo !== 0 ? 1 : 0 %>, '<%= est.modo_correo || 'plantilla_propia' %>')" 
                                                     class="px-2.5 py-1 text-[11px] font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded border border-slate-300 transition-colors cursor-pointer"
                                                     title="Editar estatus"
                                                 >
@@ -2683,19 +2717,275 @@
                     <div class="border-b border-slate-100 pb-3 flex flex-wrap items-center justify-between gap-2">
                         <div>
                             <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                                
                                 <span>Configuración de Correo Outlook y Plantillas Automáticas</span>
                             </h3>
-                            <p class="text-xs text-slate-500 mt-0.5">Control de notificaciones por correo SMTP y personalización de mensajes.</p>
+                            <p class="text-xs text-slate-500 mt-0.5">Control de notificaciones por correo SMTP, envío de correos personalizados y plantillas.</p>
                         </div>
-                        <button 
-                            type="button" 
-                            onclick="document.querySelector('[name=email_prueba]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); document.querySelector('[name=email_prueba]')?.focus();"
-                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-2xs transition-all cursor-pointer"
-                        >
-                            
-                            <span>Probar Envío de Correo</span>
-                        </button>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button 
+                                type="button" 
+                                onclick="toggleMenuCorreoPersonalizado(true)"
+                                class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+                            >
+                                <span>✉️ Enviar Correo Personalizado</span>
+                            </button>
+                            <button 
+                                type="button" 
+                                onclick="document.querySelector('[name=email_prueba]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); document.querySelector('[name=email_prueba]')?.focus();"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-2xs transition-all cursor-pointer"
+                            >
+                                <span>Probar Envío de Correo</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ========================================================= -->
+                    <!-- APARTADO DESPLEGABLE: ENVIAR CORREO PERSONALIZADO A USUARIOS -->
+                    <!-- ========================================================= -->
+                    <%
+                        const todosUsuariosCorreo = (typeof usuarios !== 'undefined' && Array.isArray(usuarios)) ? usuarios : [];
+                        const adminsCorreoList = todosUsuariosCorreo.filter(u => u.rol === 'admin');
+                        function obtenerDeptoUsuario(u) {
+                            const p = ((u.puesto || '') + ' ' + (u.email || '')).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                            if (u.rol === 'admin' || p.includes('sistema')) return 'Sistemas TI';
+                            if (p.includes('cobranza') || p.includes('credito') || p.includes('cuentas')) return 'Cobranza y Cuentas';
+                            if (p.includes('contab') || p.includes('contador')) return 'Contabilidad';
+                            if (p.includes('administrac') || p.includes('renta')) return 'Administración';
+                            if (p.includes('venta') || p.includes('telemarketing') || p.includes('comercial') || p.includes('ikon') || p.includes('clave')) return 'Ventas y Comercial';
+                            if (p.includes('servicio') || p.includes('reman') || p.includes('cartucho') || p.includes('tecnico')) return 'Servicio y Reman.';
+                            if (p.includes('almacen') || p.includes('logistica') || p.includes('compra')) return 'Almacén y Compras';
+                            return 'Otros / RH / Mkt';
+                        }
+                        const categoriasDeptos = ['Todos', 'Sistemas TI', 'Administración', 'Cobranza y Cuentas', 'Contabilidad', 'Ventas y Comercial', 'Servicio y Reman.', 'Almacén y Compras', 'Otros / RH / Mkt'];
+                    %>
+                    <div class="bg-gradient-to-r from-sky-50 via-indigo-50/60 to-sky-50 border-2 border-sky-400 rounded-lg p-5 shadow-xs space-y-4">
+                        <div class="flex items-center justify-between flex-wrap gap-3">
+                            <div>
+                                <h4 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                    <span>✉️ Envío de Correo Personalizado a Usuarios del Sistema</span>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-sky-600 text-white uppercase tracking-wider">Comunicados / Avisos TI</span>
+                                </h4>
+                                <p class="text-xs text-slate-600 mt-0.5">
+                                    Redacta y envía un correo directo a uno, varios usuarios o departamentos completos, con archivos adjuntos y opción de copia a los administradores.
+                                </p>
+                            </div>
+                            <button 
+                                type="button" 
+                                id="btnToggleCorreoPersonalizado"
+                                onclick="toggleMenuCorreoPersonalizado()"
+                                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-xs font-extrabold text-white bg-sky-600 hover:bg-sky-700 shadow-xs transition-all cursor-pointer"
+                            >
+                                <span id="txtBtnToggleCorreoPers">✉️ Redactar Correo Personalizado ▼</span>
+                            </button>
+                        </div>
+
+                        <!-- Menú desplegable de redacción de correo -->
+                        <div id="menuCorreoPersonalizado" style="display: none;" class="bg-white border border-sky-200 rounded-lg p-5 shadow-sm space-y-5 mt-3">
+                            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                                <strong class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                    <span>📝 Nuevo Mensaje de Correo Electrónico</span>
+                                </strong>
+                                <button type="button" onclick="toggleMenuCorreoPersonalizado(false)" class="text-xs font-bold text-slate-400 hover:text-slate-700 cursor-pointer">✕ Cerrar menú</button>
+                            </div>
+
+                            <form action="/admin/correo-personalizado/enviar" method="POST" enctype="multipart/form-data" id="formCorreoPersonalizado" onsubmit="return validarEnvioCorreoPersonalizado(this)" class="space-y-4">
+                                
+                                <!-- Fila 1: Remitente y Opción de Copia a Administradores -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-3.5 rounded-md border border-slate-200">
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                                            De (Administrador Remitente) <span class="text-brand-600">*</span>:
+                                        </label>
+                                        <select name="remitente_email" class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 bg-white font-semibold focus:border-sky-600 focus:outline-none">
+                                            <% adminsCorreoList.forEach(adm => { %>
+                                                <option value="<%= adm.email %>" <%= ((typeof adminId !== 'undefined' && adminId === adm.id) || (typeof adminEmail !== 'undefined' && adminEmail === adm.email)) ? 'selected' : '' %>>
+                                                    <%= adm.nombre %> (&lt;<%= adm.email %>&gt;)
+                                                </option>
+                                            <% }) %>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                                            Copia a Administradores (CC) <span class="text-brand-600">*</span>:
+                                        </label>
+                                        <select name="copiar_admins" class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 bg-white font-semibold focus:border-sky-600 focus:outline-none">
+                                            <option value="1" selected>👥 Copiar a todos los Administradores en CC (Marco, Armando, Sistemas1)</option>
+                                            <option value="0">👤 Solo quien envía el correo (sin copiar a los demás administradores)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Fila 2: Selector de Destinatarios con Categorías/Departamentos y Buscador -->
+                                <div class="border border-slate-200 rounded-md p-4 space-y-3 bg-slate-50/50">
+                                    <div class="flex flex-wrap items-center justify-between gap-2">
+                                        <div>
+                                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-800">
+                                                Para (Destinatarios) <span class="text-brand-600">*</span>:
+                                            </label>
+                                            <span class="text-[11px] text-slate-500">Filtra por departamento/categoría o busca por nombre, puesto o correo. Puedes seleccionar varios usuarios.</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span id="badgeConteoDestinatariosPers" class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-sky-100 text-sky-800 border border-sky-300">
+                                                0 seleccionados
+                                            </span>
+                                            <button type="button" onclick="seleccionarDestinatariosVisibles(true)" class="px-2.5 py-1 rounded text-[11px] font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 cursor-pointer transition-colors">
+                                                ✓ Seleccionar visibles
+                                            </button>
+                                            <button type="button" onclick="seleccionarDestinatariosVisibles(false)" class="px-2.5 py-1 rounded text-[11px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-300 cursor-pointer transition-colors">
+                                                ✕ Limpiar selección
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Botones de Categorías / Departamentos -->
+                                    <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                                        <span class="text-[11px] font-bold text-slate-500 mr-1">Categorías / Áreas:</span>
+                                        <% categoriasDeptos.forEach((catDep, idx) => { %>
+                                            <button 
+                                                type="button" 
+                                                data-cat-depto="<%= catDep %>"
+                                                onclick="filtrarDestinatariosPorDepto('<%= catDep %>', this)"
+                                                class="btn-cat-depto-correo px-2.5 py-1 rounded-md text-[11px] font-bold border transition-all cursor-pointer <%= idx === 0 ? 'bg-sky-600 text-white border-sky-600 shadow-2xs' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100' %>"
+                                            >
+                                                <%= catDep %>
+                                            </button>
+                                        <% }) %>
+                                    </div>
+
+                                    <!-- Buscador de Usuarios -->
+                                    <div class="relative">
+                                        <input 
+                                            type="text" 
+                                            id="buscarUsuarioCorreoPers" 
+                                            oninput="filtrarListaUsuariosCorreoPers()" 
+                                            placeholder="Buscar destinatario por nombre, correo electrónico o puesto (ej. Cobranza, Ventas, Contabilidad)..." 
+                                            class="w-full rounded-md border border-slate-300 pl-3 pr-8 py-2 text-xs text-slate-900 bg-white focus:border-sky-600 focus:outline-none shadow-2xs"
+                                        >
+                                        <button 
+                                            type="button" 
+                                            onclick="document.getElementById('buscarUsuarioCorreoPers').value=''; filtrarListaUsuariosCorreoPers();" 
+                                            class="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer"
+                                            title="Limpiar búsqueda"
+                                        >✕</button>
+                                    </div>
+
+                                    <!-- Lista de Usuarios con Checkboxes -->
+                                    <div class="max-h-56 overflow-y-auto border border-slate-200 rounded-md bg-white divide-y divide-slate-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" id="listaCheckboxesUsuariosCorreo">
+                                        <% todosUsuariosCorreo.forEach(u => { 
+                                            if (!u.email || !u.email.trim()) return;
+                                            const deptoCat = obtenerDeptoUsuario(u);
+                                        %>
+                                            <label 
+                                                class="item-usuario-correo-pers flex items-start gap-2.5 p-2.5 hover:bg-sky-50/60 cursor-pointer transition-colors select-none"
+                                                data-depto="<%= deptoCat %>"
+                                                data-search="<%= ((u.nombre || '') + ' ' + (u.email || '') + ' ' + (u.puesto || '') + ' ' + deptoCat).toLowerCase() %>"
+                                            >
+                                                <input 
+                                                    type="checkbox" 
+                                                    name="destinatarios" 
+                                                    value="<%= u.email.trim() %>" 
+                                                    data-nombre="<%= u.nombre %>"
+                                                    onchange="actualizarResumenDestinatariosPers()"
+                                                    class="chk-destinatario-pers mt-0.5 w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer"
+                                                >
+                                                <div class="min-w-0 flex-1">
+                                                    <div class="font-bold text-slate-900 text-xs truncate"><%= u.nombre %></div>
+                                                    <div class="text-[11px] text-slate-500 truncate font-mono"><%= u.email %></div>
+                                                    <div class="mt-0.5 flex items-center gap-1 flex-wrap">
+                                                        <span class="inline-block px-1.5 py-0.2 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                                            <%= u.puesto || deptoCat %>
+                                                        </span>
+                                                        <% if (u.rol === 'admin') { %>
+                                                            <span class="inline-block px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-purple-50 text-purple-700 border border-purple-200">Admin TI</span>
+                                                        <% } %>
+                                                    </div>
+                                                </div>
+                                            </label>
+                                        <% }) %>
+                                    </div>
+
+                                    <!-- Chips de usuarios seleccionados -->
+                                    <div id="contenedorChipsDestinatariosPers" style="display: none;" class="pt-1">
+                                        <span class="text-[11px] font-bold text-slate-600 block mb-1">Destinatarios seleccionados:</span>
+                                        <div id="listaChipsDestinatariosPers" class="flex flex-wrap gap-1.5"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Fila 3: Asunto -->
+                                <div>
+                                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                                        Asunto del Correo <span class="text-brand-600">*</span>:
+                                    </label>
+                                    <input 
+                                        type="text" 
+                                        name="asunto" 
+                                        required 
+                                        placeholder="Ej. Aviso de mantenimiento programado / Actualización de equipos..." 
+                                        class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 bg-white focus:border-sky-600 focus:outline-none shadow-2xs font-medium"
+                                    >
+                                </div>
+
+                                <!-- Fila 4: Descripción / Cuerpo del Correo -->
+                                <div>
+                                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                                        Mensaje / Descripción <span class="text-brand-600">*</span>:
+                                    </label>
+                                    <textarea 
+                                        name="mensaje" 
+                                        rows="6" 
+                                        required 
+                                        placeholder="Escribe aquí el contenido completo del correo que recibirán los usuarios seleccionados..." 
+                                        class="w-full rounded border border-slate-300 px-3 py-2 text-xs text-slate-900 bg-white focus:border-sky-600 focus:outline-none shadow-2xs leading-relaxed"
+                                    ></textarea>
+                                </div>
+
+                                <!-- Fila 5: Adjuntar Archivos -->
+                                <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-md space-y-2">
+                                    <div class="flex items-center justify-between flex-wrap gap-2">
+                                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                                            📎 Adjuntar Archivos (Opcional — Imágenes, PDF, Excel, Word, ZIP):
+                                        </label>
+                                        <button 
+                                            type="button" 
+                                            id="btnLimpiarAdjuntosCorreoPers" 
+                                            onclick="limpiarAdjuntosCorreoPers()" 
+                                            style="display: none;" 
+                                            class="text-[11px] font-bold text-rose-600 hover:underline cursor-pointer"
+                                        >
+                                            ✕ Quitar archivos adjuntos
+                                        </button>
+                                    </div>
+                                    <input 
+                                        type="file" 
+                                        name="adjuntos" 
+                                        id="inputAdjuntosCorreoPers" 
+                                        multiple 
+                                        onchange="mostrarResumenAdjuntosCorreoPers(this)"
+                                        class="w-full text-xs text-slate-600 bg-white p-1.5 rounded border border-slate-300 cursor-pointer"
+                                    >
+                                    <div id="listaArchivosAdjuntosCorreoPers" class="text-[11px] text-slate-600 space-y-1"></div>
+                                </div>
+
+                                <!-- Botones de Acción -->
+                                <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+                                    <button 
+                                        type="button" 
+                                        onclick="toggleMenuCorreoPersonalizado(false)" 
+                                        class="px-4 py-2 rounded-md text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button 
+                                        type="submit" 
+                                        id="btnSubmitCorreoPersonalizado"
+                                        class="inline-flex items-center gap-1.5 px-5 py-2 rounded-md text-xs font-extrabold text-white bg-sky-600 hover:bg-sky-700 shadow-sm transition-all cursor-pointer"
+                                    >
+                                        <span>✉️ Enviar Correo Ahora</span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
 
                     <!-- SMTP Config -->
@@ -8440,6 +8730,32 @@
                     </select>
                 </div>
 
+                <!-- Interruptores de Discord y Correo Electrónico -->
+                <div class="p-3 bg-indigo-50/70 border border-indigo-200 rounded space-y-1">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="notificar_discord" value="1" checked class="rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500">
+                        <span class="text-xs font-bold text-indigo-950">💬 ¿Notificar este estatus en Discord?</span>
+                    </label>
+                    <p class="text-[11px] text-indigo-800 ml-5">Si lo desactivas, al cambiar un ticket a este estatus no se publicará el aviso en el hilo de Discord.</p>
+                </div>
+
+                <div class="p-3 bg-emerald-50/70 border border-emerald-200 rounded space-y-2">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="notificar_correo" id="chkCrearNotifCorreo" value="1" checked onchange="document.getElementById('bloqueModoCorreoCrear').style.display = this.checked ? 'block' : 'none';" class="rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500">
+                        <span class="text-xs font-bold text-emerald-950">✉️ ¿Enviar notificación por correo electrónico?</span>
+                    </label>
+                    <p class="text-[11px] text-emerald-800 ml-5">Al activarlo se creará automáticamente la plantilla de correo de este estatus en Configuración de Correo.</p>
+
+                    <div id="bloqueModoCorreoCrear" class="ml-5 pt-1 space-y-1">
+                        <label class="block text-[11px] font-bold text-emerald-900">¿Cómo deseas enviar el correo de este estatus?</label>
+                        <select name="modo_correo" class="w-full rounded border border-emerald-300 px-2.5 py-1.5 text-xs text-slate-900 bg-white">
+                            <option value="plantilla_propia">Con su propia plantilla automática (dice el nombre de este estatus)</option>
+                            <option value="en_proceso">Mostrar al cliente como "En proceso" (evita enviar 2 "En proceso" seguidos)</option>
+                            <option value="solo_admins">Enviar correo solo a los Administradores (sin enviar correo al cliente)</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="modal-actions">
                     <button type="button" onclick="cerrarModalCrearEstatus()" class="px-3.5 py-1.5 rounded text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200">Cancelar</button>
                     <button type="submit" class="px-3.5 py-1.5 rounded text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 shadow-xs">Crear Estatus</button>
@@ -8519,6 +8835,30 @@
                         <option value="obligatoria">Obligatoria</option>
                         <option value="ninguno">Ninguna</option>
                     </select>
+                </div>
+
+                <!-- Interruptores de Discord y Correo Electrónico -->
+                <div class="p-3 bg-indigo-50/70 border border-indigo-200 rounded space-y-1">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="notificar_discord" value="1" id="chkEditNotifDiscord" class="rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500">
+                        <span class="text-xs font-bold text-indigo-950">💬 ¿Notificar este estatus en Discord?</span>
+                    </label>
+                </div>
+
+                <div class="p-3 bg-emerald-50/70 border border-emerald-200 rounded space-y-2">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="notificar_correo" value="1" id="chkEditNotifCorreo" onchange="document.getElementById('bloqueModoCorreoEdit').style.display = this.checked ? 'block' : 'none';" class="rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500">
+                        <span class="text-xs font-bold text-emerald-950">✉️ ¿Enviar notificación por correo electrónico?</span>
+                    </label>
+
+                    <div id="bloqueModoCorreoEdit" class="ml-5 pt-1 space-y-1">
+                        <label class="block text-[11px] font-bold text-emerald-900">¿Cómo deseas enviar el correo de este estatus?</label>
+                        <select name="modo_correo" id="selEditModoCorreo" class="w-full rounded border border-emerald-300 px-2.5 py-1.5 text-xs text-slate-900 bg-white">
+                            <option value="plantilla_propia">Con su propia plantilla automática (dice el nombre de este estatus)</option>
+                            <option value="en_proceso">Mostrar al cliente como "En proceso" (evita enviar 2 "En proceso" seguidos)</option>
+                            <option value="solo_admins">Enviar correo solo a los Administradores (sin enviar correo al cliente)</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="modal-actions">
@@ -8626,12 +8966,22 @@
         function cerrarModalCrearEstatus() {
             document.getElementById('modalCrearEstatus').style.display = 'none';
         }
-        function abrirModalEditarEstatus(id, nombre, color, pausa, evidencia, desc, esSistema) {
+        function abrirModalEditarEstatus(id, nombre, color, pausa, evidencia, desc, esSistema, notifDiscord = 1, notifCorreo = 1, modoCorreo = 'plantilla_propia') {
             document.getElementById('idEditEstatus').value = id;
             document.getElementById('nomEditEstatus').value = nombre;
             document.getElementById('chkEditPausaTiempo').checked = Boolean(pausa);
             document.getElementById('chkEditPideEvidencia').checked = Boolean(evidencia);
             document.getElementById('selEditPideDesc').value = desc || 'opcional';
+            const chkDisc = document.getElementById('chkEditNotifDiscord');
+            if (chkDisc) chkDisc.checked = (notifDiscord !== 0 && notifDiscord !== false);
+            const chkCorr = document.getElementById('chkEditNotifCorreo');
+            const bloqModo = document.getElementById('bloqueModoCorreoEdit');
+            const selModo = document.getElementById('selEditModoCorreo');
+            if (chkCorr) {
+                chkCorr.checked = (notifCorreo !== 0 && notifCorreo !== false);
+                if (bloqModo) bloqModo.style.display = chkCorr.checked ? 'block' : 'none';
+            }
+            if (selModo) selModo.value = modoCorreo || 'plantilla_propia';
             const rads = document.querySelectorAll('#contenedorPaletaEditEstatus input[type="radio"]');
             rads.forEach(r => { r.checked = (r.value === color); });
             document.getElementById('modalEditarEstatus').style.display = 'block';
@@ -8702,6 +9052,140 @@
         function cerrarVisorImagen() {
             const modal = document.getElementById('modalVisorImagen');
             if (modal) modal.style.display = 'none';
+        }
+
+        // ============================================================
+        // FUNCIONES PARA EL COMPOSITOR DE CORREO PERSONALIZADO
+        // ============================================================
+        let deptoCorreoPersActivo = 'Todos';
+
+        function toggleMenuCorreoPersonalizado(forzarEstado) {
+            const menu = document.getElementById('menuCorreoPersonalizado');
+            const txtBtn = document.getElementById('txtBtnToggleCorreoPers');
+            if (!menu) return;
+            const mostrar = (typeof forzarEstado === 'boolean') ? forzarEstado : (menu.style.display === 'none');
+            menu.style.display = mostrar ? 'block' : 'none';
+            if (txtBtn) {
+                txtBtn.textContent = mostrar ? '✕ Ocultar Redactor de Correo ▲' : '✉️ Redactar Correo Personalizado ▼';
+            }
+            if (mostrar) {
+                setTimeout(() => {
+                    menu.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 80);
+            }
+        }
+
+        function filtrarDestinatariosPorDepto(depto, btnEl) {
+            deptoCorreoPersActivo = depto || 'Todos';
+            document.querySelectorAll('.btn-cat-depto-correo').forEach(b => {
+                if (b.dataset.catDepto === deptoCorreoPersActivo) {
+                    b.className = 'btn-cat-depto-correo px-2.5 py-1 rounded-md text-[11px] font-bold border transition-all cursor-pointer bg-sky-600 text-white border-sky-600 shadow-2xs';
+                } else {
+                    b.className = 'btn-cat-depto-correo px-2.5 py-1 rounded-md text-[11px] font-bold border transition-all cursor-pointer bg-white text-slate-700 border-slate-300 hover:bg-slate-100';
+                }
+            });
+            filtrarListaUsuariosCorreoPers();
+        }
+
+        function filtrarListaUsuariosCorreoPers() {
+            const input = document.getElementById('buscarUsuarioCorreoPers');
+            const q = (input ? input.value : '').trim().toLowerCase();
+            const items = document.querySelectorAll('.item-usuario-correo-pers');
+            items.forEach(item => {
+                const coincideDepto = (deptoCorreoPersActivo === 'Todos') || (item.dataset.depto === deptoCorreoPersActivo);
+                const coincideTexto = !q || (item.dataset.search || '').includes(q);
+                item.style.display = (coincideDepto && coincideTexto) ? 'flex' : 'none';
+            });
+        }
+
+        function seleccionarDestinatariosVisibles(marcar) {
+            const items = document.querySelectorAll('.item-usuario-correo-pers');
+            items.forEach(item => {
+                const chk = item.querySelector('.chk-destinatario-pers');
+                if (!chk) return;
+                if (marcar) {
+                    if (item.style.display !== 'none') chk.checked = true;
+                } else {
+                    chk.checked = false;
+                }
+            });
+            actualizarResumenDestinatariosPers();
+        }
+
+        function quitarDestinatarioIndividualPers(email) {
+            document.querySelectorAll('.chk-destinatario-pers').forEach(chk => {
+                if (chk.value === email) chk.checked = false;
+            });
+            actualizarResumenDestinatariosPers();
+        }
+
+        function actualizarResumenDestinatariosPers() {
+            const chks = Array.from(document.querySelectorAll('.chk-destinatario-pers:checked'));
+            const badge = document.getElementById('badgeConteoDestinatariosPers');
+            const contChips = document.getElementById('contenedorChipsDestinatariosPers');
+            const listaChips = document.getElementById('listaChipsDestinatariosPers');
+
+            if (badge) {
+                badge.textContent = `${chks.length} seleccionado${chks.length === 1 ? '' : 's'}`;
+            }
+
+            if (!contChips || !listaChips) return;
+            if (chks.length === 0) {
+                contChips.style.display = 'none';
+                listaChips.innerHTML = '';
+                return;
+            }
+
+            contChips.style.display = 'block';
+            listaChips.innerHTML = chks.map(c => {
+                const nom = (c.dataset.nombre || c.value).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const em = c.value.replace(/'/g, "\\'");
+                return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-sky-100 text-sky-900 border border-sky-300">
+                    <span>${nom}</span>
+                    <button type="button" onclick="quitarDestinatarioIndividualPers('${em}')" class="text-sky-600 hover:text-rose-600 font-extrabold cursor-pointer ml-0.5" title="Quitar">✕</button>
+                </span>`;
+            }).join('');
+        }
+
+        function mostrarResumenAdjuntosCorreoPers(inputEl) {
+            const listaDiv = document.getElementById('listaArchivosAdjuntosCorreoPers');
+            const btnLimpiar = document.getElementById('btnLimpiarAdjuntosCorreoPers');
+            if (!listaDiv) return;
+            const files = inputEl && inputEl.files ? Array.from(inputEl.files) : [];
+            if (files.length === 0) {
+                listaDiv.innerHTML = '';
+                if (btnLimpiar) btnLimpiar.style.display = 'none';
+                return;
+            }
+            if (btnLimpiar) btnLimpiar.style.display = 'inline-block';
+            listaDiv.innerHTML = files.map(f => {
+                const kb = (f.size / 1024).toFixed(1);
+                return `<div class="flex items-center gap-1.5 text-slate-700 font-medium">
+                    <span>📄</span>
+                    <span>${f.name}</span>
+                    <span class="text-slate-400">(${kb} KB)</span>
+                </div>`;
+            }).join('');
+        }
+
+        function limpiarAdjuntosCorreoPers() {
+            const inputEl = document.getElementById('inputAdjuntosCorreoPers');
+            if (inputEl) inputEl.value = '';
+            mostrarResumenAdjuntosCorreoPers(inputEl);
+        }
+
+        function validarEnvioCorreoPersonalizado(form) {
+            const seleccionados = document.querySelectorAll('.chk-destinatario-pers:checked');
+            if (!seleccionados || seleccionados.length === 0) {
+                alert('Por favor selecciona al menos un destinatario para enviar el correo.');
+                return false;
+            }
+            const btn = document.getElementById('btnSubmitCorreoPersonalizado');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span>⏳ Enviando correo...</span>';
+            }
+            return true;
         }
     </script>
 </body>

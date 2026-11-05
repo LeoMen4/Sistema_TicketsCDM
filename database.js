@@ -442,6 +442,11 @@ db.serialize(() => {
         });
     });
 
+    // Migraciones para interruptores de Discord y Correo en estatus_tickets
+    db.run(`ALTER TABLE estatus_tickets ADD COLUMN notificar_discord INTEGER DEFAULT 1`, () => {});
+    db.run(`ALTER TABLE estatus_tickets ADD COLUMN notificar_correo INTEGER DEFAULT 1`, () => {});
+    db.run(`ALTER TABLE estatus_tickets ADD COLUMN modo_correo TEXT DEFAULT 'plantilla_propia'`, () => {});
+
     // Tabla de configuraciones globales del sistema (ej. tolerancia de alertas)
     db.run(`
         CREATE TABLE IF NOT EXISTS configuraciones (

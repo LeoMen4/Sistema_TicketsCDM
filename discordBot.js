@@ -665,6 +665,16 @@ async function enviarMensajeDesdeWeb({ ticketId, autorNombre, autorRol, autorPue
  */
 async function notificarCambioEstatusDiscord(ticketId, nuevoEstatus, extraData = {}) {
     try {
+        if (dbInstance && nuevoEstatus) {
+            const estCfg = await new Promise(resolve => {
+                dbInstance.get('SELECT notificar_discord FROM estatus_tickets WHERE LOWER(nombre) = LOWER(?)', [String(nuevoEstatus).trim()], (err, r) => resolve(r));
+            });
+            if (estCfg && estCfg.notificar_discord !== undefined && estCfg.notificar_discord !== null && Number(estCfg.notificar_discord) === 0) {
+                console.log(`[Discord Bot] Notificación omitida en Discord: el estatus "${nuevoEstatus}" tiene desactivado el interruptor de Discord.`);
+                return;
+            }
+        }
+
         const hilo = await obtenerOCrearHiloTicket(ticketId);
         if (!hilo) return;
 

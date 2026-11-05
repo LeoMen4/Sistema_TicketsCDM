@@ -213,6 +213,12 @@ const upload = multer({
     }
 });
 
+// Configuración de Multer en memoria para adjuntos de correo personalizado (cualquier tipo de archivo hasta 25MB)
+const uploadAdjuntosCorreo = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 25 * 1024 * 1024 }
+});
+
 // Almacén persistente de sesiones en Turso Cloud SQLite (evita cierres de sesión al reiniciar el servidor en Render)
 class TursoSessionStore extends session.Store {
     constructor() {
@@ -2055,8 +2061,9 @@ app.post('/admin/tickets/cambiar-estatus', esAdmin, upload.single('imagen'), (re
     const adminActualNombre = (req.session && req.session.usuario && req.session.usuario.nombre) ? req.session.usuario.nombre : 'Administrador TI';
     const adminActualPuesto = (req.session && req.session.usuario && req.session.usuario.puesto) ? req.session.usuario.puesto : 'Especialista TI';
 
-    db.get('SELECT atendido_por, entregado_por, participantes_ti, tecnico_resolvio FROM tickets WHERE id = ?', [ticket_id], (errT, ticketActual) => {
+    db.get('SELECT estatus, atendido_por, entregado_por, participantes_ti, tecnico_resolvio FROM tickets WHERE id = ?', [ticket_id], (errT, ticketActual) => {
         ticketActual = ticketActual || {};
+        const estatusAnterior = ticketActual.estatus || null;
 
         const cat = (estatus === 'Resuelto') ? (categoria_resolucion || null) : null;
         const com = (estatus === 'Resuelto') ? (comentario_resolucion || null) : null;
@@ -2175,10 +2182,11 @@ app.post('/admin/tickets/cambiar-estatus', esAdmin, upload.single('imagen'), (re
                     tecnico_resolvio: tecResumen,
                     categoria_resolucion: cat,
                     comentario_resolucion: com,
+                    detalle_intervencion: detalleHist,
                     tipo_equipo_nuevo: tip,
                     modelo_nuevo: mod,
                     numero_serie_nuevo: ser
-                }, { adminRemitente: req.session.usuario });
+                }, { adminRemitente: req.session.usuario, estatusAnterior: estatusAnterior });
 
                 // Emitir cambio de estatus en tiempo real vía WebSockets
                 io.emit('ticket:estatus_cambiado', {
@@ -2527,8 +2535,9 @@ app.post('/admin/tickets/actualizar-estatus-masivo', esAdmin, (req, res) => {
         const ticketId = item.id;
         const nuevoEstatus = item.estatus;
 
-        db.get('SELECT atendido_por, participantes_ti FROM tickets WHERE id = ?', [ticketId], (errGet, tRow) => {
+        db.get('SELECT estatus, atendido_por, participantes_ti FROM tickets WHERE id = ?', [ticketId], (errGet, tRow) => {
             tRow = tRow || {};
+            const estatusAnteriorMasivo = tRow.estatus || null;
             const nuevoAtendido = (!tRow.atendido_por && nuevoEstatus === 'En proceso') ? adminActualNombre : (tRow.atendido_por || null);
             const nuevosPart = combinarParticipantesTI(tRow.participantes_ti, adminActualNombre);
 
@@ -2544,7 +2553,7 @@ app.post('/admin/tickets/actualizar-estatus-masivo', esAdmin, (req, res) => {
                             [ticketId, nuevoEstatus, adminActualNombre, adminActualPuesto],
                             () => {
                                 // Notificar al usuario por correo usando el administrador actual como remitente
-                                mailer.notificarCambioEstatusUsuario(ticketId, nuevoEstatus, {}, { adminRemitente: req.session.usuario });
+                                mailer.notificarCambioEstatusUsuario(ticketId, nuevoEstatus, {}, { adminRemitente: req.session.usuario, estatusAnterior: estatusAnteriorMasivo });
 
                                 // Notificar cambio de estatus en Discord (o eliminar hilo si pasa a Resuelto)
                                 try {
@@ -3411,7 +3420,7 @@ const PALETA_ESTATUS_PRESETS = {
 
 // Crear Estatus Personalizado
 app.post('/admin/estatus-tickets/crear', esAdmin, (req, res) => {
-    const { nombre, color, pausa_tiempo, pide_evidencia, pide_descripcion } = req.body;
+    const { nombre, color, pausa_tiempo, pide_evidencia, pide_descripcion, notificar_discord, notificar_correo, modo_correo } = req.body;
     const nombreLimpio = nombre ? nombre.trim() : '';
 
     if (!nombreLimpio) {
@@ -3423,11 +3432,14 @@ app.post('/admin/estatus-tickets/crear', esAdmin, (req, res) => {
     const pausa = (pausa_tiempo === '1' || pausa_tiempo === 1 || pausa_tiempo === 'on') ? 1 : 0;
     const evidencia = (pide_evidencia === '1' || pide_evidencia === 1 || pide_evidencia === 'on') ? 1 : 0;
     const desc = ['ninguno', 'opcional', 'obligatoria'].includes(pide_descripcion) ? pide_descripcion : 'opcional';
+    const notifDiscord = (notificar_discord === '1' || notificar_discord === 1 || notificar_discord === 'on') ? 1 : 0;
+    const notifCorreo = (notificar_correo === '1' || notificar_correo === 1 || notificar_correo === 'on') ? 1 : 0;
+    const modoCorreoVal = ['plantilla_propia', 'en_proceso', 'solo_admins'].includes(modo_correo) ? modo_correo : 'plantilla_propia';
 
     db.run(
-        `INSERT INTO estatus_tickets (nombre, color, color_bg, color_texto, color_borde, pausa_tiempo, pide_evidencia, pide_descripcion, es_sistema, orden)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 10)`,
-        [nombreLimpio, hex, preset.bg, preset.texto, preset.borde, pausa, evidencia, desc],
+        `INSERT INTO estatus_tickets (nombre, color, color_bg, color_texto, color_borde, pausa_tiempo, pide_evidencia, pide_descripcion, notificar_discord, notificar_correo, modo_correo, es_sistema, orden)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 10)`,
+        [nombreLimpio, hex, preset.bg, preset.texto, preset.borde, pausa, evidencia, desc, notifDiscord, notifCorreo, modoCorreoVal],
         function(err) {
             if (err) {
                 const msg = err.message && err.message.includes('UNIQUE')
@@ -3435,15 +3447,23 @@ app.post('/admin/estatus-tickets/crear', esAdmin, (req, res) => {
                     : 'Error al registrar el estatus: ' + err.message;
                 return obtenerDatosAdmin(req, res, null, msg);
             }
-            req.session.mensajeFlash = `Estatus "${nombreLimpio}" creado exitosamente.`;
-            res.redirect('/admin#estatus');
+
+            if (notifCorreo === 1) {
+                mailer.asegurarPlantillaEstatusPersonalizado(nombreLimpio, () => {
+                    req.session.mensajeFlash = `Estatus "${nombreLimpio}" creado exitosamente (con su plantilla de correo automática generada).`;
+                    res.redirect('/admin#categorias');
+                });
+            } else {
+                req.session.mensajeFlash = `Estatus "${nombreLimpio}" creado exitosamente.`;
+                res.redirect('/admin#categorias');
+            }
         }
     );
 });
 
 // Editar Estatus Personalizado
 app.post('/admin/estatus-tickets/editar', esAdmin, (req, res) => {
-    const { id, nombre, color, pausa_tiempo, pide_evidencia, pide_descripcion } = req.body;
+    const { id, nombre, color, pausa_tiempo, pide_evidencia, pide_descripcion, notificar_discord, notificar_correo, modo_correo } = req.body;
     const nombreLimpio = nombre ? nombre.trim() : '';
 
     if (!id || !nombreLimpio) {
@@ -3455,12 +3475,15 @@ app.post('/admin/estatus-tickets/editar', esAdmin, (req, res) => {
     const pausa = (pausa_tiempo === '1' || pausa_tiempo === 1 || pausa_tiempo === 'on') ? 1 : 0;
     const evidencia = (pide_evidencia === '1' || pide_evidencia === 1 || pide_evidencia === 'on') ? 1 : 0;
     const desc = ['ninguno', 'opcional', 'obligatoria'].includes(pide_descripcion) ? pide_descripcion : 'opcional';
+    const notifDiscord = (notificar_discord === '1' || notificar_discord === 1 || notificar_discord === 'on') ? 1 : 0;
+    const notifCorreo = (notificar_correo === '1' || notificar_correo === 1 || notificar_correo === 'on') ? 1 : 0;
+    const modoCorreoVal = ['plantilla_propia', 'en_proceso', 'solo_admins'].includes(modo_correo) ? modo_correo : 'plantilla_propia';
 
     db.run(
         `UPDATE estatus_tickets 
-         SET nombre = ?, color = ?, color_bg = ?, color_texto = ?, color_borde = ?, pausa_tiempo = ?, pide_evidencia = ?, pide_descripcion = ?
+         SET nombre = ?, color = ?, color_bg = ?, color_texto = ?, color_borde = ?, pausa_tiempo = ?, pide_evidencia = ?, pide_descripcion = ?, notificar_discord = ?, notificar_correo = ?, modo_correo = ?
          WHERE id = ?`,
-        [nombreLimpio, hex, preset.bg, preset.texto, preset.borde, pausa, evidencia, desc, id],
+        [nombreLimpio, hex, preset.bg, preset.texto, preset.borde, pausa, evidencia, desc, notifDiscord, notifCorreo, modoCorreoVal, id],
         function(err) {
             if (err) {
                 const msg = err.message && err.message.includes('UNIQUE')
@@ -3468,8 +3491,16 @@ app.post('/admin/estatus-tickets/editar', esAdmin, (req, res) => {
                     : 'Error al actualizar estatus: ' + err.message;
                 return obtenerDatosAdmin(req, res, null, msg);
             }
-            req.session.mensajeFlash = `Estatus "${nombreLimpio}" actualizado exitosamente.`;
-            res.redirect('/admin#estatus');
+
+            if (notifCorreo === 1) {
+                mailer.asegurarPlantillaEstatusPersonalizado(nombreLimpio, () => {
+                    req.session.mensajeFlash = `Estatus "${nombreLimpio}" actualizado exitosamente.`;
+                    res.redirect('/admin#categorias');
+                });
+            } else {
+                req.session.mensajeFlash = `Estatus "${nombreLimpio}" actualizado exitosamente.`;
+                res.redirect('/admin#categorias');
+            }
         }
     );
 });
@@ -3487,8 +3518,10 @@ app.post('/admin/estatus-tickets/eliminar', esAdmin, (req, res) => {
 
         db.run('DELETE FROM estatus_tickets WHERE id = ?', [id], function(err) {
             if (err) return obtenerDatosAdmin(req, res, null, 'Error al eliminar estatus: ' + err.message);
-            req.session.mensajeFlash = `Estatus "${est.nombre}" eliminado exitosamente.`;
-            res.redirect('/admin#estatus');
+            mailer.eliminarPlantillaEstatusPersonalizado(est.nombre, () => {
+                req.session.mensajeFlash = `Estatus "${est.nombre}" eliminado exitosamente.`;
+                res.redirect('/admin#categorias');
+            });
         });
     });
 });
@@ -3792,6 +3825,67 @@ app.post('/admin/config-correo/probar', esAdmin, (req, res) => {
         }
         obtenerDatosAdmin(req, res, `¡Correo de prueba enviado exitosamente a ${email_prueba.trim()} desde ${adminRemitente?.email || 'servidor'}! La conexión funciona correctamente.`, null);
     });
+});
+
+// Enviar correo personalizado redactado por el administrador a uno o varios usuarios (con adjuntos y copia opcional a admins)
+app.post('/admin/correo-personalizado/enviar', esAdmin, uploadAdjuntosCorreo.array('adjuntos', 10), (req, res) => {
+    const { remitente_email, destinatarios, copiar_admins, asunto, mensaje } = req.body;
+
+    let listaDestinatarios = [];
+    if (Array.isArray(destinatarios)) {
+        listaDestinatarios = destinatarios.map(d => (d || '').trim()).filter(Boolean);
+    } else if (typeof destinatarios === 'string' && destinatarios.trim()) {
+        listaDestinatarios = destinatarios.split(',').map(d => d.trim()).filter(Boolean);
+    }
+
+    if (listaDestinatarios.length === 0) {
+        return obtenerDatosAdmin(req, res, null, 'Debes seleccionar al menos un destinatario para enviar el correo personalizado.');
+    }
+
+    if (!asunto || !asunto.trim()) {
+        return obtenerDatosAdmin(req, res, null, 'El asunto del correo personalizado es obligatorio.');
+    }
+
+    if (!mensaje || !mensaje.trim()) {
+        return obtenerDatosAdmin(req, res, null, 'El mensaje o descripción del correo no puede estar vacío.');
+    }
+
+    const copiarAdminsBool = (copiar_admins === '1' || copiar_admins === 1 || copiar_admins === 'on' || copiar_admins === 'todos');
+    const archivosAdjuntos = Array.isArray(req.files) ? req.files : [];
+
+    const ejecutarEnvio = (adminRemitenteObj) => {
+        mailer.enviarCorreoPersonalizado({
+            adminRemitente: adminRemitenteObj,
+            destinatarios: listaDestinatarios,
+            copiarAdmins: copiarAdminsBool,
+            asunto: asunto.trim(),
+            mensaje: mensaje.trim(),
+            archivos: archivosAdjuntos
+        }, (err, info, meta) => {
+            if (err) {
+                return obtenerDatosAdmin(req, res, null, 'Error al enviar el correo personalizado: ' + err.message);
+            }
+            const totalDest = (meta && meta.totalDestinatarios) ? meta.totalDestinatarios : listaDestinatarios.length;
+            const txtCc = (copiarAdminsBool && meta && meta.cc && meta.cc.length > 0)
+                ? ` (con copia CC a administradores: ${meta.cc.join(', ')})`
+                : ' (sin copia a otros administradores)';
+            const txtAdj = archivosAdjuntos.length > 0 ? ` y ${archivosAdjuntos.length} archivo(s) adjunto(s)` : '';
+            req.session.mensajeFlash = `¡Correo personalizado "${asunto.trim()}" enviado exitosamente a ${totalDest} destinatario(s)${txtAdj}${txtCc}!`;
+            res.redirect('/admin#correo');
+        });
+    };
+
+    if (remitente_email && remitente_email.trim()) {
+        db.get('SELECT nombre, email FROM usuarios WHERE LOWER(email) = LOWER(?)', [remitente_email.trim()], (errU, u) => {
+            if (!errU && u) {
+                ejecutarEnvio({ email: u.email, nombre: u.nombre });
+            } else {
+                ejecutarEnvio({ email: remitente_email.trim(), nombre: req.session.usuario ? req.session.usuario.nombre : 'Mesa de Ayuda TI' });
+            }
+        });
+    } else {
+        ejecutarEnvio(req.session.usuario);
+    }
 });
 
 app.get('/logout', (req, res) => {
