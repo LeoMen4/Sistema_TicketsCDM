@@ -651,9 +651,19 @@
 
                                         <!-- Descripción -->
                                         <td class="py-3.5 px-4 text-slate-600 max-w-xs">
-                                            <p class="line-clamp-2 leading-relaxed" title="<%= t.descripcion %>">
-                                                <%= t.descripcion %>
-                                            </p>
+                                            <div class="flex flex-col items-start gap-1">
+                                                <p id="descTicketUser-<%= t.id %>" class="line-clamp-2 leading-relaxed break-words text-xs text-slate-700 w-full" title="<%= t.descripcion %>"><%= t.descripcion %></p>
+                                                <button 
+                                                    type="button" 
+                                                    id="btnToggleDescUser-<%= t.id %>" 
+                                                    onclick="toggleDescripcionTicketUsuario('<%= t.id %>')" 
+                                                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold text-slate-600 hover:text-brand-700 bg-slate-100 hover:bg-brand-50 border border-slate-200 hover:border-brand-300 transition-colors cursor-pointer select-none"
+                                                    title="Desplegar u ocultar toda la descripción"
+                                                >
+                                                    <span id="iconoToggleDescUser-<%= t.id %>">▼</span>
+                                                    <span id="textoToggleDescUser-<%= t.id %>">Ver todo</span>
+                                                </button>
+                                            </div>
                                         </td>
 
                                         <!-- Evidencia -->
@@ -681,24 +691,24 @@
                                         <td class="py-3.5 px-4">
                                             <div>
                                                 <% if (t.estatus === 'Nuevo ticket') { %>
-                                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200">
-                                                        <span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span>
+                                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-extrabold border shadow-2xs" style="background-color: #e0f2fe; color: #0369a1; border-color: #7dd3fc;">
+                                                        <span class="w-2 h-2 rounded-full" style="background-color: #0284c7;"></span>
                                                         Nuevo ticket
                                                     </span>
                                                 <% } else if (t.estatus === 'En proceso') { %>
-                                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                                                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-extrabold border shadow-2xs" style="background-color: #fef3c7; color: #b45309; border-color: #fcd34d;">
+                                                        <span class="w-2 h-2 rounded-full" style="background-color: #d97706;"></span>
                                                         En proceso
                                                     </span>
                                                 <% } else if (t.estatus === 'Pendiente') { %>
-                                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                                                        <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-extrabold border shadow-2xs" style="background-color: #ffe4e6; color: #be123c; border-color: #fda4af;">
+                                                        <span class="w-2 h-2 rounded-full" style="background-color: #e11d48;"></span>
                                                         Pendiente
                                                     </span>
                                                 <% } else if (t.estatus === 'Pendiente por cliente') { %>
                                                     <div class="space-y-1">
-                                                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-bold bg-orange-50 text-orange-800 border border-orange-200">
-                                                            <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-extrabold border shadow-2xs" style="background-color: #ffedd5; color: #c2410c; border-color: #fdba74;">
+                                                            <span class="w-2 h-2 rounded-full" style="background-color: #ea580c;"></span>
                                                             Pendiente por cliente
                                                         </span>
                                                         <% if (t.fecha_programada_cliente) { %>
@@ -708,12 +718,13 @@
                                                         <% } %>
                                                     </div>
                                                 <% } else if (t.estatus === 'Resuelto') { %>
-                                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-extrabold border shadow-2xs" style="background-color: #d1fae5; color: #047857; border-color: #6ee7b7;">
+                                                        <span class="w-2 h-2 rounded-full" style="background-color: #059669;"></span>
                                                         Resuelto
                                                     </span>
                                                 <% } else { %>
-                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 text-slate-700">
+                                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-extrabold border shadow-2xs" style="background-color: #fef3c7; color: #b45309; border-color: #fcd34d;">
+                                                        <span class="w-2 h-2 rounded-full" style="background-color: #d97706;"></span>
                                                         <%= t.estatus %>
                                                     </span>
                                                 <% } %>
@@ -2228,6 +2239,9 @@
                 if (typeof filtrarTablaMisTickets === 'function') {
                     filtrarTablaMisTickets();
                 }
+                if (typeof restaurarDescripcionesUsuario === 'function') {
+                    restaurarDescripcionesUsuario();
+                }
             } catch (err) {
                 console.warn('Error sincronizando tablero usuario en vivo:', err);
             } finally {
@@ -2421,6 +2435,45 @@
     </div>
 
     <script>
+        const descripcionesDesplegadasUserIds = new Set();
+
+        function toggleDescripcionTicketUsuario(ticketId) {
+            const idStr = String(ticketId);
+            const p = document.getElementById('descTicketUser-' + idStr);
+            const icono = document.getElementById('iconoToggleDescUser-' + idStr);
+            const texto = document.getElementById('textoToggleDescUser-' + idStr);
+            if (!p) return;
+
+            const estaContraido = p.classList.contains('line-clamp-2');
+            if (estaContraido) {
+                p.classList.remove('line-clamp-2');
+                p.classList.add('whitespace-pre-line');
+                if (icono) icono.textContent = '▲';
+                if (texto) texto.textContent = 'Contraer';
+                descripcionesDesplegadasUserIds.add(idStr);
+            } else {
+                p.classList.add('line-clamp-2');
+                p.classList.remove('whitespace-pre-line');
+                if (icono) icono.textContent = '▼';
+                if (texto) texto.textContent = 'Ver todo';
+                descripcionesDesplegadasUserIds.delete(idStr);
+            }
+        }
+
+        function restaurarDescripcionesUsuario() {
+            descripcionesDesplegadasUserIds.forEach(idStr => {
+                const p = document.getElementById('descTicketUser-' + idStr);
+                const icono = document.getElementById('iconoToggleDescUser-' + idStr);
+                const texto = document.getElementById('textoToggleDescUser-' + idStr);
+                if (p) {
+                    p.classList.remove('line-clamp-2');
+                    p.classList.add('whitespace-pre-line');
+                    if (icono) icono.textContent = '▲';
+                    if (texto) texto.textContent = 'Contraer';
+                }
+            });
+        }
+
         function abrirVisorImagen(url, titulo) {
             const modal = document.getElementById('modalVisorImagen');
             const img = document.getElementById('visorImagenTag');
