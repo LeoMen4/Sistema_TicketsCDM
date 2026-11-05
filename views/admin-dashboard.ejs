@@ -1113,18 +1113,8 @@
                                                     <% }) %>
                                                 </select>
 
-                                                <div class="flex items-center gap-1.5 mt-1">
+                                                <div class="flex items-center gap-1.5 mt-0.5">
                                                     <span id="statusIndicator-<%= t.id %>" class="text-[10px] font-bold"></span>
-                                                    <button 
-                                                        type="button" 
-                                                        id="btnGuardarFila-<%= t.id %>" 
-                                                        onclick="guardarEstatusTicketFila('<%= t.id %>')" 
-                                                        style="display: none;" 
-                                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[10px] font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors cursor-pointer"
-                                                        title="Confirmar y guardar cambio de estatus"
-                                                    >
-                                                        <span>✓ Guardar</span>
-                                                    </button>
                                                 </div>
 
                                                 <div class="flex flex-wrap items-center gap-1">
@@ -5334,7 +5324,7 @@
 
         let selectEstatusPendiente = null;
 
-        // Al cambiar el <select>, NO se guarda automáticamente: se actualiza su color y se muestra el botón "Guardar"
+        // Al cambiar el <select>, NO se guarda automáticamente: se actualiza su color y se habilita el botón superior "Guardar Cambios"
         function manejarCambioSelectEstatus(select) {
             if (!select) return;
             const ticketId = select.dataset.ticketId;
@@ -5345,7 +5335,7 @@
             if (select.value !== select.dataset.originalStatus) {
                 if (ind) {
                     ind.className = 'text-[10px] font-bold text-amber-600';
-                    ind.textContent = '● Confirmar';
+                    ind.textContent = '● Pendiente de guardar';
                 }
             } else {
                 if (ind && ind.textContent !== '✓ Guardado') {
@@ -5356,14 +5346,13 @@
             actualizarVisualizacionCambios();
         }
 
-        // Se ejecuta únicamente cuando el usuario hace clic en el botón "Guardar"
+        // Procesa el guardado de un ticket cuando se confirma desde el botón superior "Guardar Cambios"
         function guardarEstatusTicketFila(ticketId) {
             const sel = document.getElementById('selectEstatusFila-' + ticketId) || document.querySelector(`.select-estatus-ticket[data-ticket-id="${ticketId}"]`);
-            if (!sel) return;
+            if (!sel) return Promise.resolve();
             const nuevoEstatus = sel.value;
-            if (nuevoEstatus === sel.dataset.originalStatus) return;
+            if (nuevoEstatus === sel.dataset.originalStatus) return Promise.resolve();
 
-            const btnFila = document.getElementById('btnGuardarFila-' + ticketId);
             const ind = document.getElementById('statusIndicator-' + ticketId);
 
             // 1. Si el nuevo estatus es "Resuelto", abrir modal de resolución para confirmar y guardar
@@ -5376,7 +5365,7 @@
                 }
                 document.getElementById('modalResolucion').style.display = 'block';
                 evaluarCategoriaResolucion();
-                return;
+                return Promise.resolve();
             }
 
             // 2. Si el nuevo estatus es "Pendiente por cliente", abrir modal de cita/motivo para confirmar y guardar
@@ -5390,7 +5379,7 @@
                 if (inMotivo) inMotivo.value = sel.dataset.motivoPendiente || '';
                 const modal = document.getElementById('modalPendienteCliente');
                 if (modal) modal.style.display = 'block';
-                return;
+                return Promise.resolve();
             }
 
             // 3. Si el estatus requiere evidencia fotográfica o nota obligatoria, abrir modal especial
@@ -5400,14 +5389,10 @@
 
             if (pideFoto || pideDesc === 'obligatoria') {
                 abrirModalCambioEstatusEspecial(sel, nuevoEstatus, pideFoto, pideDesc);
-                return;
+                return Promise.resolve();
             }
 
-            // 4. Guardar directamente tras haber confirmado con el botón "Guardar"
-            if (btnFila) {
-                btnFila.disabled = true;
-                btnFila.innerHTML = '<span>⏳ Guardando...</span>';
-            }
+            // 4. Guardar directamente tras haber confirmado con el botón superior
             if (ind) {
                 ind.className = 'text-[10px] font-bold text-amber-600 animate-pulse';
                 ind.textContent = '⏳ Guardando...';
@@ -5419,7 +5404,7 @@
             params.append('estatus', nuevoEstatus);
             params.append('formato', 'json');
 
-            fetch('/admin/tickets/cambiar-estatus', {
+            return fetch('/admin/tickets/cambiar-estatus', {
                 method: 'POST',
                 headers: { 'Accept': 'application/json' },
                 body: params
@@ -5427,11 +5412,6 @@
             .then(r => r.json())
             .then(data => {
                 sel.dataset.guardando = 'false';
-                if (btnFila) {
-                    btnFila.disabled = false;
-                    btnFila.innerHTML = '<span>✓ Guardar</span>';
-                    btnFila.style.display = 'none';
-                }
                 if (data && data.ok) {
                     sel.dataset.originalStatus = nuevoEstatus;
                     if (ind) {
@@ -5454,10 +5434,6 @@
             .catch(err => {
                 sel.dataset.guardando = 'false';
                 console.error(err);
-                if (btnFila) {
-                    btnFila.disabled = false;
-                    btnFila.innerHTML = '<span>✓ Guardar</span>';
-                }
                 if (ind) {
                     ind.className = 'text-[10px] font-bold text-rose-600';
                     ind.textContent = '✗ Error';
@@ -5521,9 +5497,7 @@
             document.getElementById('modalPendienteCliente').style.display = 'none';
             if (selectEstatusPendiente) {
                 const ticketId = selectEstatusPendiente.dataset.ticketId;
-                const btnFila = document.getElementById('btnGuardarFila-' + ticketId);
                 const ind = document.getElementById('statusIndicator-' + ticketId);
-                if (btnFila) btnFila.style.display = 'none';
                 if (ind) ind.textContent = '';
                 selectEstatusPendiente.value = selectEstatusPendiente.dataset.originalStatus;
                 selectEstatusPendiente = null;
@@ -5535,9 +5509,7 @@
             document.getElementById('modalResolucion').style.display = 'none';
             if (selectEstatusPendiente) {
                 const ticketId = selectEstatusPendiente.dataset.ticketId;
-                const btnFila = document.getElementById('btnGuardarFila-' + ticketId);
                 const ind = document.getElementById('statusIndicator-' + ticketId);
-                if (btnFila) btnFila.style.display = 'none';
                 if (ind) ind.textContent = '';
                 selectEstatusPendiente.value = selectEstatusPendiente.dataset.originalStatus;
                 selectEstatusPendiente = null;
@@ -5551,7 +5523,6 @@
 
             selects.forEach(sel => {
                 const ticketId = sel.dataset.ticketId;
-                const btnFila = document.getElementById('btnGuardarFila-' + ticketId);
                 const ind = document.getElementById('statusIndicator-' + ticketId);
 
                 // Siempre pintar el selector con el color propio del estatus seleccionado
@@ -5560,11 +5531,9 @@
                 if (sel.value !== sel.dataset.originalStatus) {
                     cambiosCount++;
                     sel.style.boxShadow = '0 0 0 2px #10b981';
-                    if (btnFila) btnFila.style.display = 'inline-flex';
                 } else {
                     sel.style.boxShadow = '';
-                    if (btnFila) btnFila.style.display = 'none';
-                    if (ind && ind.textContent === '● Confirmar') {
+                    if (ind && ind.textContent === '● Pendiente de guardar') {
                         ind.textContent = '';
                     }
                 }
@@ -5573,7 +5542,7 @@
             const btn = document.getElementById('btnGuardarEstatusGlobal');
             if (btn) {
                 if (cambiosCount > 0) {
-                    btn.innerHTML = `<span>Guardar Cambios (${cambiosCount} pendiente${cambiosCount > 1 ? 's' : ''})</span>`;
+                    btn.innerHTML = `<span>✓ Guardar Cambios (${cambiosCount} pendiente${cambiosCount > 1 ? 's' : ''})</span>`;
                     btn.classList.remove('bg-brand-600', 'hover:bg-brand-700');
                     btn.classList.add('bg-emerald-600', 'hover:bg-emerald-700', 'ring-2', 'ring-emerald-400');
                 } else {
@@ -5584,7 +5553,7 @@
             }
         }
 
-        function guardarTodosLosEstatus() {
+        async function guardarTodosLosEstatus() {
             const selects = document.querySelectorAll('.select-estatus-ticket');
             const cambios = [];
 
@@ -5599,30 +5568,19 @@
             });
 
             if (cambios.length === 0) {
-                alert('ℹ️ No se han modificado estatus en los tickets de la tabla.\n\nPara guardar, cambia el estatus de uno o más tickets en la columna "Cambiar Estatus" y luego presiona el botón "Guardar" de la fila o este botón global.');
+                alert('ℹ️ No se han modificado estatus en los tickets de la tabla.\n\nPara guardar, cambia el estatus de uno o más tickets en la columna "Cambiar Estatus" y luego presiona este botón.');
                 return;
             }
 
-            // Si solo se cambió 1 ticket, usar el flujo individual (que abre modales si aplica y sincroniza por AJAX)
-            if (cambios.length === 1) {
-                guardarEstatusTicketFila(cambios[0].id);
-                return;
-            }
-
-            // Verificar si alguno de los cambios múltiples requiere modal obligatorio
+            // Si alguno de los cambios requiere abrir un modal (Resuelto, Pendiente por cliente, o estatus con evidencia/justificación obligatoria), abrirlo primero
             for (const item of cambios) {
                 const opt = item.selectEl.selectedOptions ? item.selectEl.selectedOptions[0] : null;
                 const pideFoto = opt ? (opt.dataset.pideEvidencia === '1') : false;
                 const pideDesc = opt ? opt.dataset.pideDescripcion : 'opcional';
                 if (item.estatus === 'Resuelto' || item.estatus === 'Pendiente por cliente' || pideFoto || pideDesc === 'obligatoria') {
-                    guardarEstatusTicketFila(item.id);
+                    await guardarEstatusTicketFila(item.id);
                     return;
                 }
-            }
-
-            const plural = cambios.length > 1 ? `los estatus de ${cambios.length} tickets` : `el estatus de 1 ticket`;
-            if (!confirm(`¿Confirmas que deseas guardar ${plural}?`)) {
-                return;
             }
 
             const btn = document.getElementById('btnGuardarEstatusGlobal');
@@ -5632,8 +5590,18 @@
                 btn.innerHTML = '<span>⏳ Guardando cambios...</span>';
             }
 
-            document.getElementById('inputCambiosEstatus').value = JSON.stringify(cambios.map(c => ({ id: c.id, estatus: c.estatus })));
-            document.getElementById('formGuardarEstatusGlobal').submit();
+            try {
+                for (const item of cambios) {
+                    await guardarEstatusTicketFila(item.id);
+                }
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                }
+                actualizarVisualizacionCambios();
+                refrescarTableroAdminEnVivo();
+            }
         }
 
         function toggleVerPassword(inputId, btn) {
