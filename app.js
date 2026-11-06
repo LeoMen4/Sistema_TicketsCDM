@@ -1589,7 +1589,7 @@ async function obtenerDatosAdmin(req, res, mensaje = null, error = null) {
                 FROM ticket_comentarios
                 GROUP BY ticket_id
             `, []),
-            dbAllAsync('SELECT id, nombre, email, puesto, password_plana, rol FROM usuarios WHERE deleted_at IS NULL ORDER BY nombre ASC', []),
+            dbAllAsync('SELECT id, nombre, email, puesto, password_plana, rol, discord_user_id, discord_username, discord_display_name, discord_manual FROM usuarios WHERE deleted_at IS NULL ORDER BY nombre ASC', []),
             dbAllAsync('SELECT id, nombre, email, puesto, rol, deleted_at FROM usuarios WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC', []),
             dbAllAsync(`
                 SELECT tickets.*, COALESCE(usuarios.nombre, tickets.creado_por_admin, 'Usuario') AS usuario_nombre, usuarios.email AS usuario_email, usuarios.puesto AS usuario_puesto 
@@ -1643,6 +1643,8 @@ async function obtenerDatosAdmin(req, res, mensaje = null, error = null) {
             return t;
         });
 
+        const miembrosDiscord = await discordBot.obtenerMiembrosServidorDiscord();
+
         res.render('admin-dashboard', {
             adminNombre: req.session.usuario.nombre,
             adminPuesto: req.session.usuario.puesto || 'Especialista TI',
@@ -1668,6 +1670,7 @@ async function obtenerDatosAdmin(req, res, mensaje = null, error = null) {
             configCorreo: configCorreo || {},
             plantillasCorreo: plantillasCorreo || [],
             discordInfo: discordBot.obtenerEstadoBot(),
+            miembrosDiscord: miembrosDiscord || [],
             filtroActual: filtroEstatus,
             mensaje: mensajeFinal,
             error: errorFinal
@@ -1934,7 +1937,7 @@ app.post('/admin/tickets/crear', esAdmin, upload.single('imagen'), (req, res) =>
     }
 
     // Validar existencia del usuario seleccionado
-    db.get('SELECT id, nombre, email FROM usuarios WHERE id = ? AND deleted_at IS NULL', [usuario_id], (errUser, usuarioDestino) => {
+    db.get('SELECT id, nombre, email, puesto, discord_user_id, discord_username, discord_display_name, discord_manual FROM usuarios WHERE id = ? AND deleted_at IS NULL', [usuario_id], (errUser, usuarioDestino) => {
         if (errUser || !usuarioDestino) {
             req.session.errorFlash = 'El usuario seleccionado no existe o no se encuentra activo.';
             return res.redirect('/admin');
@@ -3885,6 +3888,34 @@ app.post('/admin/correo-personalizado/enviar', esAdmin, uploadAdjuntosCorreo.arr
         });
     } else {
         ejecutarEnvio(req.session.usuario);
+    }
+});
+
+// Asignar o modificar manualmente la conexión de un usuario con su cuenta de Discord
+app.post('/admin/discord/asignar-usuario', esAdmin, async (req, res) => {
+    try {
+        const { usuario_id, discord_user_id } = req.body;
+        if (!usuario_id) {
+            return res.status(400).json({ ok: false, error: 'ID de usuario requerido' });
+        }
+        const resultado = await discordBot.asignarConexionDiscordManual(Number(usuario_id), discord_user_id);
+        return res.json(resultado);
+    } catch (e) {
+        console.error('Error al asignar conexión de Discord:', e);
+        return res.status(500).json({ ok: false, error: e.message || 'Error interno al guardar conexión' });
+    }
+});
+
+// Re-sincronizar conexiones automáticas de usuarios con el servidor de Discord
+app.post('/admin/discord/sincronizar', esAdmin, async (req, res) => {
+    try {
+        await discordBot.sincronizarTodasLasConexionesDiscord();
+        req.session.mensajeFlash = '¡Conexiones de Discord sincronizadas y verificadas exitosamente!';
+        return res.redirect('/admin#discord');
+    } catch (e) {
+        console.error('Error al sincronizar Discord:', e);
+        req.session.errorFlash = 'Error al sincronizar con Discord: ' + (e.message || '');
+        return res.redirect('/admin#discord');
     }
 });
 

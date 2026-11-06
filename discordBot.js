@@ -91,10 +91,11 @@ function inicializarDiscord(io, db, uploadsDir) {
                 console.log(`[Discord Bot] Canal base #${DISCORD_CHANNEL_NAME} listo: ${canalTicketsBase.id}`);
             }
 
-            // Precargar miembros del servidor para búsqueda rápida
+            // Precargar miembros del servidor para búsqueda rápida y validar conexiones de usuarios
             try {
                 await servidorGrupoCDM.members.fetch();
                 console.log(`[Discord Bot] Miembros sincronizados (${servidorGrupoCDM.members.cache.size})`);
+                await sincronizarTodasLasConexionesDiscord();
             } catch (errMem) {
                 console.warn('[Discord Bot] Advertencia al precargar miembros:', errMem.message);
             }
@@ -358,55 +359,299 @@ function inicializarDiscord(io, db, uploadsDir) {
 }
 
 /**
- * Busca de forma inteligente al miembro en Discord correspondiente a un usuario del sistema de tickets
+ * Funciones auxiliares para normalización y comparación estricta de usuarios en Discord
  */
-async function buscarMiembroDiscord(usuario) {
-    if (!servidorGrupoCDM || !usuario) return null;
+function normalizarTextoDiscord(str) {
+    return (str || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
 
-    try {
-        // 1. Si ya tiene discord_user_id guardado
-        if (usuario.discord_user_id) {
-            const miembroGuardado = servidorGrupoCDM.members.cache.get(usuario.discord_user_id);
-            if (miembroGuardado) return miembroGuardado;
-            try {
-                return await servidorGrupoCDM.members.fetch(usuario.discord_user_id);
-            } catch (e) {}
+function foneticoDiscord(palabra) {
+    return (palabra || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/mm/g, 'm')
+        .replace(/nn/g, 'n')
+        .replace(/ss/g, 's')
+        .replace(/ll/g, 'y')
+        .replace(/z/g, 's')
+        .replace(/v/g, 'b');
+}
+
+function extraerPrefijoEmail(email) {
+    return ((email || '').toLowerCase().trim().split('@')[0] || '').replace(/[^a-z0-9]/g, '');
+}
+
+const STOPWORDS_DISCORD = new Set([
+    'de', 'del', 'la', 'las', 'los', 'el', 'y', 'en', 'por', 'para',
+    'cdm', 'grupo', 'grupocdm', 'umex', 'holding', 'iker', 'ikon',
+    'ventas', 'cobranza', 'administracion', 'contabilidad', 'servicio',
+    'compras', 'almacen', 'sistemas', 'marketing', 'logistica', 'reman',
+    'gerente', 'auxiliar', 'coordinador', 'coordinadora', 'ejecutivo',
+    'ejecutiva', 'especialista', 'consultor', 'contador', 'director'
+]);
+
+/**
+ * Compara si un username o apodo de Discord coincide exactamente con el prefijo del correo
+ * sin confundir números (ej: 'ventas1' NUNCA coincidirá con 'ventas12', ni 'cobranza' con 'cobranza2')
+ */
+function coincidePrefijoExacto(valorDiscordRaw, prefix) {
+    if (!prefix || !valorDiscordRaw) return false;
+    const limpio = valorDiscordRaw.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!limpio) return false;
+
+    const sinSufijoCorp = limpio.replace(/(grupocdm|cdm|umex|holding)$/i, '');
+    if (limpio === prefix || sinSufijoCorp === prefix) {
+        return true;
+    }
+
+    if (sinSufijoCorp.startsWith(prefix)) {
+        const resto = sinSufijoCorp.slice(prefix.length);
+        // Si lo que sigue después del prefijo empieza con un número (ej. '2' en 'ventas12' o 'cobranza2'), NO es coincidencia
+        if (/^\d/.test(resto)) return false;
+        // Si el prefijo no tiene número al final (ej. 'cobranza', 'administracion', 'contabilidad'), exigir coincidencia exacta
+        if (!/\d$/.test(prefix)) return false;
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Evalúa qué tan bien coincide un miembro de Discord con un usuario del sistema de tickets.
+ * Devuelve un puntaje:
+ *   100 = Coincidencia exacta de prefijo de correo (ej. ventas1 -> ventas1 / ventas1cdm)
+ *    90 = Coincidencia de nombre + apellido (2 o más palabras personales coinciden)
+ *    75 = Coincidencia de primer nombre único sin apellidos contradictorios (ej. Emmanuel -> Emanuel, Soledad de Jesus -> Soledad)
+ *     0 = No coincide o pertenece al prefijo de otro usuario
+ */
+function evaluarCoincidenciaMiembro(miembro, usuario, todosLosPrefijosMap = null) {
+    if (!miembro || !usuario || miembro.user?.bot) return 0;
+
+    const prefixUsuario = extraerPrefijoEmail(usuario.email);
+    const uNameRaw = (miembro.user?.username || '').toLowerCase();
+    const uNameLimpio = uNameRaw.replace(/[^a-z0-9]/g, '');
+    const uNameBase = uNameLimpio.replace(/(grupocdm|cdm|umex|holding)$/i, '');
+
+    // 1. Coincidencia exacta por prefijo de correo en username o displayName
+    if (prefixUsuario) {
+        if (coincidePrefijoExacto(uNameRaw, prefixUsuario)) {
+            return 100;
+        }
+        if (coincidePrefijoExacto(miembro.displayName || '', prefixUsuario) || coincidePrefijoExacto(miembro.nickname || '', prefixUsuario)) {
+            return 95;
+        }
+    }
+
+    // Protección crítica: Si el username de este miembro de Discord coincide con el prefijo de correo de OTRO usuario distinto
+    // (por ejemplo, 'ventas12' pertenece a Saúl Landín), prohibir que se vincule por nombre a otro usuario.
+    if (todosLosPrefijosMap && uNameBase && todosLosPrefijosMap.has(uNameBase)) {
+        const propietarioId = todosLosPrefijosMap.get(uNameBase);
+        if (usuario.id && Number(propietarioId) !== Number(usuario.id)) {
+            return 0;
+        }
+    }
+
+    // 2. Coincidencia por nombre personal
+    const nombreUsrNorm = normalizarTextoDiscord(usuario.nombre);
+    if (!nombreUsrNorm) return 0;
+
+    const palabrasUsr = nombreUsrNorm
+        .split(' ')
+        .filter(p => p.length >= 3 && !STOPWORDS_DISCORD.has(p));
+
+    if (palabrasUsr.length === 0) return 0;
+
+    const candidatosNombres = [
+        normalizarTextoDiscord(miembro.displayName),
+        normalizarTextoDiscord(miembro.nickname),
+        normalizarTextoDiscord(miembro.user?.globalName),
+        normalizarTextoDiscord(miembro.user?.username)
+    ].filter(Boolean);
+
+    let mejorPuntaje = 0;
+
+    for (const cand of candidatosNombres) {
+        if (cand === nombreUsrNorm) {
+            mejorPuntaje = Math.max(mejorPuntaje, 95);
+            continue;
         }
 
-        // 2. Extraer prefijo de correo (ej. 'compras' de 'compras@grupo-cdm.mx')
-        const email = (usuario.email || '').toLowerCase().trim();
-        const prefix = email.split('@')[0].replace(/[^a-z0-9]/g, '');
+        const palabrasCand = cand
+            .split(' ')
+            .filter(p => p.length >= 3 && !STOPWORDS_DISCORD.has(p));
 
-        // 3. Buscar entre los miembros en caché
-        let miembroEncontrado = null;
+        if (palabrasCand.length === 0) continue;
 
-        // Por coincidencia exacta de nombre de usuario en Discord (ej: comprascdm o compras)
-        for (const [id, m] of servidorGrupoCDM.members.cache) {
-            const uName = (m.user.username || '').toLowerCase();
-            const dName = (m.displayName || '').toLowerCase();
-            const nName = (m.nickname || '').toLowerCase();
+        const coincidenciasPalabras = palabrasUsr.filter(pU =>
+            palabrasCand.some(pC => pC === pU || foneticoDiscord(pC) === foneticoDiscord(pU))
+        );
 
-            if (prefix && (uName === prefix || uName === prefix + 'cdm' || uName.startsWith(prefix))) {
-                miembroEncontrado = m;
-                break;
+        // Si coinciden al menos 2 palabras del nombre (ej. Nombre + Apellido)
+        if (coincidenciasPalabras.length >= 2) {
+            mejorPuntaje = Math.max(mejorPuntaje, 90);
+            continue;
+        }
+
+        // Si coincide el primer nombre (incluso con variante como Emmanuel / Emanuel)
+        const primerNombreUsr = palabrasUsr[0];
+        const primerNombreCand = palabrasCand[0];
+        const primerNombreCoincide =
+            primerNombreCand === primerNombreUsr ||
+            foneticoDiscord(primerNombreCand) === foneticoDiscord(primerNombreUsr);
+
+        if (primerNombreCoincide) {
+            // Si en Discord solo tiene puesto su primer nombre (ej. "Emanuel" o "Soledad") sin un apellido contradictorio
+            if (palabrasCand.length === 1) {
+                mejorPuntaje = Math.max(mejorPuntaje, 75);
+            }
+        }
+    }
+
+    return mejorPuntaje;
+}
+
+/**
+ * Obtiene un mapa de todos los prefijos de correo registrados -> usuario.id
+ */
+async function obtenerMapaPrefijosUsuarios() {
+    const mapa = new Map();
+    if (!dbInstance) return mapa;
+    const filas = await new Promise((resolve) => {
+        dbInstance.all('SELECT id, email FROM usuarios WHERE deleted_at IS NULL', [], (err, rows) => resolve(rows || []));
+    });
+    for (const f of filas) {
+        const p = extraerPrefijoEmail(f.email);
+        if (p) mapa.set(p, f.id);
+    }
+    return mapa;
+}
+
+/**
+ * Busca de forma inteligente y estricta al miembro en Discord correspondiente a un usuario del sistema de tickets.
+ * Respeta siempre las asignaciones manuales (discord_manual = 1) hechas por el Administrador.
+ */
+async function buscarMiembroDiscord(usuarioInput) {
+    if (!servidorGrupoCDM || !usuarioInput) return null;
+
+    try {
+        // Consultar siempre la información más reciente del usuario en la base de datos
+        let usuario = usuarioInput;
+        if (dbInstance && (usuarioInput.id || usuarioInput.email)) {
+            const rowDB = await new Promise((resolve) => {
+                if (usuarioInput.id) {
+                    dbInstance.get(
+                        'SELECT id, nombre, email, puesto, discord_user_id, discord_username, discord_display_name, discord_manual FROM usuarios WHERE id = ?',
+                        [usuarioInput.id],
+                        (err, r) => resolve(r || null)
+                    );
+                } else {
+                    dbInstance.get(
+                        'SELECT id, nombre, email, puesto, discord_user_id, discord_username, discord_display_name, discord_manual FROM usuarios WHERE LOWER(email) = LOWER(?)',
+                        [usuarioInput.email],
+                        (err, r) => resolve(r || null)
+                    );
+                }
+            });
+            if (rowDB) {
+                usuario = rowDB;
+            }
+        }
+
+        // Asegurar que la caché de miembros del servidor esté cargada
+        if (servidorGrupoCDM.members.cache.size <= 2) {
+            await servidorGrupoCDM.members.fetch().catch(() => {});
+        }
+
+        // 1. Si el administrador fijó manualmente la conexión de este usuario (discord_manual = 1), respetarla SIEMPRE
+        if (Number(usuario.discord_manual) === 1) {
+            if (!usuario.discord_user_id) {
+                // El admin eligió explícitamente "Sin vincular" para este usuario
+                return null;
+            }
+            const miembroManual = servidorGrupoCDM.members.cache.get(usuario.discord_user_id);
+            if (miembroManual) return miembroManual;
+            try {
+                return await servidorGrupoCDM.members.fetch(usuario.discord_user_id);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        const mapaPrefijos = await obtenerMapaPrefijosUsuarios();
+
+        // 2. Si tiene un discord_user_id guardado automáticamente (discord_manual = 0), validar que no sea una vinculación errónea previa
+        if (usuario.discord_user_id) {
+            let miembroGuardado = servidorGrupoCDM.members.cache.get(usuario.discord_user_id);
+            if (!miembroGuardado) {
+                try {
+                    miembroGuardado = await servidorGrupoCDM.members.fetch(usuario.discord_user_id);
+                } catch (e) {}
             }
 
-            // Por coincidencia del nombre de la persona (ej: "Sandra Valle")
-            if (usuario.nombre) {
-                const nombreLimpio = usuario.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                const dNameLimpio = dName.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                if (dNameLimpio.includes(nombreLimpio) || nombreLimpio.includes(dNameLimpio)) {
-                    miembroEncontrado = m;
-                    break;
+            if (miembroGuardado) {
+                const puntajeGuardado = evaluarCoincidenciaMiembro(miembroGuardado, usuario, mapaPrefijos);
+                if (puntajeGuardado > 0) {
+                    const disp = miembroGuardado.displayName || miembroGuardado.user.username;
+                    if (dbInstance && usuario.id && usuario.discord_display_name !== disp) {
+                        dbInstance.run(
+                            'UPDATE usuarios SET discord_username = ?, discord_display_name = ? WHERE id = ?',
+                            [miembroGuardado.user.username, disp, usuario.id]
+                        );
+                    }
+                    return miembroGuardado;
+                } else {
+                    // La vinculación automática anterior era errónea (ej: ventas1 tenía el ID de ventas12) -> limpiarla
+                    console.log(`[Discord Bot] Limpiando vinculación automática errónea de ${usuario.nombre} (${usuario.email}) con ${miembroGuardado.displayName} (@${miembroGuardado.user.username})`);
+                    if (dbInstance && usuario.id) {
+                        await new Promise(resolve => {
+                            dbInstance.run(
+                                'UPDATE usuarios SET discord_user_id = NULL, discord_username = NULL, discord_display_name = NULL WHERE id = ? AND COALESCE(discord_manual, 0) = 0',
+                                [usuario.id],
+                                () => resolve()
+                            );
+                        });
+                    }
+                    usuario.discord_user_id = null;
                 }
             }
         }
 
+        // 3. Buscar entre todos los miembros del servidor con las reglas estrictas
+        const buscarMejorCandidatoEnCache = () => {
+            let mejorMiembro = null;
+            let mejorScore = 0;
+
+            for (const [id, m] of servidorGrupoCDM.members.cache) {
+                const score = evaluarCoincidenciaMiembro(m, usuario, mapaPrefijos);
+                if (score > mejorScore) {
+                    mejorScore = score;
+                    mejorMiembro = m;
+                }
+            }
+            return mejorMiembro;
+        };
+
+        let miembroEncontrado = buscarMejorCandidatoEnCache();
+
+        // Si no se encontró en caché, refrescar la lista de miembros en vivo desde Discord e intentar de nuevo
+        if (!miembroEncontrado) {
+            try {
+                await servidorGrupoCDM.members.fetch();
+                miembroEncontrado = buscarMejorCandidatoEnCache();
+            } catch (eFetch) {}
+        }
+
         if (miembroEncontrado && dbInstance && usuario.id) {
-            // Guardar para futuros accesos directos
+            const dispName = miembroEncontrado.displayName || miembroEncontrado.user.username;
             dbInstance.run(
-                'UPDATE usuarios SET discord_user_id = ?, discord_username = ? WHERE id = ?',
-                [miembroEncontrado.id, miembroEncontrado.user.username, usuario.id]
+                'UPDATE usuarios SET discord_user_id = ?, discord_username = ?, discord_display_name = ? WHERE id = ? AND COALESCE(discord_manual, 0) = 0',
+                [miembroEncontrado.id, miembroEncontrado.user.username, dispName, usuario.id]
             );
         }
 
@@ -415,6 +660,172 @@ async function buscarMiembroDiscord(usuario) {
         console.warn('[Discord Bot] Error buscando miembro:', e.message);
         return null;
     }
+}
+
+/**
+ * Sincroniza y valida todas las conexiones de Discord de los usuarios activos (respetando las fijadas manualmente)
+ */
+async function sincronizarTodasLasConexionesDiscord() {
+    if (!servidorGrupoCDM || !dbInstance) return;
+    try {
+        await servidorGrupoCDM.members.fetch().catch(() => {});
+        const usuariosActivos = await new Promise((resolve) => {
+            dbInstance.all(
+                'SELECT id, nombre, email, puesto, discord_user_id, discord_username, discord_display_name, discord_manual FROM usuarios WHERE deleted_at IS NULL',
+                [],
+                (err, rows) => resolve(rows || [])
+            );
+        });
+
+        for (const u of usuariosActivos) {
+            await buscarMiembroDiscord(u);
+        }
+        console.log(`[Discord Bot] Verificación de conexiones de usuarios completada (${usuariosActivos.length} usuarios revisados).`);
+    } catch (e) {
+        console.warn('[Discord Bot] Error sincronizando conexiones de usuarios:', e.message);
+    }
+}
+
+/**
+ * Devuelve la lista de todos los miembros humanos del servidor de Discord de Grupo CDM para el panel de Administración
+ */
+async function obtenerMiembrosServidorDiscord() {
+    if (!servidorGrupoCDM) return [];
+    try {
+        if (servidorGrupoCDM.members.cache.size <= 2) {
+            await servidorGrupoCDM.members.fetch().catch(() => {});
+        }
+        const lista = [];
+        for (const [id, m] of servidorGrupoCDM.members.cache) {
+            if (m.user && !m.user.bot) {
+                lista.push({
+                    id: m.id,
+                    username: m.user.username || '',
+                    displayName: m.displayName || m.user.globalName || m.user.username || '',
+                    globalName: m.user.globalName || '',
+                    nickname: m.nickname || ''
+                });
+            }
+        }
+        lista.sort((a, b) => a.displayName.localeCompare(b.displayName, 'es', { sensitivity: 'base' }));
+        return lista;
+    } catch (e) {
+        return [];
+    }
+}
+
+/**
+ * Permite al Administrador asignar o modificar manualmente a qué usuario de Discord está conectado un usuario del sistema de tickets,
+ * y actualiza automáticamente los hilos de sus tickets abiertos para que siempre lo incluya y cite ahí.
+ */
+async function asignarConexionDiscordManual(usuarioId, seleccionDiscordId) {
+    if (!dbInstance || !usuarioId) return { ok: false, error: 'Datos incompletos' };
+
+    const usuarioActual = await new Promise(resolve => {
+        dbInstance.get('SELECT * FROM usuarios WHERE id = ?', [usuarioId], (err, r) => resolve(r || null));
+    });
+    if (!usuarioActual) return { ok: false, error: 'Usuario no encontrado' };
+
+    const anteriorDiscordId = usuarioActual.discord_user_id || null;
+
+    if (seleccionDiscordId === 'AUTO') {
+        // Volver a detección automática para este usuario
+        await new Promise(resolve => {
+            dbInstance.run(
+                'UPDATE usuarios SET discord_manual = 0, discord_user_id = NULL, discord_username = NULL, discord_display_name = NULL WHERE id = ?',
+                [usuarioId],
+                () => resolve()
+            );
+        });
+        const miembroAuto = await buscarMiembroDiscord({ ...usuarioActual, discord_manual: 0, discord_user_id: null });
+        const nuevoId = miembroAuto ? miembroAuto.id : null;
+        await actualizarMiembroEnHilosActivos(usuarioId, nuevoId, anteriorDiscordId);
+        return {
+            ok: true,
+            modo: 'auto',
+            discord_user_id: nuevoId,
+            discord_username: miembroAuto ? miembroAuto.user.username : null,
+            discord_display_name: miembroAuto ? (miembroAuto.displayName || miembroAuto.user.username) : null
+        };
+    } else if (!seleccionDiscordId || seleccionDiscordId === 'NONE') {
+        // Fijar manualmente como "Sin vincular"
+        await new Promise(resolve => {
+            dbInstance.run(
+                'UPDATE usuarios SET discord_manual = 1, discord_user_id = NULL, discord_username = NULL, discord_display_name = NULL WHERE id = ?',
+                [usuarioId],
+                () => resolve()
+            );
+        });
+        await actualizarMiembroEnHilosActivos(usuarioId, null, anteriorDiscordId);
+        return {
+            ok: true,
+            modo: 'manual_sin_vincular',
+            discord_user_id: null,
+            discord_username: null,
+            discord_display_name: null
+        };
+    } else {
+        // Fijar manualmente a un miembro específico de Discord elegido por el Administrador
+        let miembroElegido = servidorGrupoCDM ? servidorGrupoCDM.members.cache.get(seleccionDiscordId) : null;
+        if (!miembroElegido && servidorGrupoCDM) {
+            try {
+                miembroElegido = await servidorGrupoCDM.members.fetch(seleccionDiscordId);
+            } catch (e) {}
+        }
+        const uName = miembroElegido ? miembroElegido.user.username : '';
+        const dName = miembroElegido ? (miembroElegido.displayName || miembroElegido.user.username) : seleccionDiscordId;
+
+        await new Promise(resolve => {
+            dbInstance.run(
+                'UPDATE usuarios SET discord_manual = 1, discord_user_id = ?, discord_username = ?, discord_display_name = ? WHERE id = ?',
+                [seleccionDiscordId, uName, dName, usuarioId],
+                () => resolve()
+            );
+        });
+        await actualizarMiembroEnHilosActivos(usuarioId, seleccionDiscordId, anteriorDiscordId);
+        return {
+            ok: true,
+            modo: 'manual',
+            discord_user_id: seleccionDiscordId,
+            discord_username: uName,
+            discord_display_name: dName
+        };
+    }
+}
+
+/**
+ * Si un usuario tiene tickets abiertos con hilos en Discord, al cambiar su cuenta vinculada
+ * saca de esos hilos la cuenta errónea anterior (si no es admin) y mete a la nueva cuenta asignada.
+ */
+async function actualizarMiembroEnHilosActivos(usuarioId, nuevoDiscordId, anteriorDiscordId) {
+    if (!client || !servidorGrupoCDM || !dbInstance) return;
+    try {
+        const ticketsAbiertos = await new Promise(resolve => {
+            dbInstance.all(
+                "SELECT id, discord_thread_id FROM tickets WHERE usuario_id = ? AND estatus != 'Resuelto' AND deleted_at IS NULL AND discord_thread_id IS NOT NULL",
+                [usuarioId],
+                (err, rows) => resolve(rows || [])
+            );
+        });
+        if (!ticketsAbiertos.length) return;
+
+        const adminsDiscord = await obtenerMiembrosAdminDiscord();
+        const idsAdmins = new Set(adminsDiscord.map(a => a.id));
+
+        for (const tk of ticketsAbiertos) {
+            try {
+                const hilo = await client.channels.fetch(tk.discord_thread_id);
+                if (!hilo || hilo.deleted) continue;
+
+                if (anteriorDiscordId && anteriorDiscordId !== nuevoDiscordId && !idsAdmins.has(anteriorDiscordId)) {
+                    await hilo.members.remove(anteriorDiscordId).catch(() => {});
+                }
+                if (nuevoDiscordId) {
+                    await hilo.members.add(nuevoDiscordId).catch(() => {});
+                }
+            } catch (eHilo) {}
+        }
+    } catch (e) {}
 }
 
 /**
@@ -459,7 +870,7 @@ async function obtenerOCrearHiloTicket(ticketId, ticketData = null, usuarioData 
         if (!ticket || !usuario) {
             ticket = await new Promise((resolve) => {
                 dbInstance.get(
-                    `SELECT t.*, u.nombre AS usuario_nombre, u.email AS usuario_email, u.puesto AS usuario_puesto, u.discord_user_id
+                    `SELECT t.*, u.nombre AS usuario_nombre, u.email AS usuario_email, u.puesto AS usuario_puesto, u.discord_user_id, u.discord_username, u.discord_display_name, u.discord_manual
                      FROM tickets t
                      JOIN usuarios u ON t.usuario_id = u.id
                      WHERE t.id = ?`,
@@ -473,7 +884,10 @@ async function obtenerOCrearHiloTicket(ticketId, ticketData = null, usuarioData 
                     nombre: ticket.usuario_nombre,
                     email: ticket.usuario_email,
                     puesto: ticket.usuario_puesto,
-                    discord_user_id: ticket.discord_user_id
+                    discord_user_id: ticket.discord_user_id,
+                    discord_username: ticket.discord_username,
+                    discord_display_name: ticket.discord_display_name,
+                    discord_manual: ticket.discord_manual
                 };
             }
         }
@@ -492,6 +906,13 @@ async function obtenerOCrearHiloTicket(ticketId, ticketData = null, usuarioData 
                         if (hiloExistente.archived) {
                             await hiloExistente.setArchived(false, 'Ticket activo').catch(() => {});
                         }
+                        // Asegurar que el usuario correcto esté dentro del hilo activo
+                        try {
+                            const miembroCorrecto = await buscarMiembroDiscord(usuario);
+                            if (miembroCorrecto) {
+                                await hiloExistente.members.add(miembroCorrecto.id).catch(() => {});
+                            }
+                        } catch (eAddEx) {}
                     }
                     return hiloExistente;
                 }
@@ -779,5 +1200,8 @@ module.exports = {
     enviarMensajeDesdeWeb,
     notificarCambioEstatusDiscord,
     buscarMiembroDiscord,
+    sincronizarTodasLasConexionesDiscord,
+    obtenerMiembrosServidorDiscord,
+    asignarConexionDiscordManual,
     obtenerEstadoBot
 };

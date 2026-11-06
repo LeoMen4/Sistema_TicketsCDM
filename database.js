@@ -140,6 +140,8 @@ db.serialize(() => {
     db.run(`ALTER TABLE usuarios ADD COLUMN puesto TEXT DEFAULT ''`, (err) => {});
     db.run(`ALTER TABLE usuarios ADD COLUMN discord_user_id TEXT DEFAULT NULL`, (err) => {});
     db.run(`ALTER TABLE usuarios ADD COLUMN discord_username TEXT DEFAULT NULL`, (err) => {});
+    db.run(`ALTER TABLE usuarios ADD COLUMN discord_display_name TEXT DEFAULT NULL`, (err) => {});
+    db.run(`ALTER TABLE usuarios ADD COLUMN discord_manual INTEGER DEFAULT 0`, (err) => {});
 
     // Tabla de tickets sin requerir el campo obsoleto 'periferico'
     db.run(`
