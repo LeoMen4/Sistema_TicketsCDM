@@ -2930,13 +2930,15 @@ app.post('/api/tickets/comentarios/:id/eliminar', (req, res) => {
 // Poleo en vivo para el Panel de Administrador (Tickets nuevos + Mensajes no leídos de usuarios)
 app.get('/api/admin/notificaciones-live', esAdmin, (req, res) => {
     db.all(
-        `SELECT tickets.id, tickets.titulo, tickets.prioridad, tickets.tipo_falla, tickets.subcategoria, tickets.fecha,
-                usuarios.nombre AS usuario_nombre, usuarios.puesto AS usuario_puesto
+        `SELECT tickets.id, tickets.titulo, tickets.prioridad, tickets.tipo_falla, tickets.subcategoria,
+                tickets.descripcion, tickets.imagen, tickets.estatus, tickets.fecha, tickets.usuario_id,
+                tickets.creado_por_admin,
+                usuarios.nombre AS usuario_nombre, usuarios.puesto AS usuario_puesto, usuarios.email AS usuario_email
          FROM tickets
-         JOIN usuarios ON tickets.usuario_id = usuarios.id
+         LEFT JOIN usuarios ON tickets.usuario_id = usuarios.id
          WHERE tickets.deleted_at IS NULL AND tickets.estatus = 'Nuevo ticket'
          ORDER BY tickets.id DESC
-         LIMIT 15`,
+         LIMIT 20`,
         [],
         (errT, ticketsNuevos) => {
             ticketsNuevos = ticketsNuevos || [];
@@ -3041,12 +3043,23 @@ app.get('/api/usuario/notificaciones-live', esUsuario, (req, res) => {
                  GROUP BY ticket_id`,
                 [usuarioId],
                 (errC, conteosPorTicket) => {
-                    return res.json({
-                        ok: true,
-                        mensajesNoLeidos: mensajesAdmin,
-                        conteosPorTicket: conteosPorTicket || [],
-                        totalMensajesNoLeidos: mensajesAdmin.length
-                    });
+                    db.all(
+                        `SELECT id, estatus, fecha_programada_cliente, motivo_pendiente_cliente
+                         FROM tickets
+                         WHERE usuario_id = ? AND deleted_at IS NULL
+                         ORDER BY id DESC
+                         LIMIT 20`,
+                        [usuarioId],
+                        (errTk, misTicketsRecientes) => {
+                            return res.json({
+                                ok: true,
+                                mensajesNoLeidos: mensajesAdmin,
+                                conteosPorTicket: conteosPorTicket || [],
+                                totalMensajesNoLeidos: mensajesAdmin.length,
+                                misTicketsRecientes: misTicketsRecientes || []
+                            });
+                        }
+                    );
                 }
             );
         }

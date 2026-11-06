@@ -8333,10 +8333,18 @@
                     }
                 }
 
-                // Si algún ticket nuevo activo aún no está dibujado en la tabla (y estamos en filtro Todos o Nuevo ticket), refrescar la tabla
+                // Si algún ticket nuevo activo aún no está dibujado en la tabla (y estamos en filtro Todos o Nuevo ticket), insertarlo al instante y refrescar la tabla
                 const filtroUrl = new URLSearchParams(window.location.search).get('estatus') || 'Todos';
                 if (filtroUrl === 'Todos' || filtroUrl === 'Nuevo ticket') {
-                    const faltaAlgunoEnTabla = (data.ticketsNuevos || []).some(t => !document.getElementById('filaTicket-' + t.id));
+                    let faltaAlgunoEnTabla = false;
+                    (data.ticketsNuevos || []).slice().reverse().forEach(t => {
+                        if (!document.getElementById('filaTicket-' + t.id)) {
+                            faltaAlgunoEnTabla = true;
+                            if (typeof insertarTicketNuevoEnTablaDirecto === 'function') {
+                                insertarTicketNuevoEnTablaDirecto(t);
+                            }
+                        }
+                    });
                     if (faltaAlgunoEnTabla) {
                         refrescarTableroAdminEnVivo(true);
                     }
@@ -8564,6 +8572,157 @@
             verificarNotificacionesLiveAdmin();
         }
 
+        // Inserta un ticket recién llegado directamente en el DOM de la tabla en 0ms (igual que actualizarEstatusTicketEnTabla)
+        function insertarTicketNuevoEnTablaDirecto(t) {
+            if (!t || !t.id) return;
+            if (document.getElementById('filaTicket-' + t.id)) return;
+
+            const filtroUrl = new URLSearchParams(window.location.search).get('estatus') || 'Todos';
+            if (filtroUrl !== 'Todos' && filtroUrl !== 'Nuevo ticket') return;
+
+            const contTabla = document.getElementById('contenedorTablaTicketsAdmin');
+            if (!contTabla) return;
+            const tbody = contTabla.querySelector('tbody');
+            if (!tbody) return;
+
+            // Si la tabla tenía la fila vacía de "No hay tickets para mostrar", quitarla
+            const filaVacia = tbody.querySelector('td[colspan="10"]');
+            if (filaVacia && filaVacia.parentNode) {
+                filaVacia.parentNode.remove();
+            }
+
+            const estatusNombre = t.estatus || 'Nuevo ticket';
+            const colEst = obtenerColoresEstatusJS(estatusNombre);
+            const prio = t.prioridad || 'Media';
+            let badgePrioHtml = `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">Media</span>`;
+            if (prio === 'Alta') {
+                badgePrioHtml = `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-brand-50 text-brand-700 border border-brand-200">Alta</span>`;
+            } else if (prio === 'Baja') {
+                badgePrioHtml = `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Baja</span>`;
+            }
+
+            // Construir opciones del select de estatus usando otro select existente o la lista base
+            let opcionesSelectHtml = '';
+            const selectExistente = document.querySelector('.select-estatus-ticket');
+            if (selectExistente) {
+                Array.from(selectExistente.options).forEach(opt => {
+                    const selAttr = (opt.value === estatusNombre) ? 'selected' : '';
+                    opcionesSelectHtml += `<option value="${escaparHtmlSimple(opt.value)}" data-pide-evidencia="${opt.dataset.pideEvidencia || '0'}" data-pide-descripcion="${opt.dataset.pideDescripcion || 'opcional'}" data-pausa-tiempo="${opt.dataset.pausaTiempo || '0'}" data-color="${opt.dataset.color || ''}" data-color-bg="${opt.dataset.colorBg || ''}" data-color-texto="${opt.dataset.colorTexto || ''}" data-color-borde="${opt.dataset.colorBorde || ''}" style="${opt.getAttribute('style') || ''}" ${selAttr}>${escaparHtmlSimple(opt.textContent)}</option>`;
+                });
+            } else {
+                ['Nuevo ticket', 'En proceso', 'Pendiente', 'Pendiente por cliente', 'Resuelto'].forEach(estNom => {
+                    const c = obtenerColoresEstatusJS(estNom);
+                    const selAttr = (estNom === estatusNombre) ? 'selected' : '';
+                    opcionesSelectHtml += `<option value="${estNom}" style="background-color: ${c.bg}; color: ${c.texto}; font-weight: bold;" ${selAttr}>${estNom}</option>`;
+                });
+            }
+
+            const tr = document.createElement('tr');
+            tr.id = 'filaTicket-' + t.id;
+            tr.dataset.ticketId = String(t.id);
+            tr.className = 'fila-ticket-admin hover:bg-slate-50 transition-colors bg-sky-50/70';
+            tr.dataset.usuarioId = String(t.usuario_id || '');
+            tr.dataset.categoria = String(t.tipo_falla || '').toLowerCase();
+            tr.dataset.prioridad = String(prio).toLowerCase();
+            tr.dataset.search = ('#' + t.id + ' ' + t.id + ' ' + (t.usuario_nombre || '') + ' ' + (t.usuario_puesto || '') + ' ' + (t.usuario_email || '') + ' ' + (t.titulo || '') + ' ' + (t.tipo_falla || '') + ' ' + (t.subcategoria || '') + ' ' + (t.descripcion || '') + ' ' + estatusNombre).toLowerCase();
+
+            const tituloEscapadoJs = String(t.titulo || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            const evidenciaHtml = t.imagen
+                ? `<button type="button" onclick="abrirVisorImagen('/uploads/${escaparHtmlSimple(t.imagen)}', 'Evidencia Ticket #${t.id}')" class="inline-block group cursor-pointer focus:outline-none"><img src="/uploads/${escaparHtmlSimple(t.imagen)}" alt="Evidencia" class="w-11 h-11 object-cover rounded-md border border-slate-200"></button>`
+                : `<span class="text-slate-400 text-[10px] italic">Sin imagen</span>`;
+
+            const horaActualFmt = new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+            tr.innerHTML = `
+                <td class="py-2.5 px-2 text-center whitespace-nowrap">
+                    <div class="inline-flex items-center gap-0.5 bg-slate-100 rounded p-0.5 border border-slate-200">
+                        <button type="button" onclick="moverFilaTicketUnPaso('${t.id}', 'arriba')" class="text-slate-500 hover:text-brand-600 hover:bg-white rounded px-1 py-0.5 text-[11px] font-black leading-none transition-colors" title="Subir ticket">▲</button>
+                        <button type="button" onclick="moverFilaTicketUnPaso('${t.id}', 'abajo')" class="text-slate-500 hover:text-brand-600 hover:bg-white rounded px-1 py-0.5 text-[11px] font-black leading-none transition-colors" title="Bajar ticket">▼</button>
+                    </div>
+                </td>
+                <td class="py-3 px-4 font-bold whitespace-nowrap">
+                    <div class="flex items-center justify-between gap-1.5">
+                        <a href="/admin/tickets/${t.id}" target="_blank" rel="opener" class="inline-flex items-center gap-1 text-brand-600 hover:text-brand-800 font-extrabold hover:underline" title="Abrir ticket completo en pestaña nueva">
+                            <span>#${t.id}</span>
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                        </a>
+                        <button type="button" onclick="abrirModalEliminarTicket('${t.id}', '${tituloEscapadoJs}')" title="Eliminar este ticket" class="text-slate-400 hover:text-brand-600 hover:bg-brand-50 p-1 rounded transition-colors cursor-pointer text-sm">Eliminar</button>
+                    </div>
+                </td>
+                <td class="py-3 px-4">
+                    <div class="font-semibold text-slate-900">${escaparHtmlSimple(t.usuario_nombre || 'Usuario')}</div>
+                    ${t.usuario_puesto ? `<div class="text-[11px] font-semibold text-brand-700">${escaparHtmlSimple(t.usuario_puesto)}</div>` : ''}
+                    ${t.usuario_email ? `<div class="text-[11px] text-slate-500">${escaparHtmlSimple(t.usuario_email)}</div>` : ''}
+                    ${t.creado_por_admin ? `<div class="mt-0.5"><span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">Por: ${escaparHtmlSimple(t.creado_por_admin)}</span></div>` : ''}
+                </td>
+                <td class="py-3 px-4">
+                    <div class="font-semibold text-slate-900 flex items-center gap-1.5 flex-wrap">
+                        <span>${escaparHtmlSimple(t.titulo || '')}</span>
+                    </div>
+                    <div class="text-[11px] text-slate-500 mt-0.5">
+                        <span>${escaparHtmlSimple(t.tipo_falla || 'General')}</span>
+                        ${t.subcategoria ? `<span class="text-brand-600 font-bold">› ${escaparHtmlSimple(t.subcategoria)}</span>` : ''}
+                    </div>
+                </td>
+                <td class="py-3 px-4 whitespace-nowrap">${badgePrioHtml}</td>
+                <td class="py-3 px-4 text-slate-600 max-w-[270px]">
+                    <div class="flex flex-col items-start gap-1">
+                        <p id="descTicketTexto-${t.id}" class="line-clamp-2 leading-relaxed break-words text-xs text-slate-700 w-full" title="${escaparHtmlSimple(t.descripcion || '')}">${escaparHtmlSimple(t.descripcion || '')}</p>
+                        <button type="button" id="btnToggleDesc-${t.id}" onclick="toggleDescripcionTicket('${t.id}')" class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold text-slate-600 hover:text-brand-700 bg-slate-100 hover:bg-brand-50 border border-slate-200 hover:border-brand-300 transition-colors cursor-pointer select-none">
+                            <span id="iconoToggleDesc-${t.id}">▼</span>
+                            <span id="textoToggleDesc-${t.id}">Ver todo</span>
+                        </button>
+                    </div>
+                </td>
+                <td class="py-3 px-4 text-center whitespace-nowrap">${evidenciaHtml}</td>
+                <td class="py-3 px-4 whitespace-nowrap" id="celdaEstatusTicket-${t.id}">
+                    <div class="flex items-center gap-1.5">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-extrabold border shadow-2xs" style="background-color: ${colEst.bg}; color: ${colEst.texto}; border-color: ${colEst.borde};">
+                            <span class="w-2 h-2 rounded-full flex-shrink-0" style="background-color: ${colEst.dot};"></span>
+                            <span>${escaparHtmlSimple(estatusNombre)}</span>
+                        </span>
+                    </div>
+                </td>
+                <td class="py-3 px-4">
+                    <div class="space-y-1.5">
+                        <select id="selectEstatusFila-${t.id}" class="select-estatus-ticket w-full max-w-[160px] rounded-md border px-2 py-1 text-xs font-extrabold focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer transition-all shadow-2xs" style="background-color: ${colEst.bg}; color: ${colEst.texto}; border-color: ${colEst.borde};" data-ticket-id="${t.id}" data-original-status="${escaparHtmlSimple(estatusNombre)}" onchange="manejarCambioSelectEstatus(this)">
+                            ${opcionesSelectHtml}
+                        </select>
+                        <div class="flex items-center gap-1.5 mt-0.5"><span id="statusIndicator-${t.id}" class="text-[10px] font-bold"></span></div>
+                        <div class="flex flex-wrap items-center gap-1">
+                            <button type="button" onclick="abrirChatTicketAdmin('${t.id}')" class="relative inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold bg-slate-100 hover:bg-brand-50 text-slate-700 hover:text-brand-700 border border-slate-300 hover:border-brand-300 transition-colors cursor-pointer">
+                                <span>Chat</span>
+                                <span id="badgeChatAdminTicket-${t.id}" style="display:none;" class="px-1 py-0.1 rounded-full text-[9px] font-extrabold bg-brand-600 text-white animate-bounce">0</span>
+                            </button>
+                            <button type="button" data-ticket-id="${t.id}" data-ticket-titulo="${escaparHtmlSimple(t.titulo || '')}" data-ticket-estatus="${escaparHtmlSimple(estatusNombre)}" data-atendido-actual="" onclick="abrirModalRegistrarAvance(this)" class="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition-colors cursor-pointer">
+                                <span>Avance</span>
+                            </button>
+                        </div>
+                    </div>
+                </td>
+                <td class="py-3 px-4">
+                    <div class="min-w-[180px]">
+                        <div class="flex items-start justify-between gap-1">
+                            <div>
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold border" style="background-color: ${colEst.bg}; color: ${colEst.texto}; border-color: ${colEst.borde};">
+                                    <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background-color: ${colEst.dot};"></span>
+                                    ${escaparHtmlSimple(estatusNombre)}
+                                </span>
+                                <div class="text-[10px] text-slate-500 mt-0.5">${horaActualFmt}</div>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+            `;
+
+            tbody.insertBefore(tr, tbody.firstChild);
+            setTimeout(() => tr.classList.remove('bg-sky-50/70'), 3000);
+
+            if (typeof filtrarTablaTicketsAdmin === 'function') {
+                filtrarTablaTicketsAdmin();
+            }
+        }
+
         // ==========================================
         // SINCRONIZACIÓN AUTOMÁTICA EN TIEMPO REAL (ADMINISTRADOR)
         // ==========================================
@@ -8597,7 +8756,7 @@
                     }
                 });
 
-                const urlRefresco = new URL(window.location.pathname + window.location.search, window.location.origin);
+                const urlRefresco = new URL('/admin' + window.location.search, window.location.origin);
                 urlRefresco.searchParams.set('_rt', Date.now());
 
                 const resp = await fetch(urlRefresco.toString(), { 
@@ -8728,8 +8887,11 @@
 
                 // 1. NUEVO TICKET EN TIEMPO REAL
                 socketAdmin.on('ticket:nuevo', function(data) {
+                    if (data && data.ticket) {
+                        insertarTicketNuevoEnTablaDirecto(data.ticket);
+                    }
                     refrescarTableroAdminEnVivo(true);
-                    setTimeout(() => refrescarTableroAdminEnVivo(true), 450);
+                    setTimeout(() => refrescarTableroAdminEnVivo(true), 600);
                     if (!data || !data.ticket) return;
                     const t = data.ticket;
                     const descartados = obtenerTicketsDescartados();
@@ -8971,9 +9133,9 @@
             actualizarBotonNotifEscritorioAdminUI();
             inicializarSocketsAdmin();
             verificarNotificacionesLiveAdmin();
-            // Sincronización continua de respaldo (cada 5s) para asegurar actualización en todas las computadoras
+            // Sincronización continua de respaldo para asegurar actualización inmediata en todas las computadoras
             setInterval(refrescarTableroAdminEnVivo, 5000);
-            setInterval(verificarNotificacionesLiveAdmin, 15000);
+            setInterval(verificarNotificacionesLiveAdmin, 4000);
         }
     </script>
 
