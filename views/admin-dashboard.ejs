@@ -8310,11 +8310,12 @@
                 const ultimoTk = data.ultimoTicket ? data.ultimoTicket.id : 0;
                 const ultimoCom = data.ultimoComentarioUsuario ? data.ultimoComentarioUsuario.id : 0;
 
-                // Alerta sonora y visual al recibir nuevo ticket (solo si WebSockets estuviese desconectado)
+                // Alerta sonora y visual al recibir nuevo ticket y asegurar que siempre aparezca en la tabla
                 if (ultimoTicketIdConocido === null) {
                     ultimoTicketIdConocido = ultimoTk;
                 } else if (ultimoTk > ultimoTicketIdConocido) {
                     ultimoTicketIdConocido = ultimoTk;
+                    refrescarTableroAdminEnVivo(true);
                     const wsConectado = (socketAdmin && socketAdmin.connected);
                     if (!wsConectado && !descartados.includes(Number(ultimoTk))) {
                         reproducirSonidoAlertaAdmin('ticket');
@@ -8329,6 +8330,15 @@
                             t.id,
                             'ticket'
                         );
+                    }
+                }
+
+                // Si algún ticket nuevo activo aún no está dibujado en la tabla (y estamos en filtro Todos o Nuevo ticket), refrescar la tabla
+                const filtroUrl = new URLSearchParams(window.location.search).get('estatus') || 'Todos';
+                if (filtroUrl === 'Todos' || filtroUrl === 'Nuevo ticket') {
+                    const faltaAlgunoEnTabla = (data.ticketsNuevos || []).some(t => !document.getElementById('filaTicket-' + t.id));
+                    if (faltaAlgunoEnTabla) {
+                        refrescarTableroAdminEnVivo(true);
                     }
                 }
 
@@ -8558,21 +8568,39 @@
         // SINCRONIZACIÓN AUTOMÁTICA EN TIEMPO REAL (ADMINISTRADOR)
         // ==========================================
         let sincronizandoTableroAdmin = false;
-        async function refrescarTableroAdminEnVivo() {
-            if (sincronizandoTableroAdmin) return;
-            // No interrumpir si hay un modal abierto o si el admin está escribiendo en un formulario o tiene un cambio de estatus pendiente de guardar
-            const modalAbierto = document.querySelector('.modal[style*="display: block"]') || 
-                                 document.querySelector('.modal:not([style*="display: none"])[style*="display"]');
-            const inputActivo = document.activeElement && 
-                                (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') && 
-                                document.activeElement.id !== 'buscarTicketsAdmin';
-            const guardandoActivo = document.querySelector('.select-estatus-ticket[data-guardando="true"]');
-            const selectConCambio = Array.from(document.querySelectorAll('.select-estatus-ticket')).some(s => s.value !== s.dataset.originalStatus);
-            if (modalAbierto || inputActivo || guardandoActivo || selectConCambio) return;
+        let pendienteRefrescoAdmin = false;
+        let pendienteForzarAdmin = false;
+
+        async function refrescarTableroAdminEnVivo(forzar = false) {
+            if (sincronizandoTableroAdmin) {
+                pendienteRefrescoAdmin = true;
+                if (forzar) pendienteForzarAdmin = true;
+                return;
+            }
+
+            if (!forzar) {
+                const modalAbierto = document.querySelector('.modal[style*="display: block"]');
+                const guardandoActivo = document.querySelector('.select-estatus-ticket[data-guardando="true"]');
+                if (modalAbierto || guardandoActivo) {
+                    pendienteRefrescoAdmin = true;
+                    return;
+                }
+            }
 
             sincronizandoTableroAdmin = true;
             try {
-                const resp = await fetch(window.location.href, { 
+                // Guardar cualquier cambio de estatus sin guardar que el admin tenga seleccionado en la tabla para no perderlo
+                const cambiosPendientesSelect = {};
+                document.querySelectorAll('.select-estatus-ticket').forEach(s => {
+                    if (s.dataset.ticketId && s.value !== s.dataset.originalStatus) {
+                        cambiosPendientesSelect[s.dataset.ticketId] = s.value;
+                    }
+                });
+
+                const urlRefresco = new URL(window.location.pathname + window.location.search, window.location.origin);
+                urlRefresco.searchParams.set('_rt', Date.now());
+
+                const resp = await fetch(urlRefresco.toString(), { 
                     headers: { 'X-Requested-With': 'XMLHttpRequest' },
                     cache: 'no-store' 
                 });
@@ -8588,6 +8616,18 @@
                     contTablaActual.innerHTML = nuevoContTabla.innerHTML;
                     restaurarDescripcionesDesplegadas();
                     aplicarOrdenPersonalizadoTickets();
+
+                    // Restaurar selecciones de estatus pendientes que el admin aún no había guardado
+                    Object.keys(cambiosPendientesSelect).forEach(tId => {
+                        const sel = document.getElementById('selectEstatusFila-' + tId) || document.querySelector(`.select-estatus-ticket[data-ticket-id="${tId}"]`);
+                        if (sel) {
+                            sel.value = cambiosPendientesSelect[tId];
+                            if (typeof aplicarEstiloColorSelect === 'function') aplicarEstiloColorSelect(sel);
+                        }
+                    });
+                    if (typeof actualizarVisualizacionCambios === 'function') {
+                        actualizarVisualizacionCambios();
+                    }
                 }
 
                 // 2. Actualizar clasificadores de estatus
@@ -8619,6 +8659,12 @@
                 console.warn('Error sincronizando tablero admin en vivo:', err);
             } finally {
                 sincronizandoTableroAdmin = false;
+                if (pendienteRefrescoAdmin) {
+                    const f = pendienteForzarAdmin;
+                    pendienteRefrescoAdmin = false;
+                    pendienteForzarAdmin = false;
+                    setTimeout(() => refrescarTableroAdminEnVivo(f), 250);
+                }
             }
         }
 
@@ -8682,7 +8728,8 @@
 
                 // 1. NUEVO TICKET EN TIEMPO REAL
                 socketAdmin.on('ticket:nuevo', function(data) {
-                    refrescarTableroAdminEnVivo();
+                    refrescarTableroAdminEnVivo(true);
+                    setTimeout(() => refrescarTableroAdminEnVivo(true), 450);
                     if (!data || !data.ticket) return;
                     const t = data.ticket;
                     const descartados = obtenerTicketsDescartados();

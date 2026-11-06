@@ -2210,18 +2210,29 @@
         // SINCRONIZACIÓN AUTOMÁTICA EN TIEMPO REAL (COLABORADOR)
         // ==========================================
         let sincronizandoTableroUser = false;
-        async function refrescarTableroUsuarioEnVivo() {
-            if (sincronizandoTableroUser) return;
-            const modalAbierto = document.querySelector('.modal[style*="display: block"]') || 
-                                 document.querySelector('.modal:not([style*="display: none"])[style*="display"]');
-            const inputActivo = document.activeElement && 
-                                (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') && 
-                                document.activeElement.id !== 'buscarMisTickets';
-            if (modalAbierto || inputActivo) return;
+        let pendienteRefrescoUser = false;
+        let pendienteForzarUser = false;
+
+        async function refrescarTableroUsuarioEnVivo(forzar = false) {
+            if (sincronizandoTableroUser) {
+                pendienteRefrescoUser = true;
+                if (forzar) pendienteForzarUser = true;
+                return;
+            }
+            if (!forzar) {
+                const modalAbierto = document.querySelector('.modal[style*="display: block"]');
+                if (modalAbierto) {
+                    pendienteRefrescoUser = true;
+                    return;
+                }
+            }
 
             sincronizandoTableroUser = true;
             try {
-                const resp = await fetch(window.location.href, { 
+                const urlRefresco = new URL(window.location.pathname + window.location.search, window.location.origin);
+                urlRefresco.searchParams.set('_rt', Date.now());
+
+                const resp = await fetch(urlRefresco.toString(), { 
                     headers: { 'X-Requested-With': 'XMLHttpRequest' },
                     cache: 'no-store' 
                 });
@@ -2246,6 +2257,12 @@
                 console.warn('Error sincronizando tablero usuario en vivo:', err);
             } finally {
                 sincronizandoTableroUser = false;
+                if (pendienteRefrescoUser) {
+                    const f = pendienteForzarUser;
+                    pendienteRefrescoUser = false;
+                    pendienteForzarUser = false;
+                    setTimeout(() => refrescarTableroUsuarioEnVivo(f), 250);
+                }
             }
         }
 
@@ -2304,7 +2321,8 @@
                 });
 
                 socketUser.on('ticket:nuevo', function() {
-                    refrescarTableroUsuarioEnVivo();
+                    refrescarTableroUsuarioEnVivo(true);
+                    setTimeout(() => refrescarTableroUsuarioEnVivo(true), 450);
                     verificarNotificacionesVivoUsuario();
                 });
 
