@@ -11,7 +11,11 @@ function obtenerConfig(callback) {
     });
 }
 
-// Crear transportador Nodemailer optimizado para correo corporativo de Grupo CDM (puerto 2525 / 25 / 587)
+// Pool único persistente para reutilizar una sola conexión SMTP y evitar retrasos / colas antispam
+let transportadorPool = null;
+let claveConfigPool = '';
+
+// Crear o reutilizar transportador Nodemailer optimizado para correo corporativo de Grupo CDM (puerto 2525 / 25 / 587)
 function crearTransportador(config) {
     if (!config) {
         return null;
@@ -19,25 +23,64 @@ function crearTransportador(config) {
 
     const host = (config.smtp_host && config.smtp_host.trim()) ? config.smtp_host.trim() : 'mail.grupo-cdm.mx';
     const port = parseInt(config.smtp_port) || 2525;
+    const usarAuth = Boolean(config.password_remitente && config.password_remitente.trim() && host !== 'mail.grupo-cdm.mx');
+    const userAuth = usarAuth ? (config.email_remitente || '').trim() : '';
+    const passAuth = usarAuth ? config.password_remitente.trim() : '';
+
+    const nuevaClave = `${host}:${port}:${userAuth}:${passAuth}`;
+    if (transportadorPool && claveConfigPool === nuevaClave) {
+        return transportadorPool;
+    }
+
+    if (transportadorPool) {
+        try { transportadorPool.close(); } catch (e) {}
+    }
 
     const transportOpts = {
+        pool: true,
+        maxConnections: 1,
+        maxMessages: 100,
+        rateDelta: 1000,
+        rateLimit: 5,
         host: host,
         port: port,
         secure: port === 465,
+        name: 'grupo-cdm.mx',
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 20000,
         tls: {
             rejectUnauthorized: false
         }
     };
 
     // Solo enviamos auth si hay contraseña explícita y no es el relay interno de grupo-cdm (o si se configuró externamente)
-    if (config.password_remitente && config.password_remitente.trim() && host !== 'mail.grupo-cdm.mx') {
+    if (usarAuth) {
         transportOpts.auth = {
-            user: (config.email_remitente || '').trim(),
-            pass: config.password_remitente.trim()
+            user: userAuth,
+            pass: passAuth
         };
     }
 
-    return nodemailer.createTransport(transportOpts);
+    transportadorPool = nodemailer.createTransport(transportOpts);
+    claveConfigPool = nuevaClave;
+    return transportadorPool;
+}
+
+// Enriquecer opciones de correo con cabeceras de prioridad alta y Message-ID corporativo @grupo-cdm.mx para entrega inmediata
+function prepararOpcionesCorreo(mailOptions) {
+    const idUnico = `< cdm-${Date.now()}-${Math.random().toString(36).substring(2, 10)}@grupo-cdm.mx >`.replace(/\s+/g, '');
+    return {
+        ...mailOptions,
+        priority: 'high',
+        messageId: idUnico,
+        headers: {
+            'X-Priority': '1 (Highest)',
+            'X-MSMail-Priority': 'High',
+            'Importance': 'High',
+            ...(mailOptions.headers || {})
+        }
+    };
 }
 
 // Determinar el remitente (permite que cualquier administrador activo sea el remitente)
@@ -183,24 +226,24 @@ function notificarNuevoTicketAdmin(ticketId, datosTicket, opciones = {}) {
                 const cuerpoTextoFinal = reemplazarVariables(plantilla.cuerpo, variables);
                 const cuerpoHtmlFinal = generarHtml(asuntoFinal, cuerpoTextoFinal, variables, remitente);
 
-                // Enviar individualmente a cada administrador para garantizar entrega sin rechazos por lote
-                adminsValidos.forEach(admin => {
-                    const mailOptions = {
-                        from: `"${remitente.nombre}" <${remitente.email}>`,
-                        replyTo: remitente.email,
-                        to: admin.email.trim(),
-                        subject: asuntoFinal,
-                        text: cuerpoTextoFinal,
-                        html: cuerpoHtmlFinal
-                    };
+                // Enviar en un solo mensaje agrupado a todos los administradores usando el pool persistente
+                const listaCorreosAdmins = Array.from(new Set(adminsValidos.map(a => a.email.trim())));
+                const mailOptions = prepararOpcionesCorreo({
+                    from: `"${remitente.nombre}" <${remitente.email}>`,
+                    replyTo: remitente.email,
+                    to: listaCorreosAdmins[0],
+                    cc: listaCorreosAdmins.length > 1 ? listaCorreosAdmins.slice(1) : undefined,
+                    subject: asuntoFinal,
+                    text: cuerpoTextoFinal,
+                    html: cuerpoHtmlFinal
+                });
 
-                    transporter.sendMail(mailOptions, (error, info) => {
-                        if (error) {
-                            console.error(`[Correo] Error al enviar notificación de nuevo ticket a ${admin.email}:`, error.message);
-                        } else {
-                            console.log(`[Correo] Notificación de nuevo ticket #${ticketId} enviada con éxito a ${admin.email}:`, info.messageId);
-                        }
-                    });
+                transporter.sendMail(mailOptions, (error, info) => {
+                    if (error) {
+                        console.error(`[Correo] Error al enviar notificación de nuevo ticket #${ticketId} a administradores:`, error.message);
+                    } else {
+                        console.log(`[Correo] Notificación de nuevo ticket #${ticketId} enviada con éxito a [${listaCorreosAdmins.join(', ')}]:`, info.messageId);
+                    }
                 });
             });
         });
@@ -272,14 +315,14 @@ function notificarTicketCreadoUsuario(ticketId, datosTicket, opciones = {}) {
             const cuerpoHtmlFinal = generarHtml(asuntoFinal, cuerpoTextoFinal, variables, remitente);
 
             // 1. Enviar correo al usuario solicitante
-            const mailOptionsUsuario = {
+            const mailOptionsUsuario = prepararOpcionesCorreo({
                 from: `"${remitente.nombre}" <${remitente.email}>`,
                 replyTo: remitente.email,
                 to: datosTicket.usuario_email.trim(),
                 subject: asuntoFinal,
                 text: cuerpoTextoFinal,
                 html: cuerpoHtmlFinal
-            };
+            });
 
             transporter.sendMail(mailOptionsUsuario, (error, info) => {
                 if (error) {
@@ -299,14 +342,14 @@ function notificarTicketCreadoUsuario(ticketId, datosTicket, opciones = {}) {
                 const cuerpoAdminTexto = `Hola ${opciones.adminRemitente?.nombre || datosTicket.creado_por_admin || 'Administrador'},\n\nTe confirmamos que has levantado exitosamente el ticket de soporte #${ticketId} para el usuario ${datosTicket.usuario_nombre} (${datosTicket.usuario_email}):\n\n• Número de Ticket: #${ticketId}\n• Título: ${datosTicket.titulo}\n• Tipo de Falla: ${datosTicket.tipo_falla}\n• Subcategoría: ${datosTicket.subcategoria || 'Sin subcategoría'}\n• Prioridad: ${datosTicket.prioridad}\n• Estatus: ${datosTicket.estatus || 'Nuevo ticket'}\n• Fecha de reporte: ${fechaFormateada}\n\nDescripción del problema:\n${datosTicket.descripcion}\n\nEl usuario ya ha recibido su notificación automática de confirmación.`;
                 const cuerpoAdminHtml = generarHtml(asuntoAdmin, cuerpoAdminTexto, variables, remitente);
 
-                transporter.sendMail({
+                transporter.sendMail(prepararOpcionesCorreo({
                     from: `"${remitente.nombre}" <${remitente.email}>`,
                     replyTo: remitente.email,
                     to: adminEmailCreador,
                     subject: asuntoAdmin,
                     text: cuerpoAdminTexto,
                     html: cuerpoAdminHtml
-                }, (errorAdmin, infoAdmin) => {
+                }), (errorAdmin, infoAdmin) => {
                     if (errorAdmin) {
                         console.error(`[Correo] Error al enviar confirmación de ticket #${ticketId} al administrador creador (${adminEmailCreador}):`, errorAdmin.message);
                     } else {
@@ -516,7 +559,7 @@ function notificarCambioEstatusUsuario(ticketId, nuevoEstatus, datosResolucion =
                                 ? listaCcAdmins
                                 : (listaCcAdmins.slice(1).length > 0 ? listaCcAdmins.slice(1) : undefined);
 
-                            const mailOptions = {
+                            const mailOptions = prepararOpcionesCorreo({
                                 from: `"${remitente.nombre}" <${remitente.email}>`,
                                 replyTo: remitente.email,
                                 to: destinatarioPrincipal,
@@ -524,7 +567,7 @@ function notificarCambioEstatusUsuario(ticketId, nuevoEstatus, datosResolucion =
                                 subject: asuntoFinal,
                                 text: cuerpoTextoFinal,
                                 html: cuerpoHtmlFinal
-                            };
+                            });
 
                             transporter.sendMail(mailOptions, (error, info) => {
                                 if (error) {
@@ -595,7 +638,7 @@ function enviarCorreoPrueba(destinatario, adminRemitente = null, callback = null
             `
         };
 
-        transporter.sendMail(mailOptions, (error, info) => {
+        transporter.sendMail(prepararOpcionesCorreo(mailOptions), (error, info) => {
             if (error) {
                 return callback && callback(error);
             }
@@ -682,7 +725,7 @@ function enviarCorreoPersonalizado(datosCorreo, callback) {
         }));
 
         const enviarConCc = (listaCc) => {
-            const mailOptions = {
+            const mailOptions = prepararOpcionesCorreo({
                 from: `"${remitente.nombre}" <${remitente.email}>`,
                 replyTo: remitente.email,
                 to: destinatariosLimpios,
@@ -691,7 +734,7 @@ function enviarCorreoPersonalizado(datosCorreo, callback) {
                 text: mensaje,
                 html: htmlPersonalizado,
                 attachments: attachments.length > 0 ? attachments : undefined
-            };
+            });
 
             transporter.sendMail(mailOptions, (error, info) => {
                 if (error) {
