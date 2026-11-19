@@ -666,7 +666,8 @@
                                 ];
                                 const estatusActivosClasif = listaEstClasif.filter(e => !e.es_cierre && e.nombre !== 'Resuelto');
                                 const estatusCierreClasif = listaEstClasif.filter(e => e.es_cierre || e.nombre === 'Resuelto');
-                                const nombresCierreClasif = estatusCierreClasif.map(e => '"' + e.nombre + '"');
+                                const nombresCierreSet = new Set(estatusCierreClasif.map(e => e.nombre));
+                                const enVistaFinalizados = (filtroActual === 'Finalizados' || nombresCierreSet.has(filtroActual));
                             %>
                             <div class="inline-flex items-center gap-1 bg-white p-1 rounded-md border border-slate-200 shadow-2xs overflow-x-auto max-w-full" id="clasificadorEstatusAdmin">
                                 <a 
@@ -679,23 +680,30 @@
                                         class="px-3 py-1 rounded text-xs font-bold whitespace-nowrap transition-all <%= filtroActual === est.nombre ? 'bg-brand-600 text-white shadow-2xs' : 'text-slate-600 hover:text-brand-600 hover:bg-slate-50' %>"
                                     ><%= est.nombre %></a>
                                 <% }) %>
-                                <% if (estatusCierreClasif.length > 0) { %>
-                                    <span class="text-slate-300 px-0.5 select-none" title="Estatus de finalización de ticket (ocultos de la tabla principal Todos)">|</span>
+                                <a 
+                                    href="/admin?estatus=Finalizados" 
+                                    title="Consultar todos los tickets finalizados (Resuelto y estatus de finalización)"
+                                    class="px-3 py-1 rounded text-xs font-bold whitespace-nowrap transition-all <%= enVistaFinalizados ? 'bg-brand-600 text-white shadow-2xs' : 'text-slate-600 hover:text-brand-600 hover:bg-slate-50' %>"
+                                >Finalizados</a>
+                            </div>
+                            <% if (enVistaFinalizados && estatusCierreClasif.length > 1) { %>
+                                <div class="inline-flex items-center gap-1 bg-emerald-50/70 p-1 rounded-md border border-emerald-200 text-xs">
+                                    <span class="text-[10px] font-bold text-emerald-800 px-1.5 uppercase">Ver en Finalizados:</span>
+                                    <a 
+                                        href="/admin?estatus=Finalizados" 
+                                        class="px-2.5 py-0.5 rounded text-[11px] font-bold whitespace-nowrap transition-all <%= filtroActual === 'Finalizados' ? 'bg-emerald-600 text-white shadow-2xs' : 'text-emerald-800 hover:bg-emerald-100' %>"
+                                    >Todos los finalizados</a>
                                     <% estatusCierreClasif.forEach(est => { %>
                                         <a 
                                             href="/admin?estatus=<%= encodeURIComponent(est.nombre) %>" 
-                                            title="Estatus de finalización de ticket (oculto en la tabla principal Todos)"
-                                            class="px-3 py-1 rounded text-xs font-bold whitespace-nowrap transition-all inline-flex items-center gap-1 <%= filtroActual === est.nombre ? 'bg-emerald-600 text-white shadow-2xs' : 'text-emerald-700 bg-emerald-50/60 hover:text-emerald-800 hover:bg-emerald-100/80 border border-emerald-200/70' %>"
-                                        >
-                                            <span>🏁</span>
-                                            <span><%= est.nombre %></span>
-                                        </a>
+                                            class="px-2.5 py-0.5 rounded text-[11px] font-bold whitespace-nowrap transition-all <%= filtroActual === est.nombre ? 'bg-emerald-600 text-white shadow-2xs' : 'text-emerald-800 hover:bg-emerald-100' %>"
+                                        ><%= est.nombre %></a>
                                     <% }) %>
-                                <% } %>
-                            </div>
+                                </div>
+                            <% } %>
                             <% if (filtroActual === 'Todos') { %>
                                 <span class="text-[11px] text-slate-400 italic">
-                                    (Los tickets finalizados en <%= nombresCierreClasif.join(', ') %> se ocultan de la tabla principal y se consultan en su pestaña)
+                                    (Los tickets finalizados se consultan en "Finalizados")
                                 </span>
                             <% } %>
                         </div>
@@ -1621,12 +1629,12 @@
                             <thead>
                                 <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-600">
                                     <th class="py-3 px-4">Estatus / Badge</th>
-                                    <th class="py-3 px-4 text-center">Pausa Tiempo</th>
+                                    <th class="py-3 px-4 text-center">Tiempo en Métricas</th>
                                     <th class="py-3 px-4 text-center">Pide Evidencia</th>
                                     <th class="py-3 px-4 text-center">Justificación</th>
                                     <th class="py-3 px-4 text-center">Discord</th>
                                     <th class="py-3 px-4 text-center">Correo</th>
-                                    <th class="py-3 px-4 text-center">Tabla Principal / Cierre</th>
+                                    <th class="py-3 px-4 text-center">Tabla Principal / Finalizados</th>
                                     <th class="py-3 px-4 text-center">Tipo</th>
                                     <th class="py-3 px-4 text-right">Acciones</th>
                                 </tr>
@@ -1641,8 +1649,12 @@
                                             </span>
                                         </td>
                                         <td class="py-3 px-4 text-center">
-                                            <% if (est.pausa_tiempo) { %>
-                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300">
+                                            <% if (est.anula_tiempo) { %>
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-300" title="Anula todo el tiempo transcurrido del ticket en los promedios de métricas">
+                                                    🚫 Anula Tiempo
+                                                </span>
+                                            <% } else if (est.pausa_tiempo) { %>
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300" title="Pausa el reloj mientras el ticket está en este estatus">
                                                     ⏸️ Pausa Tiempo
                                                 </span>
                                             <% } else { %>
@@ -1668,15 +1680,22 @@
                                             <% } %>
                                         </td>
                                         <td class="py-3 px-4 text-center">
-                                            <% if (est.notificar_discord !== 0) { %>
-                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-800 border border-indigo-200">
-                                                    💬 Activo
-                                                </span>
-                                            <% } else { %>
-                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
-                                                    🔇 Oculto
-                                                </span>
-                                            <% } %>
+                                            <div class="inline-flex flex-col items-center gap-1">
+                                                <% if (est.notificar_discord !== 0) { %>
+                                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-800 border border-indigo-200">
+                                                        💬 Activo
+                                                    </span>
+                                                <% } else { %>
+                                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                                                        🔇 Oculto
+                                                    </span>
+                                                <% } %>
+                                                <% if (est.archivar_discord || est.nombre === 'Resuelto') { %>
+                                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-white" title="Bloquea y archiva el hilo de Discord al pasar a este estatus">
+                                                        🔒 Archiva hilo
+                                                    </span>
+                                                <% } %>
+                                            </div>
                                         </td>
                                         <td class="py-3 px-4 text-center">
                                             <% if (est.notificar_correo !== 0) { %>
@@ -1701,8 +1720,8 @@
                                         </td>
                                         <td class="py-3 px-4 text-center">
                                             <% if (est.es_cierre || est.nombre === 'Resuelto') { %>
-                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300" title="Oculto de la tabla principal (Todos), se consulta en su pestaña como los resueltos">
-                                                    🏁 Finalización (En Resueltos)
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300" title="Oculto de la tabla principal (Todos), se consulta en la pestaña Finalizados">
+                                                    🏁 En Finalizados
                                                 </span>
                                             <% } else { %>
                                                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200" title="Aparece en la tabla principal (Todos)">
@@ -1721,7 +1740,7 @@
                                             <div class="inline-flex items-center gap-1.5">
                                                 <button 
                                                     type="button" 
-                                                    onclick="abrirModalEditarEstatus('<%= est.id %>', '<%= est.nombre %>', '<%= est.color || '#3b82f6' %>', <%= est.pausa_tiempo ? 1 : 0 %>, <%= est.pide_evidencia ? 1 : 0 %>, '<%= est.pide_descripcion || 'opcional' %>', <%= est.es_sistema ? 1 : 0 %>, <%= est.notificar_discord !== 0 ? 1 : 0 %>, <%= est.notificar_correo !== 0 ? 1 : 0 %>, '<%= est.modo_correo || 'plantilla_propia' %>', <%= (est.es_cierre || est.nombre === 'Resuelto') ? 1 : 0 %>)" 
+                                                    onclick="abrirModalEditarEstatus('<%= est.id %>', '<%= est.nombre %>', '<%= est.color || '#3b82f6' %>', <%= est.pausa_tiempo ? 1 : 0 %>, <%= est.pide_evidencia ? 1 : 0 %>, '<%= est.pide_descripcion || 'opcional' %>', <%= est.es_sistema ? 1 : 0 %>, <%= est.notificar_discord !== 0 ? 1 : 0 %>, <%= est.notificar_correo !== 0 ? 1 : 0 %>, '<%= est.modo_correo || 'plantilla_propia' %>', <%= (est.es_cierre || est.nombre === 'Resuelto') ? 1 : 0 %>, <%= est.anula_tiempo ? 1 : 0 %>, <%= (est.archivar_discord || est.nombre === 'Resuelto') ? 1 : 0 %>)" 
                                                     class="px-2.5 py-1 text-[11px] font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded border border-slate-300 transition-colors cursor-pointer"
                                                     title="Editar estatus"
                                                 >
@@ -8606,12 +8625,18 @@
             const btnFila = document.getElementById('btnGuardarFila-' + ticketId);
             if (btnFila) btnFila.style.display = 'none';
 
-            // 3. Efecto flash visual en la fila (y si es un estatus de finalización en la vista principal "Todos", ocultarlo de la tabla principal)
+            // 3. Efecto flash visual en la fila (y si cambia entre Tabla Principal "Todos" y "Finalizados", retirarlo de la vista actual)
             const fila = document.getElementById('filaTicket-' + ticketId);
             const filtroUrl = new URLSearchParams(window.location.search).get('estatus') || 'Todos';
             if (fila) {
                 fila.classList.add('bg-amber-100/60');
-                if ((filtroUrl === 'Todos' && esEstatusCierreJS(nuevoEst)) || (filtroUrl !== 'Todos' && filtroUrl !== nuevoEst)) {
+                const esFinalizadoNuevo = esEstatusCierreJS(nuevoEst);
+                const debeOcultarseDeVistaActual = 
+                    (filtroUrl === 'Todos' && esFinalizadoNuevo) ||
+                    (filtroUrl === 'Finalizados' && !esFinalizadoNuevo) ||
+                    (filtroUrl !== 'Todos' && filtroUrl !== 'Finalizados' && filtroUrl !== nuevoEst);
+
+                if (debeOcultarseDeVistaActual) {
                     setTimeout(() => {
                         if (fila && fila.parentNode) {
                             fila.remove();
@@ -9396,17 +9421,25 @@
                 <div class="p-3 bg-purple-50/70 border border-purple-200 rounded space-y-1">
                     <label class="inline-flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="es_cierre" id="chkCrearEsCierre" value="1" class="rounded border-purple-300 text-purple-600 focus:ring-purple-500">
-                        <span class="text-xs font-bold text-purple-950">🏁 ¿Este estatus es de finalización de ticket? (Ocultar de la tabla principal)</span>
+                        <span class="text-xs font-bold text-purple-950">🏁 ¿Este estatus es de finalización de ticket? (Ocultar de la tabla principal y mandar a "Finalizados")</span>
                     </label>
-                    <p class="text-[11px] text-purple-800 ml-5">Al marcar esta casilla, los tickets con este estatus se ocultarán de la tabla principal ("Todos") igual que los tickets resueltos, y aparecerán al seleccionarlo en los filtros de estatus.</p>
+                    <p class="text-[11px] text-purple-800 ml-5">Al marcar esta casilla, los tickets con este estatus se ocultarán de la tabla principal ("Todos") y aparecerán en el apartado de "Finalizados".</p>
                 </div>
 
                 <div class="p-3 bg-amber-50/70 border border-amber-200 rounded space-y-1">
                     <label class="inline-flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="pausa_tiempo" value="1" class="rounded border-amber-300 text-amber-600 focus:ring-amber-500">
+                        <input type="checkbox" name="pausa_tiempo" id="chkCrearPausaTiempo" value="1" onchange="if(this.checked){ const c = document.getElementById('chkCrearAnulaTiempo'); if(c) c.checked = false; }" class="rounded border-amber-300 text-amber-600 focus:ring-amber-500">
                         <span class="text-xs font-bold text-amber-950">⏸️ ¿Pausar el tiempo para los Dashboards y Métricas?</span>
                     </label>
-                    <p class="text-[11px] text-amber-800 ml-5">El tiempo que el ticket pase en este estatus no se contará como tiempo de resolución de TI (excluyendo domingos).</p>
+                    <p class="text-[11px] text-amber-800 ml-5">Solo congela el reloj mientras el ticket esté en este estatus (si no marcas ninguna casilla de tiempo, el tiempo transcurrirá normal).</p>
+                </div>
+
+                <div class="p-3 bg-rose-50/70 border border-rose-200 rounded space-y-1">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="anula_tiempo" id="chkCrearAnulaTiempo" value="1" onchange="if(this.checked){ const c = document.getElementById('chkCrearPausaTiempo'); if(c) c.checked = false; }" class="rounded border-rose-300 text-rose-600 focus:ring-rose-500">
+                        <span class="text-xs font-bold text-rose-950">🚫 ¿Anular todo el tiempo del ticket para los Dashboards y Métricas?</span>
+                    </label>
+                    <p class="text-[11px] text-rose-800 ml-5">El ticket y su evidencia sí aparecerán registrados en las métricas, pero todo el tiempo que transcurrió no se contará en los promedios (ideal para tickets cancelados).</p>
                 </div>
 
                 <div class="p-3 bg-sky-50/70 border border-sky-200 rounded space-y-1">
@@ -9426,12 +9459,21 @@
                 </div>
 
                 <!-- Interruptores de Discord y Correo Electrónico -->
-                <div class="p-3 bg-indigo-50/70 border border-indigo-200 rounded space-y-1">
-                    <label class="inline-flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="notificar_discord" value="1" checked class="rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500">
-                        <span class="text-xs font-bold text-indigo-950">💬 ¿Notificar este estatus en Discord?</span>
-                    </label>
-                    <p class="text-[11px] text-indigo-800 ml-5">Si lo desactivas, al cambiar un ticket a este estatus no se publicará el aviso en el hilo de Discord.</p>
+                <div class="p-3 bg-indigo-50/70 border border-indigo-200 rounded space-y-2">
+                    <div>
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="notificar_discord" value="1" checked class="rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500">
+                            <span class="text-xs font-bold text-indigo-950">💬 ¿Notificar este estatus en Discord?</span>
+                        </label>
+                        <p class="text-[11px] text-indigo-800 ml-5">Si lo desactivas, al cambiar un ticket a este estatus no se publicará el aviso en el hilo de Discord.</p>
+                    </div>
+                    <div class="pt-1.5 border-t border-indigo-200/70">
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="archivar_discord" id="chkCrearArchivarDiscord" value="1" class="rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500">
+                            <span class="text-xs font-bold text-indigo-950">¿Bloquear y archivar el hilo de Discord al pasar a este estatus?</span>
+                        </label>
+                        <p class="text-[11px] text-indigo-800 ml-5">Archiva el hilo en Discord sin eliminarlo, ocultándolo de la barra activa igual que con los tickets resueltos.</p>
+                    </div>
                 </div>
 
                 <div class="p-3 bg-emerald-50/70 border border-emerald-200 rounded space-y-2">
@@ -9512,16 +9554,24 @@
                 <div class="p-3 bg-purple-50/70 border border-purple-200 rounded space-y-1">
                     <label class="inline-flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="es_cierre" value="1" id="chkEditEsCierre" class="rounded border-purple-300 text-purple-600 focus:ring-purple-500">
-                        <span class="text-xs font-bold text-purple-950">🏁 ¿Este estatus es de finalización de ticket? (Ocultar de la tabla principal)</span>
+                        <span class="text-xs font-bold text-purple-950">🏁 ¿Este estatus es de finalización de ticket? (Ocultar de la tabla principal y mandar a "Finalizados")</span>
                     </label>
-                    <p class="text-[11px] text-purple-800 ml-5">Al marcar esta casilla, los tickets con este estatus se ocultarán de la tabla principal ("Todos") igual que los tickets resueltos, y aparecerán al seleccionarlo en los filtros de estatus.</p>
+                    <p class="text-[11px] text-purple-800 ml-5">Al marcar esta casilla, los tickets con este estatus se ocultarán de la tabla principal ("Todos") y aparecerán en el apartado de "Finalizados".</p>
                 </div>
 
                 <div class="p-3 bg-amber-50/70 border border-amber-200 rounded space-y-1">
                     <label class="inline-flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="pausa_tiempo" value="1" id="chkEditPausaTiempo" class="rounded border-amber-300 text-amber-600 focus:ring-amber-500">
+                        <input type="checkbox" name="pausa_tiempo" value="1" id="chkEditPausaTiempo" onchange="if(this.checked){ const c = document.getElementById('chkEditAnulaTiempo'); if(c) c.checked = false; }" class="rounded border-amber-300 text-amber-600 focus:ring-amber-500">
                         <span class="text-xs font-bold text-amber-950">⏸️ ¿Pausar el tiempo para los Dashboards y Métricas?</span>
                     </label>
+                </div>
+
+                <div class="p-3 bg-rose-50/70 border border-rose-200 rounded space-y-1">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="anula_tiempo" value="1" id="chkEditAnulaTiempo" onchange="if(this.checked){ const c = document.getElementById('chkEditPausaTiempo'); if(c) c.checked = false; }" class="rounded border-rose-300 text-rose-600 focus:ring-rose-500">
+                        <span class="text-xs font-bold text-rose-950">🚫 ¿Anular todo el tiempo del ticket para los Dashboards y Métricas?</span>
+                    </label>
+                    <p class="text-[11px] text-rose-800 ml-5">El ticket y su evidencia sí aparecerán en las métricas, pero todo su tiempo transcurrido no se contará en los promedios.</p>
                 </div>
 
                 <div class="p-3 bg-sky-50/70 border border-sky-200 rounded space-y-1">
@@ -9541,11 +9591,19 @@
                 </div>
 
                 <!-- Interruptores de Discord y Correo Electrónico -->
-                <div class="p-3 bg-indigo-50/70 border border-indigo-200 rounded space-y-1">
-                    <label class="inline-flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="notificar_discord" value="1" id="chkEditNotifDiscord" class="rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500">
-                        <span class="text-xs font-bold text-indigo-950">💬 ¿Notificar este estatus en Discord?</span>
-                    </label>
+                <div class="p-3 bg-indigo-50/70 border border-indigo-200 rounded space-y-2">
+                    <div>
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="notificar_discord" value="1" id="chkEditNotifDiscord" class="rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500">
+                            <span class="text-xs font-bold text-indigo-950">💬 ¿Notificar este estatus en Discord?</span>
+                        </label>
+                    </div>
+                    <div class="pt-1.5 border-t border-indigo-200/70">
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="archivar_discord" value="1" id="chkEditArchivarDiscord" class="rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500">
+                            <span class="text-xs font-bold text-indigo-950">¿Bloquear y archivar el hilo de Discord al pasar a este estatus?</span>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="p-3 bg-emerald-50/70 border border-emerald-200 rounded space-y-2">
@@ -9666,15 +9724,23 @@
         function abrirModalCrearEstatus() {
             const chkCierre = document.getElementById('chkCrearEsCierre');
             if (chkCierre) chkCierre.checked = false;
+            const chkPausa = document.getElementById('chkCrearPausaTiempo');
+            if (chkPausa) chkPausa.checked = false;
+            const chkAnula = document.getElementById('chkCrearAnulaTiempo');
+            if (chkAnula) chkAnula.checked = false;
+            const chkArch = document.getElementById('chkCrearArchivarDiscord');
+            if (chkArch) chkArch.checked = false;
             document.getElementById('modalCrearEstatus').style.display = 'block';
         }
         function cerrarModalCrearEstatus() {
             document.getElementById('modalCrearEstatus').style.display = 'none';
         }
-        function abrirModalEditarEstatus(id, nombre, color, pausa, evidencia, desc, esSistema, notifDiscord = 1, notifCorreo = 1, modoCorreo = 'plantilla_propia', esCierre = 0) {
+        function abrirModalEditarEstatus(id, nombre, color, pausa, evidencia, desc, esSistema, notifDiscord = 1, notifCorreo = 1, modoCorreo = 'plantilla_propia', esCierre = 0, anulaTiempo = 0, archivarDiscord = 0) {
             document.getElementById('idEditEstatus').value = id;
             document.getElementById('nomEditEstatus').value = nombre;
-            document.getElementById('chkEditPausaTiempo').checked = Boolean(pausa);
+            const chkAnula = document.getElementById('chkEditAnulaTiempo');
+            if (chkAnula) chkAnula.checked = Boolean(anulaTiempo);
+            document.getElementById('chkEditPausaTiempo').checked = !Boolean(anulaTiempo) && Boolean(pausa);
             document.getElementById('chkEditPideEvidencia').checked = Boolean(evidencia);
             document.getElementById('selEditPideDesc').value = desc || 'opcional';
             const chkCierre = document.getElementById('chkEditEsCierre');
@@ -9684,6 +9750,11 @@
             }
             const chkDisc = document.getElementById('chkEditNotifDiscord');
             if (chkDisc) chkDisc.checked = (notifDiscord !== 0 && notifDiscord !== false);
+            const chkArch = document.getElementById('chkEditArchivarDiscord');
+            if (chkArch) {
+                chkArch.checked = Boolean(archivarDiscord) || nombre === 'Resuelto';
+                chkArch.disabled = (nombre === 'Resuelto');
+            }
             const chkCorr = document.getElementById('chkEditNotifCorreo');
             const bloqModo = document.getElementById('bloqueModoCorreoEdit');
             const selModo = document.getElementById('selEditModoCorreo');

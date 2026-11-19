@@ -802,7 +802,7 @@ async function actualizarMiembroEnHilosActivos(usuarioId, nuevoDiscordId, anteri
     try {
         const ticketsAbiertos = await new Promise(resolve => {
             dbInstance.all(
-                "SELECT id, discord_thread_id FROM tickets WHERE usuario_id = ? AND estatus != 'Resuelto' AND deleted_at IS NULL AND discord_thread_id IS NOT NULL",
+                "SELECT id, discord_thread_id FROM tickets WHERE usuario_id = ? AND estatus != 'Resuelto' AND estatus NOT IN (SELECT nombre FROM estatus_tickets WHERE activo = 1 AND (es_cierre = 1 OR archivar_discord = 1)) AND deleted_at IS NULL AND discord_thread_id IS NOT NULL",
                 [usuarioId],
                 (err, rows) => resolve(rows || [])
             );
@@ -1086,14 +1086,19 @@ async function enviarMensajeDesdeWeb({ ticketId, autorNombre, autorRol, autorPue
  */
 async function notificarCambioEstatusDiscord(ticketId, nuevoEstatus, extraData = {}) {
     try {
+        let estCfg = null;
         if (dbInstance && nuevoEstatus) {
-            const estCfg = await new Promise(resolve => {
-                dbInstance.get('SELECT notificar_discord FROM estatus_tickets WHERE LOWER(nombre) = LOWER(?)', [String(nuevoEstatus).trim()], (err, r) => resolve(r));
+            estCfg = await new Promise(resolve => {
+                dbInstance.get('SELECT notificar_discord, archivar_discord, color FROM estatus_tickets WHERE LOWER(nombre) = LOWER(?)', [String(nuevoEstatus).trim()], (err, r) => resolve(r));
             });
-            if (estCfg && estCfg.notificar_discord !== undefined && estCfg.notificar_discord !== null && Number(estCfg.notificar_discord) === 0) {
-                console.log(`[Discord Bot] Notificación omitida en Discord: el estatus "${nuevoEstatus}" tiene desactivado el interruptor de Discord.`);
-                return;
-            }
+        }
+
+        const debeNotificar = !(estCfg && estCfg.notificar_discord !== undefined && estCfg.notificar_discord !== null && Number(estCfg.notificar_discord) === 0);
+        const debeArchivar = (nuevoEstatus === 'Resuelto') || Boolean(estCfg && Number(estCfg.archivar_discord) === 1);
+
+        if (!debeNotificar && !debeArchivar) {
+            console.log(`[Discord Bot] Notificación omitida en Discord: el estatus "${nuevoEstatus}" tiene desactivado el interruptor de Discord.`);
+            return;
         }
 
         const hilo = await obtenerOCrearHiloTicket(ticketId);
@@ -1106,56 +1111,68 @@ async function notificarCambioEstatusDiscord(ticketId, nuevoEstatus, extraData =
             await hilo.setArchived(false).catch(() => {});
         }
 
-        let color = 0x3b82f6; // Azul
-        let icono = '🔄';
+        if (debeNotificar) {
+            let color = 0x3b82f6; // Azul
+            let icono = '🔄';
 
-        if (nuevoEstatus === 'En proceso') {
-            color = 0x06b6d4; // Cian
-            icono = '⚙️';
-        } else if (nuevoEstatus === 'Pendiente') {
-            color = 0xf59e0b; // Ámbar
-            icono = '⏳';
-        } else if (nuevoEstatus === 'Pendiente por cliente') {
-            color = 0x8b5cf6; // Morado
-            icono = '📅';
-        } else if (nuevoEstatus === 'Resuelto') {
-            color = 0x10b981; // Verde
-            icono = '✅';
+            if (nuevoEstatus === 'En proceso') {
+                color = 0x06b6d4; // Cian
+                icono = '⚙️';
+            } else if (nuevoEstatus === 'Pendiente') {
+                color = 0xf59e0b; // Ámbar
+                icono = '⏳';
+            } else if (nuevoEstatus === 'Pendiente por cliente') {
+                color = 0x8b5cf6; // Morado
+                icono = '📅';
+            } else if (nuevoEstatus === 'Resuelto') {
+                color = 0x10b981; // Verde
+                icono = '✅';
+            } else if (debeArchivar) {
+                color = 0x64748b; // Gris / Finalizado
+                icono = '🏁';
+            }
+
+            if (estCfg && estCfg.color && /^#[0-9a-fA-F]{6}$/.test(estCfg.color)) {
+                color = parseInt(estCfg.color.slice(1), 16);
+            }
+
+            const embed = new EmbedBuilder()
+                .setTitle(`${icono} Estatus Actualizado: ${nuevoEstatus}`)
+                .setColor(color)
+                .setTimestamp();
+
+            if (nuevoEstatus === 'Pendiente por cliente') {
+                if (extraData.motivo_pendiente_cliente) {
+                    embed.addFields({ name: 'Motivo', value: String(extraData.motivo_pendiente_cliente), inline: false });
+                }
+                if (extraData.fecha_programada_cliente) {
+                    embed.addFields({ name: 'Fecha Programada', value: String(extraData.fecha_programada_cliente), inline: true });
+                }
+            }
+
+            if (nuevoEstatus === 'Resuelto' || debeArchivar) {
+                if (extraData.tecnico_resolvio) {
+                    embed.addFields({ name: nuevoEstatus === 'Resuelto' ? 'Técnico que resolvió' : 'Atendido / Cerrado por', value: String(extraData.tecnico_resolvio), inline: true });
+                }
+                if (extraData.comentario_resolucion) {
+                    embed.addFields({ name: nuevoEstatus === 'Resuelto' ? 'Solución Aplicada' : 'Detalle de Cierre', value: String(extraData.comentario_resolucion), inline: false });
+                }
+            }
+
+            const msgEstatus = await hilo.send({ embeds: [embed] });
+            mensajesEnviadosPorBot.add(msgEstatus.id);
         }
 
-        const embed = new EmbedBuilder()
-            .setTitle(`${icono} Estatus Actualizado: ${nuevoEstatus}`)
-            .setColor(color)
-            .setTimestamp();
-
-        if (nuevoEstatus === 'Pendiente por cliente') {
-            if (extraData.motivo_pendiente_cliente) {
-                embed.addFields({ name: 'Motivo', value: String(extraData.motivo_pendiente_cliente), inline: false });
-            }
-            if (extraData.fecha_programada_cliente) {
-                embed.addFields({ name: 'Fecha Programada', value: String(extraData.fecha_programada_cliente), inline: true });
-            }
-        }
-
-        if (nuevoEstatus === 'Resuelto') {
-            if (extraData.tecnico_resolvio) {
-                embed.addFields({ name: 'Técnico que resolvió', value: String(extraData.tecnico_resolvio), inline: true });
-            }
-            if (extraData.comentario_resolucion) {
-                embed.addFields({ name: 'Solución Aplicada', value: String(extraData.comentario_resolucion), inline: false });
-            }
-        }
-
-        const msgEstatus = await hilo.send({ embeds: [embed] });
-        mensajesEnviadosPorBot.add(msgEstatus.id);
-
-        // Si el ticket fue resuelto, bloquear y archivar el hilo (se oculta de la barra activa pero se conserva en "Archivados")
-        if (nuevoEstatus === 'Resuelto') {
+        // Si el estatus tiene activado bloquear y archivar el hilo (como Resuelto o Cancelado), bloquear y archivar el hilo
+        if (debeArchivar) {
             const solucionTexto = extraData.comentario_resolucion 
-                ? `\n• **Solución aplicada:** *${extraData.comentario_resolucion}*` 
+                ? `\n• **Detalle:** *${extraData.comentario_resolucion}*` 
                 : '';
+            const tituloCierre = (nuevoEstatus === 'Resuelto')
+                ? `🔒 **Este ticket ha sido resuelto y cerrado por Sistemas TI.**`
+                : `🔒 **Este ticket ha pasado al estatus de finalización "${nuevoEstatus}" por Sistemas TI.**`;
             const msgCierre = await hilo.send(
-                `🔒 **Este ticket ha sido resuelto y cerrado por Sistemas TI.**${solucionTexto}\n\n` +
+                `${tituloCierre}${solucionTexto}\n\n` +
                 `• Este hilo ha sido **bloqueado y archivado** para mantener limpia la barra lateral.\n` +
                 `• Puedes consultarlo en cualquier momento arriba en el botón **Hilos 🧵 > pestaña Archivados**.\n` +
                 `• Si en el futuro este ticket es reabierto en la plataforma web, el hilo **se desarchivará automáticamente** con todo su historial intacto.`
@@ -1165,14 +1182,14 @@ async function notificarCambioEstatusDiscord(ticketId, nuevoEstatus, extraData =
             setTimeout(async () => {
                 try {
                     if (!hilo.locked) {
-                        await hilo.setLocked(true, 'Ticket resuelto y cerrado');
+                        await hilo.setLocked(true, `Ticket finalizado (${nuevoEstatus})`);
                     }
                     if (!hilo.archived) {
-                        await hilo.setArchived(true, 'Ticket resuelto y cerrado');
+                        await hilo.setArchived(true, `Ticket finalizado (${nuevoEstatus})`);
                     }
-                    console.log(`[Discord Bot] Hilo del ticket #${ticketId} archivado y bloqueado exitosamente.`);
+                    console.log(`[Discord Bot] Hilo del ticket #${ticketId} archivado y bloqueado exitosamente (${nuevoEstatus}).`);
                 } catch (eArc) {
-                    console.warn('[Discord Bot] No se pudo archivar el hilo resuelto:', eArc.message);
+                    console.warn('[Discord Bot] No se pudo archivar el hilo finalizado:', eArc.message);
                 }
             }, 1500);
         }

@@ -444,12 +444,14 @@ db.serialize(() => {
         });
     });
 
-    // Migraciones para interruptores de Discord, Correo y Finalización (es_cierre) en estatus_tickets
+    // Migraciones para interruptores de Discord, Correo, Anulación de tiempo y Finalización en estatus_tickets
     db.run(`ALTER TABLE estatus_tickets ADD COLUMN notificar_discord INTEGER DEFAULT 1`, () => {});
     db.run(`ALTER TABLE estatus_tickets ADD COLUMN notificar_correo INTEGER DEFAULT 1`, () => {});
     db.run(`ALTER TABLE estatus_tickets ADD COLUMN modo_correo TEXT DEFAULT 'plantilla_propia'`, () => {});
     db.run(`ALTER TABLE estatus_tickets ADD COLUMN es_cierre INTEGER DEFAULT 0`, () => {});
-    db.run(`UPDATE estatus_tickets SET es_cierre = 1 WHERE nombre = 'Resuelto'`, () => {});
+    db.run(`ALTER TABLE estatus_tickets ADD COLUMN anula_tiempo INTEGER DEFAULT 0`, () => {});
+    db.run(`ALTER TABLE estatus_tickets ADD COLUMN archivar_discord INTEGER DEFAULT 0`, () => {});
+    db.run(`UPDATE estatus_tickets SET es_cierre = 1, archivar_discord = 1 WHERE nombre = 'Resuelto'`, () => {});
 
     // Tabla de configuraciones globales del sistema (ej. tolerancia de alertas)
     db.run(`

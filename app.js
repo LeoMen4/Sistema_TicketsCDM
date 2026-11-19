@@ -920,55 +920,79 @@ function calcularMetricasDashboards(callback) {
                     if (errH) return callback(errH);
                     historial = historial || [];
 
-                    db.get("SELECT valor FROM configuraciones WHERE clave = 'tolerancia_alerta_pct'", [], (errConf, rowConf) => {
-                        const toleranciaPct = (rowConf && !isNaN(parseFloat(rowConf.valor))) ? parseFloat(rowConf.valor) : 25;
-                        const factorTolerancia = 1 + (toleranciaPct / 100);
-
-                        // Mapear historial por ticket
-                        const histByTicket = {};
-                        historial.forEach(h => {
-                            if (!histByTicket[h.ticket_id]) histByTicket[h.ticket_id] = [];
-                            histByTicket[h.ticket_id].push(h);
+                    db.all('SELECT * FROM estatus_tickets WHERE activo = 1', [], (errEstCfg, estatusRows) => {
+                        const estatusPausadosSet = new Set(['Pendiente por cliente']);
+                        const estatusAnuladosSet = new Set();
+                        const estatusCierreSet = new Set(['Resuelto']);
+                        (estatusRows || []).forEach(er => {
+                            if (!er || !er.nombre) return;
+                            if (Number(er.pausa_tiempo) === 1) estatusPausadosSet.add(er.nombre);
+                            if (Number(er.anula_tiempo) === 1) estatusAnuladosSet.add(er.nombre);
+                            if (Number(er.es_cierre) === 1) estatusCierreSet.add(er.nombre);
                         });
 
-                        // Enriquecer cada ticket con sus métricas de tiempo (sin contar domingos)
-                        const ticketsEnriquecidos = tickets.map(t => {
-                            const h = histByTicket[t.id] || [];
-                            const primerH = h[0];
-                            const fCreacion = primerH ? primerH.fecha : t.fecha;
+                        db.get("SELECT valor FROM configuraciones WHERE clave = 'tolerancia_alerta_pct'", [], (errConf, rowConf) => {
+                            const toleranciaPct = (rowConf && !isNaN(parseFloat(rowConf.valor))) ? parseFloat(rowConf.valor) : 25;
+                            const factorTolerancia = 1 + (toleranciaPct / 100);
 
-                            // Primera atención: primer cambio que no sea 'Nuevo ticket' (excluyendo domingos)
-                            const primerAtencion = h.find(x => x.estatus !== 'Nuevo ticket');
-                            const tiempoAtencionMs = primerAtencion 
-                                ? calcularMsSinDomingos(fCreacion, primerAtencion.fecha) 
-                                : null;
+                            // Mapear historial por ticket
+                            const histByTicket = {};
+                            historial.forEach(h => {
+                                if (!histByTicket[h.ticket_id]) histByTicket[h.ticket_id] = [];
+                                histByTicket[h.ticket_id].push(h);
+                            });
 
-                            // Tiempo de resolución: desde creación hasta 'Resuelto' (excluyendo domingos)
-                            let tiempoResolucionMs = null;
-                            if (t.estatus === 'Resuelto') {
-                                const ultimoResuelto = [...h].reverse().find(x => x.estatus === 'Resuelto');
-                                const fResolucion = ultimoResuelto ? ultimoResuelto.fecha : t.fecha;
-                                const msBrutos = calcularMsSinDomingos(fCreacion, fResolucion);
-                                const msPausados = calcularTiempoPausadoCliente(h, fResolucion);
-                                tiempoResolucionMs = (msBrutos !== null) ? Math.max(0, msBrutos - msPausados) : null;
-                            }
+                            // Enriquecer cada ticket con sus métricas de tiempo (sin contar domingos, y anulando tiempo si el estatus tiene anula_tiempo = 1)
+                            const ticketsEnriquecidos = tickets.map(t => {
+                                const h = histByTicket[t.id] || [];
+                                const primerH = h[0];
+                                const fCreacion = primerH ? primerH.fecha : t.fecha;
+                                const tieneTiempoAnulado = estatusAnuladosSet.has(t.estatus);
 
-                            return {
-                                ...t,
-                                tiempoAtencionMs,
-                                tiempoResolucionMs
+                                if (tieneTiempoAnulado) {
+                                    return {
+                                        ...t,
+                                        tiempoAtencionMs: null,
+                                        tiempoResolucionMs: null,
+                                        tiempoAnulado: true
+                                    };
+                                }
+
+                                // Primera atención: primer cambio que no sea 'Nuevo ticket' (excluyendo domingos)
+                                const primerAtencion = h.find(x => x.estatus !== 'Nuevo ticket');
+                                const tiempoAtencionMs = primerAtencion 
+                                    ? calcularMsSinDomingos(fCreacion, primerAtencion.fecha) 
+                                    : null;
+
+                                // Tiempo de resolución: desde creación hasta 'Resuelto' o estatus de cierre (sin anula_tiempo), excluyendo domingos y pausas
+                                let tiempoResolucionMs = null;
+                                if (t.estatus === 'Resuelto' || estatusCierreSet.has(t.estatus)) {
+                                    const ultimoResuelto = [...h].reverse().find(x => x.estatus === t.estatus || x.estatus === 'Resuelto');
+                                    const fResolucion = ultimoResuelto ? ultimoResuelto.fecha : t.fecha;
+                                    const msBrutos = calcularMsSinDomingos(fCreacion, fResolucion);
+                                    const msPausados = calcularTiempoPausadoCliente(h, fResolucion, estatusPausadosSet);
+                                    tiempoResolucionMs = (msBrutos !== null) ? Math.max(0, msBrutos - msPausados) : null;
+                                }
+
+                                return {
+                                    ...t,
+                                    tiempoAtencionMs,
+                                    tiempoResolucionMs,
+                                    tiempoAnulado: false
+                                };
+                            });
+
+                            // 1. Estadísticas de Estatus
+                            const estatusStats = {
+                                nuevos: tickets.filter(t => t.estatus === 'Nuevo ticket').length,
+                                enProceso: tickets.filter(t => t.estatus === 'En proceso').length,
+                                pendientes: tickets.filter(t => t.estatus === 'Pendiente').length,
+                                pendientesCliente: tickets.filter(t => t.estatus === 'Pendiente por cliente').length,
+                                resueltos: tickets.filter(t => t.estatus === 'Resuelto').length,
+                                finalizados: tickets.filter(t => t.estatus === 'Resuelto' || estatusCierreSet.has(t.estatus)).length,
+                                anuladosTiempo: tickets.filter(t => estatusAnuladosSet.has(t.estatus)).length,
+                                total: tickets.length
                             };
-                        });
-
-                        // 1. Estadísticas de Estatus
-                        const estatusStats = {
-                            nuevos: tickets.filter(t => t.estatus === 'Nuevo ticket').length,
-                            enProceso: tickets.filter(t => t.estatus === 'En proceso').length,
-                            pendientes: tickets.filter(t => t.estatus === 'Pendiente').length,
-                            pendientesCliente: tickets.filter(t => t.estatus === 'Pendiente por cliente').length,
-                            resueltos: tickets.filter(t => t.estatus === 'Resuelto').length,
-                            total: tickets.length
-                        };
 
                         // 2. Estadísticas de Prioridad
                         const prioridadStats = {
@@ -1261,6 +1285,7 @@ function calcularMetricasDashboards(callback) {
                             categoriasStats,
                             tiemposGlobalesStats,
                             toleranciaPct
+                        });
                         });
                     });
                 });
@@ -1558,6 +1583,8 @@ async function obtenerDatosAdmin(req, res, mensaje = null, error = null) {
 
     if (filtroEstatus === 'Todos') {
         queryTickets += " AND tickets.estatus != 'Resuelto' AND tickets.estatus NOT IN (SELECT nombre FROM estatus_tickets WHERE activo = 1 AND es_cierre = 1)";
+    } else if (filtroEstatus === 'Finalizados') {
+        queryTickets += " AND (tickets.estatus = 'Resuelto' OR tickets.estatus IN (SELECT nombre FROM estatus_tickets WHERE activo = 1 AND es_cierre = 1))";
     } else {
         queryTickets += ' AND tickets.estatus = ?';
         params.push(filtroEstatus);
@@ -3440,7 +3467,7 @@ const PALETA_ESTATUS_PRESETS = {
 
 // Crear Estatus Personalizado
 app.post('/admin/estatus-tickets/crear', esAdmin, (req, res) => {
-    const { nombre, color, pausa_tiempo, pide_evidencia, pide_descripcion, notificar_discord, notificar_correo, modo_correo, es_cierre } = req.body;
+    const { nombre, color, pausa_tiempo, anula_tiempo, pide_evidencia, pide_descripcion, notificar_discord, archivar_discord, notificar_correo, modo_correo, es_cierre } = req.body;
     const nombreLimpio = nombre ? nombre.trim() : '';
 
     if (!nombreLimpio) {
@@ -3449,19 +3476,21 @@ app.post('/admin/estatus-tickets/crear', esAdmin, (req, res) => {
 
     const hex = color || '#8b5cf6';
     const preset = PALETA_ESTATUS_PRESETS[hex] || { bg: '#f8fafc', texto: '#1e293b', borde: '#cbd5e1' };
-    const pausa = (pausa_tiempo === '1' || pausa_tiempo === 1 || pausa_tiempo === 'on') ? 1 : 0;
+    const anula = (anula_tiempo === '1' || anula_tiempo === 1 || anula_tiempo === 'on') ? 1 : 0;
+    const pausa = (!anula && (pausa_tiempo === '1' || pausa_tiempo === 1 || pausa_tiempo === 'on')) ? 1 : 0;
     const evidencia = (pide_evidencia === '1' || pide_evidencia === 1 || pide_evidencia === 'on') ? 1 : 0;
     const desc = ['ninguno', 'opcional', 'obligatoria'].includes(pide_descripcion) ? pide_descripcion : 'opcional';
     const notifDiscord = (notificar_discord === '1' || notificar_discord === 1 || notificar_discord === 'on') ? 1 : 0;
+    const archDiscord = (archivar_discord === '1' || archivar_discord === 1 || archivar_discord === 'on') ? 1 : 0;
     const notifCorreo = (notificar_correo === '1' || notificar_correo === 1 || notificar_correo === 'on') ? 1 : 0;
     const modoCorreoVal = ['plantilla_propia', 'en_proceso', 'solo_admins'].includes(modo_correo) ? modo_correo : 'plantilla_propia';
     const cierre = (es_cierre === '1' || es_cierre === 1 || es_cierre === 'on') ? 1 : 0;
     const ordenDefault = cierre === 1 ? 15 : 4;
 
     db.run(
-        `INSERT INTO estatus_tickets (nombre, color, color_bg, color_texto, color_borde, pausa_tiempo, pide_evidencia, pide_descripcion, notificar_discord, notificar_correo, modo_correo, es_cierre, es_sistema, orden)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
-        [nombreLimpio, hex, preset.bg, preset.texto, preset.borde, pausa, evidencia, desc, notifDiscord, notifCorreo, modoCorreoVal, cierre, ordenDefault],
+        `INSERT INTO estatus_tickets (nombre, color, color_bg, color_texto, color_borde, pausa_tiempo, anula_tiempo, pide_evidencia, pide_descripcion, notificar_discord, archivar_discord, notificar_correo, modo_correo, es_cierre, es_sistema, orden)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
+        [nombreLimpio, hex, preset.bg, preset.texto, preset.borde, pausa, anula, evidencia, desc, notifDiscord, archDiscord, notifCorreo, modoCorreoVal, cierre, ordenDefault],
         function(err) {
             if (err) {
                 const msg = err.message && err.message.includes('UNIQUE')
@@ -3485,7 +3514,7 @@ app.post('/admin/estatus-tickets/crear', esAdmin, (req, res) => {
 
 // Editar Estatus Personalizado
 app.post('/admin/estatus-tickets/editar', esAdmin, (req, res) => {
-    const { id, nombre, color, pausa_tiempo, pide_evidencia, pide_descripcion, notificar_discord, notificar_correo, modo_correo, es_cierre } = req.body;
+    const { id, nombre, color, pausa_tiempo, anula_tiempo, pide_evidencia, pide_descripcion, notificar_discord, archivar_discord, notificar_correo, modo_correo, es_cierre } = req.body;
     const nombreLimpio = nombre ? nombre.trim() : '';
 
     if (!id || !nombreLimpio) {
@@ -3494,19 +3523,21 @@ app.post('/admin/estatus-tickets/editar', esAdmin, (req, res) => {
 
     const hex = color || '#8b5cf6';
     const preset = PALETA_ESTATUS_PRESETS[hex] || { bg: '#f8fafc', texto: '#1e293b', borde: '#cbd5e1' };
-    const pausa = (pausa_tiempo === '1' || pausa_tiempo === 1 || pausa_tiempo === 'on') ? 1 : 0;
+    const anula = (anula_tiempo === '1' || anula_tiempo === 1 || anula_tiempo === 'on') ? 1 : 0;
+    const pausa = (!anula && (pausa_tiempo === '1' || pausa_tiempo === 1 || pausa_tiempo === 'on')) ? 1 : 0;
     const evidencia = (pide_evidencia === '1' || pide_evidencia === 1 || pide_evidencia === 'on') ? 1 : 0;
     const desc = ['ninguno', 'opcional', 'obligatoria'].includes(pide_descripcion) ? pide_descripcion : 'opcional';
     const notifDiscord = (notificar_discord === '1' || notificar_discord === 1 || notificar_discord === 'on') ? 1 : 0;
+    const archDiscord = (nombreLimpio === 'Resuelto' || archivar_discord === '1' || archivar_discord === 1 || archivar_discord === 'on') ? 1 : 0;
     const notifCorreo = (notificar_correo === '1' || notificar_correo === 1 || notificar_correo === 'on') ? 1 : 0;
     const modoCorreoVal = ['plantilla_propia', 'en_proceso', 'solo_admins'].includes(modo_correo) ? modo_correo : 'plantilla_propia';
     const cierre = (nombreLimpio === 'Resuelto' || es_cierre === '1' || es_cierre === 1 || es_cierre === 'on') ? 1 : 0;
 
     db.run(
         `UPDATE estatus_tickets 
-         SET nombre = ?, color = ?, color_bg = ?, color_texto = ?, color_borde = ?, pausa_tiempo = ?, pide_evidencia = ?, pide_descripcion = ?, notificar_discord = ?, notificar_correo = ?, modo_correo = ?, es_cierre = ?
+         SET nombre = ?, color = ?, color_bg = ?, color_texto = ?, color_borde = ?, pausa_tiempo = ?, anula_tiempo = ?, pide_evidencia = ?, pide_descripcion = ?, notificar_discord = ?, archivar_discord = ?, notificar_correo = ?, modo_correo = ?, es_cierre = ?
          WHERE id = ?`,
-        [nombreLimpio, hex, preset.bg, preset.texto, preset.borde, pausa, evidencia, desc, notifDiscord, notifCorreo, modoCorreoVal, cierre, id],
+        [nombreLimpio, hex, preset.bg, preset.texto, preset.borde, pausa, anula, evidencia, desc, notifDiscord, archDiscord, notifCorreo, modoCorreoVal, cierre, id],
         function(err) {
             if (err) {
                 const msg = err.message && err.message.includes('UNIQUE')
