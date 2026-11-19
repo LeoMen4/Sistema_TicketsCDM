@@ -920,7 +920,7 @@ function calcularMetricasDashboards(callback) {
                     if (errH) return callback(errH);
                     historial = historial || [];
 
-                    db.all('SELECT * FROM estatus_tickets WHERE activo = 1', [], (errEstCfg, estatusRows) => {
+                    db.all('SELECT * FROM estatus_tickets WHERE activo = 1 ORDER BY COALESCE(es_cierre, 0) ASC, orden ASC, id ASC', [], (errEstCfg, estatusRows) => {
                         const estatusPausadosSet = new Set(['Pendiente por cliente']);
                         const estatusAnuladosSet = new Set();
                         const estatusCierreSet = new Set(['Resuelto']);
@@ -930,6 +930,22 @@ function calcularMetricasDashboards(callback) {
                             if (Number(er.anula_tiempo) === 1) estatusAnuladosSet.add(er.nombre);
                             if (Number(er.es_cierre) === 1) estatusCierreSet.add(er.nombre);
                         });
+
+                        const listaEstatusDinamicos = (estatusRows && estatusRows.length > 0)
+                            ? estatusRows.map(er => ({
+                                id: er.id,
+                                nombre: er.nombre,
+                                count: tickets.filter(t => String(t.estatus || '').trim().toLowerCase() === String(er.nombre || '').trim().toLowerCase()).length,
+                                color: er.color || '#64748b',
+                                color_bg: er.color_bg || '#f8fafc',
+                                color_texto: er.color_texto || '#334155',
+                                color_borde: er.color_borde || '#cbd5e1',
+                                es_sistema: Number(er.es_sistema || 0),
+                                es_cierre: Number(er.es_cierre || 0),
+                                pausa_tiempo: Number(er.pausa_tiempo || 0),
+                                anula_tiempo: Number(er.anula_tiempo || 0)
+                            }))
+                            : [];
 
                         db.get("SELECT valor FROM configuraciones WHERE clave = 'tolerancia_alerta_pct'", [], (errConf, rowConf) => {
                             const toleranciaPct = (rowConf && !isNaN(parseFloat(rowConf.valor))) ? parseFloat(rowConf.valor) : 25;
@@ -1281,6 +1297,7 @@ function calcularMetricasDashboards(callback) {
                         callback(null, {
                             totalTickets: tickets.length,
                             estatusStats,
+                            listaEstatusDinamicos,
                             prioridadStats,
                             categoriasStats,
                             tiemposGlobalesStats,

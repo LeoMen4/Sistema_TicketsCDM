@@ -742,8 +742,17 @@
                                                         Resuelto
                                                     </span>
                                                 <% } else { %>
-                                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-extrabold border shadow-2xs" style="background-color: #fef3c7; color: #b45309; border-color: #fcd34d;">
-                                                        <span class="w-2 h-2 rounded-full" style="background-color: #d97706;"></span>
+                                                    <% 
+                                                        const estCfgUserRow = (typeof estatusTicketsList !== 'undefined' && Array.isArray(estatusTicketsList))
+                                                            ? estatusTicketsList.find(e => e && e.nombre && e.nombre.toLowerCase().trim() === String(t.estatus || '').toLowerCase().trim())
+                                                            : null;
+                                                        const bgUserEst = estCfgUserRow ? (estCfgUserRow.color_bg || '#f8fafc') : '#f1f5f9';
+                                                        const txtUserEst = estCfgUserRow ? (estCfgUserRow.color_texto || '#334155') : '#334155';
+                                                        const brdUserEst = estCfgUserRow ? (estCfgUserRow.color_borde || '#cbd5e1') : '#cbd5e1';
+                                                        const dotUserEst = estCfgUserRow ? (estCfgUserRow.color || '#64748b') : '#64748b';
+                                                    %>
+                                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-extrabold border shadow-2xs" style="background-color: <%= bgUserEst %>; color: <%= txtUserEst %>; border-color: <%= brdUserEst %>;">
+                                                        <span class="w-2 h-2 rounded-full" style="background-color: <%= dotUserEst %>;"></span>
                                                         <%= t.estatus %>
                                                     </span>
                                                 <% } %>

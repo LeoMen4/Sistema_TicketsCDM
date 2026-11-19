@@ -321,6 +321,17 @@
                         <span class="text-[11px] text-emerald-600 mt-1"><%= totalTickets > 0 ? ((estatusStats.resueltos / totalTickets) * 100).toFixed(1) : 0 %>%</span>
                     </div>
 
+                    <% if (typeof listaEstatusDinamicos !== 'undefined' && Array.isArray(listaEstatusDinamicos)) { %>
+                        <% const nombresBaseDash = ['nuevo ticket', 'en proceso', 'pendiente', 'pendiente por cliente', 'resuelto']; %>
+                        <% listaEstatusDinamicos.filter(e => e && e.nombre && !nombresBaseDash.includes(e.nombre.toLowerCase().trim())).forEach(estCustom => { %>
+                            <div class="bg-white rounded-md shadow-2xs border border-slate-200 p-4 flex flex-col justify-between" style="border-top: 3px solid <%= estCustom.color || '#64748b' %>;">
+                                <span class="text-[10px] font-bold uppercase tracking-wider truncate" style="color: <%= estCustom.color_texto || '#334155' %>;" title="<%= estCustom.nombre %>"><%= estCustom.nombre %></span>
+                                <span class="text-2xl font-extrabold text-slate-900 mt-1"><%= estCustom.count || 0 %></span>
+                                <span class="text-[11px] mt-1 font-medium" style="color: <%= estCustom.color || '#64748b' %>;"><%= totalTickets > 0 ? (((estCustom.count || 0) / totalTickets) * 100).toFixed(1) : 0 %>%<%= estCustom.anula_tiempo ? ' (Tiempo anulado)' : '' %></span>
+                            </div>
+                        <% }) %>
+                    <% } %>
+
                     <div class="bg-white rounded-md shadow-2xs border border-slate-200 p-4 border-t-3 border-t-brand-600 flex flex-col justify-between">
                         <span class="text-[10px] font-bold uppercase tracking-wider text-brand-700">Prom. Resolución</span>
                         <span class="text-lg font-extrabold text-brand-900 mt-1 truncate" title="<%= tiemposGlobalesStats.promGlobalResTexto %>"><%= tiemposGlobalesStats.promGlobalResTexto %></span>

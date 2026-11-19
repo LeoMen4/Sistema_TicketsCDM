@@ -108,10 +108,25 @@ function construirSeccionDashboardsPrincipales(ws, wb, metricas, graficas, filaI
         { titulo: 'NUEVOS', valor: metricas.estatusStats.nuevos, color: 'FF17A2B8' },
         { titulo: 'EN PROCESO', valor: metricas.estatusStats.enProceso, color: 'FFF59E0B' },
         { titulo: 'PENDIENTES', valor: metricas.estatusStats.pendientes, color: 'FFEF4444' },
-        { titulo: 'RESUELTOS', valor: metricas.estatusStats.resueltos, color: 'FF10B981' },
+        { titulo: 'RESUELTOS', valor: metricas.estatusStats.resueltos, color: 'FF10B981' }
+    ];
+    if (Array.isArray(metricas.listaEstatusDinamicos)) {
+        const nombresBaseExcel = ['nuevo ticket', 'en proceso', 'pendiente', 'pendiente por cliente', 'resuelto'];
+        metricas.listaEstatusDinamicos.forEach(e => {
+            if (e && e.nombre && !nombresBaseExcel.includes(e.nombre.toLowerCase().trim())) {
+                const hexClean = String(e.color || '#64748b').replace('#', '').toUpperCase();
+                kpis.push({
+                    titulo: e.nombre.toUpperCase(),
+                    valor: e.count || 0,
+                    color: hexClean.length === 6 ? ('FF' + hexClean) : 'FF64748B'
+                });
+            }
+        });
+    }
+    kpis.push(
         { titulo: 'PROM. RESOLUCIÓN', valor: metricas.tiemposGlobalesStats.promGlobalResTexto || 'N/A', color: 'FF0284C7' },
         { titulo: 'PROM. 1RA ATENCIÓN', valor: metricas.tiemposGlobalesStats.promGlobalAtenTexto || 'N/A', color: 'FF10B981' }
-    ];
+    );
 
     const filaKpiTit = filaInicio + 4;
     const filaKpiVal = filaInicio + 5;
