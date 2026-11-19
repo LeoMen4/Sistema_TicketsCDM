@@ -453,9 +453,17 @@
                                     'pendiente por cliente': 0,
                                     'resuelto': 0
                                 };
+                                const listaEstUser = (typeof estatusTicketsList !== 'undefined' && Array.isArray(estatusTicketsList)) ? estatusTicketsList : [];
+                                listaEstUser.forEach(e => {
+                                    if (e && e.nombre) {
+                                        const k = e.nombre.toLowerCase().trim();
+                                        if (conteoEst[k] === undefined) conteoEst[k] = 0;
+                                    }
+                                });
                                 tickets.forEach(t => {
                                     const st = (t.estatus || '').toLowerCase().trim();
-                                    if (conteoEst[st] !== undefined) conteoEst[st]++;
+                                    if (conteoEst[st] === undefined) conteoEst[st] = 0;
+                                    conteoEst[st]++;
                                 });
                             %>
                             <div class="space-y-2.5 pt-2 border-t border-slate-200/80">
@@ -534,9 +542,20 @@
 
                                     <!-- Chip Resuelto -->
                                     <label class="filtro-chip-estatus inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold cursor-pointer transition-all select-none border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100" title="Desmarca esta casilla si no deseas ver los tickets ya resueltos">
-                                        <input type="checkbox" class="filtro-estatus-checkbox w-3.5 h-3.5 text-emerald-600 rounded border-slate-300 focus:ring-0 cursor-pointer" value="resuelto" checked onchange="filtrarMisTickets()">
+                                        <input type="checkbox" class="filtro-estatus-checkbox w-3.5 h-3.5 text-emerald-600 rounded border-slate-300 focus:ring-0 cursor-pointer" value="resuelto" data-es-cierre="1" checked onchange="filtrarMisTickets()">
                                         <span>Resuelto (<%= conteoEst['resuelto'] %>)</span>
                                     </label>
+
+                                    <% 
+                                        const baseEstNamesUser = ['nuevo ticket', 'en proceso', 'pendiente', 'pendiente por cliente', 'resuelto'];
+                                        listaEstUser.filter(e => e && e.nombre && !baseEstNamesUser.includes(e.nombre.toLowerCase().trim())).forEach(e => {
+                                            const kLow = e.nombre.toLowerCase().trim();
+                                    %>
+                                        <label class="filtro-chip-estatus inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold cursor-pointer transition-all select-none border" style="background-color: <%= e.color_bg || '#f3e8ff' %>; color: <%= e.color_texto || '#6b21a8' %>; border-color: <%= e.color_borde || '#d8b4fe' %>;" title="Marcar/Desmarcar para mostrar u ocultar">
+                                            <input type="checkbox" class="filtro-estatus-checkbox w-3.5 h-3.5 rounded border-slate-300 focus:ring-0 cursor-pointer" value="<%= kLow %>" data-es-cierre="<%= e.es_cierre ? '1' : '0' %>" checked onchange="filtrarMisTickets()">
+                                            <span><%= e.es_cierre ? '🏁 ' : '' %><%= e.nombre %> (<%= conteoEst[kLow] || 0 %>)</span>
+                                        </label>
+                                    <% }); %>
 
                                     <div class="sm:ml-auto flex items-center gap-2 pt-1 sm:pt-0">
                                         <button 
@@ -1654,7 +1673,7 @@
         function ocultarSoloResueltosMisTickets() {
             const cbs = document.querySelectorAll('.filtro-estatus-checkbox');
             cbs.forEach(cb => {
-                if (cb.value.toLowerCase().trim() === 'resuelto') {
+                if (cb.value.toLowerCase().trim() === 'resuelto' || cb.dataset.esCierre === '1') {
                     cb.checked = false;
                 } else {
                     cb.checked = true;

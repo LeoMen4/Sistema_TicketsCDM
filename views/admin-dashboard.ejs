@@ -656,27 +656,46 @@
                             <span class="text-xs font-bold uppercase tracking-wider text-slate-700 mr-1">
                                 Clasificar por estatus:
                             </span>
+                            <%
+                                const listaEstClasif = (typeof estatusTicketsList !== 'undefined' && estatusTicketsList.length > 0) ? estatusTicketsList : [
+                                    { nombre: 'Nuevo ticket', es_cierre: 0 },
+                                    { nombre: 'Pendiente', es_cierre: 0 },
+                                    { nombre: 'Pendiente por cliente', es_cierre: 0 },
+                                    { nombre: 'En proceso', es_cierre: 0 },
+                                    { nombre: 'Resuelto', es_cierre: 1 }
+                                ];
+                                const estatusActivosClasif = listaEstClasif.filter(e => !e.es_cierre && e.nombre !== 'Resuelto');
+                                const estatusCierreClasif = listaEstClasif.filter(e => e.es_cierre || e.nombre === 'Resuelto');
+                                const nombresCierreClasif = estatusCierreClasif.map(e => '"' + e.nombre + '"');
+                            %>
                             <div class="inline-flex items-center gap-1 bg-white p-1 rounded-md border border-slate-200 shadow-2xs overflow-x-auto max-w-full" id="clasificadorEstatusAdmin">
                                 <a 
                                     href="/admin?estatus=Todos" 
                                     class="px-3 py-1 rounded text-xs font-bold whitespace-nowrap transition-all <%= filtroActual === 'Todos' ? 'bg-brand-600 text-white shadow-2xs' : 'text-slate-600 hover:text-brand-600 hover:bg-slate-50' %>"
                                 >Todos</a>
-                                <% (typeof estatusTicketsList !== 'undefined' && estatusTicketsList.length > 0 ? estatusTicketsList : [
-                                    { nombre: 'Nuevo ticket' },
-                                    { nombre: 'Pendiente' },
-                                    { nombre: 'Pendiente por cliente' },
-                                    { nombre: 'En proceso' },
-                                    { nombre: 'Resuelto' }
-                                ]).forEach(est => { %>
+                                <% estatusActivosClasif.forEach(est => { %>
                                     <a 
                                         href="/admin?estatus=<%= encodeURIComponent(est.nombre) %>" 
                                         class="px-3 py-1 rounded text-xs font-bold whitespace-nowrap transition-all <%= filtroActual === est.nombre ? 'bg-brand-600 text-white shadow-2xs' : 'text-slate-600 hover:text-brand-600 hover:bg-slate-50' %>"
                                     ><%= est.nombre %></a>
                                 <% }) %>
+                                <% if (estatusCierreClasif.length > 0) { %>
+                                    <span class="text-slate-300 px-0.5 select-none" title="Estatus de finalización de ticket (ocultos de la tabla principal Todos)">|</span>
+                                    <% estatusCierreClasif.forEach(est => { %>
+                                        <a 
+                                            href="/admin?estatus=<%= encodeURIComponent(est.nombre) %>" 
+                                            title="Estatus de finalización de ticket (oculto en la tabla principal Todos)"
+                                            class="px-3 py-1 rounded text-xs font-bold whitespace-nowrap transition-all inline-flex items-center gap-1 <%= filtroActual === est.nombre ? 'bg-emerald-600 text-white shadow-2xs' : 'text-emerald-700 bg-emerald-50/60 hover:text-emerald-800 hover:bg-emerald-100/80 border border-emerald-200/70' %>"
+                                        >
+                                            <span>🏁</span>
+                                            <span><%= est.nombre %></span>
+                                        </a>
+                                    <% }) %>
+                                <% } %>
                             </div>
                             <% if (filtroActual === 'Todos') { %>
                                 <span class="text-[11px] text-slate-400 italic">
-                                    (Los tickets resueltos se consultan en "Resueltos")
+                                    (Los tickets finalizados en <%= nombresCierreClasif.join(', ') %> se ocultan de la tabla principal y se consultan en su pestaña)
                                 </span>
                             <% } %>
                         </div>
@@ -1103,6 +1122,7 @@
                                                             data-pide-evidencia="<%= est.pide_evidencia ? '1' : '0' %>"
                                                             data-pide-descripcion="<%= est.pide_descripcion || 'opcional' %>"
                                                             data-pausa-tiempo="<%= est.pausa_tiempo ? '1' : '0' %>"
+                                                            data-es-cierre="<%= (est.es_cierre || est.nombre === 'Resuelto') ? '1' : '0' %>"
                                                             data-color="<%= colOpt.dot %>"
                                                             data-color-bg="<%= colOpt.bg %>"
                                                             data-color-texto="<%= colOpt.texto %>"
@@ -1606,6 +1626,7 @@
                                     <th class="py-3 px-4 text-center">Justificación</th>
                                     <th class="py-3 px-4 text-center">Discord</th>
                                     <th class="py-3 px-4 text-center">Correo</th>
+                                    <th class="py-3 px-4 text-center">Tabla Principal / Cierre</th>
                                     <th class="py-3 px-4 text-center">Tipo</th>
                                     <th class="py-3 px-4 text-right">Acciones</th>
                                 </tr>
@@ -1679,6 +1700,17 @@
                                             <% } %>
                                         </td>
                                         <td class="py-3 px-4 text-center">
+                                            <% if (est.es_cierre || est.nombre === 'Resuelto') { %>
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300" title="Oculto de la tabla principal (Todos), se consulta en su pestaña como los resueltos">
+                                                    🏁 Finalización (En Resueltos)
+                                                </span>
+                                            <% } else { %>
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200" title="Aparece en la tabla principal (Todos)">
+                                                    📋 Tabla Principal
+                                                </span>
+                                            <% } %>
+                                        </td>
+                                        <td class="py-3 px-4 text-center">
                                             <% if (est.es_sistema) { %>
                                                 <span class="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">Sistema</span>
                                             <% } else { %>
@@ -1689,7 +1721,7 @@
                                             <div class="inline-flex items-center gap-1.5">
                                                 <button 
                                                     type="button" 
-                                                    onclick="abrirModalEditarEstatus('<%= est.id %>', '<%= est.nombre %>', '<%= est.color || '#3b82f6' %>', <%= est.pausa_tiempo ? 1 : 0 %>, <%= est.pide_evidencia ? 1 : 0 %>, '<%= est.pide_descripcion || 'opcional' %>', <%= est.es_sistema ? 1 : 0 %>, <%= est.notificar_discord !== 0 ? 1 : 0 %>, <%= est.notificar_correo !== 0 ? 1 : 0 %>, '<%= est.modo_correo || 'plantilla_propia' %>')" 
+                                                    onclick="abrirModalEditarEstatus('<%= est.id %>', '<%= est.nombre %>', '<%= est.color || '#3b82f6' %>', <%= est.pausa_tiempo ? 1 : 0 %>, <%= est.pide_evidencia ? 1 : 0 %>, '<%= est.pide_descripcion || 'opcional' %>', <%= est.es_sistema ? 1 : 0 %>, <%= est.notificar_discord !== 0 ? 1 : 0 %>, <%= est.notificar_correo !== 0 ? 1 : 0 %>, '<%= est.modo_correo || 'plantilla_propia' %>', <%= (est.es_cierre || est.nombre === 'Resuelto') ? 1 : 0 %>)" 
                                                     class="px-2.5 py-1 text-[11px] font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded border border-slate-300 transition-colors cursor-pointer"
                                                     title="Editar estatus"
                                                 >
@@ -5580,7 +5612,7 @@
             });
         }
 
-        // Mapa de colores de estatus en el cliente (sistema + personalizados)
+        // Mapa de colores de estatus en el cliente (sistema + personalizados) y conjunto de estatus de finalización (es_cierre)
         const mapaColoresEstatusJS = {
             'Nuevo ticket': { bg: '#e0f2fe', texto: '#0369a1', borde: '#7dd3fc', dot: '#0284c7' },
             'En proceso': { bg: '#fef3c7', texto: '#b45309', borde: '#fcd34d', dot: '#d97706' },
@@ -5588,18 +5620,31 @@
             'Pendiente por cliente': { bg: '#ffedd5', texto: '#c2410c', borde: '#fdba74', dot: '#ea580c' },
             'Resuelto': { bg: '#d1fae5', texto: '#047857', borde: '#6ee7b7', dot: '#059669' }
         };
+        const estatusCierreSetJS = new Set(['Resuelto']);
         <% if (typeof estatusTicketsList !== 'undefined' && Array.isArray(estatusTicketsList)) { %>
             (<%- JSON.stringify(estatusTicketsList) %>).forEach(est => {
-                if (est && est.nombre && !mapaColoresEstatusJS[est.nombre]) {
-                    mapaColoresEstatusJS[est.nombre] = {
-                        bg: est.color_bg || '#f3e8ff',
-                        texto: est.color_texto || '#6b21a8',
-                        borde: est.color_borde || '#d8b4fe',
-                        dot: est.color || '#8b5cf6'
-                    };
+                if (est && est.nombre) {
+                    if (!mapaColoresEstatusJS[est.nombre]) {
+                        mapaColoresEstatusJS[est.nombre] = {
+                            bg: est.color_bg || '#f3e8ff',
+                            texto: est.color_texto || '#6b21a8',
+                            borde: est.color_borde || '#d8b4fe',
+                            dot: est.color || '#8b5cf6'
+                        };
+                    }
+                    if (est.es_cierre || est.nombre === 'Resuelto') {
+                        estatusCierreSetJS.add(est.nombre);
+                    }
                 }
             });
         <% } %>
+
+        function esEstatusCierreJS(nombreEst) {
+            const clave = String(nombreEst || '').trim();
+            if (estatusCierreSetJS.has(clave)) return true;
+            const opt = document.querySelector(`.select-estatus-ticket option[value="${clave.replace(/"/g, '\\"')}"]`);
+            return opt ? (opt.dataset.esCierre === '1') : false;
+        }
 
         function obtenerColoresEstatusJS(nombreEst) {
             const clave = String(nombreEst || '').trim();
@@ -8561,11 +8606,21 @@
             const btnFila = document.getElementById('btnGuardarFila-' + ticketId);
             if (btnFila) btnFila.style.display = 'none';
 
-            // 3. Efecto flash visual en la fila
+            // 3. Efecto flash visual en la fila (y si es un estatus de finalización en la vista principal "Todos", ocultarlo de la tabla principal)
             const fila = document.getElementById('filaTicket-' + ticketId);
+            const filtroUrl = new URLSearchParams(window.location.search).get('estatus') || 'Todos';
             if (fila) {
                 fila.classList.add('bg-amber-100/60');
-                setTimeout(() => fila.classList.remove('bg-amber-100/60'), 2500);
+                if ((filtroUrl === 'Todos' && esEstatusCierreJS(nuevoEst)) || (filtroUrl !== 'Todos' && filtroUrl !== nuevoEst)) {
+                    setTimeout(() => {
+                        if (fila && fila.parentNode) {
+                            fila.remove();
+                            if (typeof filtrarTablaTicketsAdmin === 'function') filtrarTablaTicketsAdmin();
+                        }
+                    }, 700);
+                } else {
+                    setTimeout(() => fila.classList.remove('bg-amber-100/60'), 2500);
+                }
             }
 
             // 4. Refrescar widget de citas programadas
@@ -8607,7 +8662,7 @@
             if (selectExistente) {
                 Array.from(selectExistente.options).forEach(opt => {
                     const selAttr = (opt.value === estatusNombre) ? 'selected' : '';
-                    opcionesSelectHtml += `<option value="${escaparHtmlSimple(opt.value)}" data-pide-evidencia="${opt.dataset.pideEvidencia || '0'}" data-pide-descripcion="${opt.dataset.pideDescripcion || 'opcional'}" data-pausa-tiempo="${opt.dataset.pausaTiempo || '0'}" data-color="${opt.dataset.color || ''}" data-color-bg="${opt.dataset.colorBg || ''}" data-color-texto="${opt.dataset.colorTexto || ''}" data-color-borde="${opt.dataset.colorBorde || ''}" style="${opt.getAttribute('style') || ''}" ${selAttr}>${escaparHtmlSimple(opt.textContent)}</option>`;
+                    opcionesSelectHtml += `<option value="${escaparHtmlSimple(opt.value)}" data-pide-evidencia="${opt.dataset.pideEvidencia || '0'}" data-pide-descripcion="${opt.dataset.pideDescripcion || 'opcional'}" data-pausa-tiempo="${opt.dataset.pausaTiempo || '0'}" data-es-cierre="${opt.dataset.esCierre || '0'}" data-color="${opt.dataset.color || ''}" data-color-bg="${opt.dataset.colorBg || ''}" data-color-texto="${opt.dataset.colorTexto || ''}" data-color-borde="${opt.dataset.colorBorde || ''}" style="${opt.getAttribute('style') || ''}" ${selAttr}>${escaparHtmlSimple(opt.textContent)}</option>`;
                 });
             } else {
                 ['Nuevo ticket', 'En proceso', 'Pendiente', 'Pendiente por cliente', 'Resuelto'].forEach(estNom => {
@@ -9338,6 +9393,14 @@
                     </div>
                 </div>
 
+                <div class="p-3 bg-purple-50/70 border border-purple-200 rounded space-y-1">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="es_cierre" id="chkCrearEsCierre" value="1" class="rounded border-purple-300 text-purple-600 focus:ring-purple-500">
+                        <span class="text-xs font-bold text-purple-950">🏁 ¿Este estatus es de finalización de ticket? (Ocultar de la tabla principal)</span>
+                    </label>
+                    <p class="text-[11px] text-purple-800 ml-5">Al marcar esta casilla, los tickets con este estatus se ocultarán de la tabla principal ("Todos") igual que los tickets resueltos, y aparecerán al seleccionarlo en los filtros de estatus.</p>
+                </div>
+
                 <div class="p-3 bg-amber-50/70 border border-amber-200 rounded space-y-1">
                     <label class="inline-flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="pausa_tiempo" value="1" class="rounded border-amber-300 text-amber-600 focus:ring-amber-500">
@@ -9444,6 +9507,14 @@
                             <span class="text-[9px] text-slate-600 font-bold">Gris</span>
                         </label>
                     </div>
+                </div>
+
+                <div class="p-3 bg-purple-50/70 border border-purple-200 rounded space-y-1">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="es_cierre" value="1" id="chkEditEsCierre" class="rounded border-purple-300 text-purple-600 focus:ring-purple-500">
+                        <span class="text-xs font-bold text-purple-950">🏁 ¿Este estatus es de finalización de ticket? (Ocultar de la tabla principal)</span>
+                    </label>
+                    <p class="text-[11px] text-purple-800 ml-5">Al marcar esta casilla, los tickets con este estatus se ocultarán de la tabla principal ("Todos") igual que los tickets resueltos, y aparecerán al seleccionarlo en los filtros de estatus.</p>
                 </div>
 
                 <div class="p-3 bg-amber-50/70 border border-amber-200 rounded space-y-1">
@@ -9593,17 +9664,24 @@
         let selectEstatusEspecialPendiente = null;
 
         function abrirModalCrearEstatus() {
+            const chkCierre = document.getElementById('chkCrearEsCierre');
+            if (chkCierre) chkCierre.checked = false;
             document.getElementById('modalCrearEstatus').style.display = 'block';
         }
         function cerrarModalCrearEstatus() {
             document.getElementById('modalCrearEstatus').style.display = 'none';
         }
-        function abrirModalEditarEstatus(id, nombre, color, pausa, evidencia, desc, esSistema, notifDiscord = 1, notifCorreo = 1, modoCorreo = 'plantilla_propia') {
+        function abrirModalEditarEstatus(id, nombre, color, pausa, evidencia, desc, esSistema, notifDiscord = 1, notifCorreo = 1, modoCorreo = 'plantilla_propia', esCierre = 0) {
             document.getElementById('idEditEstatus').value = id;
             document.getElementById('nomEditEstatus').value = nombre;
             document.getElementById('chkEditPausaTiempo').checked = Boolean(pausa);
             document.getElementById('chkEditPideEvidencia').checked = Boolean(evidencia);
             document.getElementById('selEditPideDesc').value = desc || 'opcional';
+            const chkCierre = document.getElementById('chkEditEsCierre');
+            if (chkCierre) {
+                chkCierre.checked = Boolean(esCierre) || nombre === 'Resuelto';
+                chkCierre.disabled = (nombre === 'Resuelto');
+            }
             const chkDisc = document.getElementById('chkEditNotifDiscord');
             if (chkDisc) chkDisc.checked = (notifDiscord !== 0 && notifDiscord !== false);
             const chkCorr = document.getElementById('chkEditNotifCorreo');

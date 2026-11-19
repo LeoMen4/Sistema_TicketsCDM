@@ -543,13 +543,14 @@ app.post('/tickets/crear', esUsuario, upload.single('imagen'), (req, res) => {
     const descFinal = descripcion.trim();
     const prioFinal = prioridad || 'Media';
 
-    // 1. Verificar si el usuario ya tiene un ticket activo (NO resuelto) con el mismo título y falla
+    // 1. Verificar si el usuario ya tiene un ticket activo (NO resuelto ni finalizado) con el mismo título y falla
     db.get(
         `SELECT id, estatus FROM tickets 
          WHERE usuario_id = ? 
            AND LOWER(TRIM(titulo)) = LOWER(TRIM(?)) 
            AND LOWER(TRIM(tipo_falla)) = LOWER(TRIM(?)) 
            AND estatus != 'Resuelto'
+           AND estatus NOT IN (SELECT nombre FROM estatus_tickets WHERE activo = 1 AND es_cierre = 1)
            AND deleted_at IS NULL`,
         [usuarioId, tituloFinal, tipoFallaFinal],
         (errCheck, ticketAbierto) => {
@@ -800,15 +801,18 @@ function renderUserDashboardWithMsg(req, res, mensaje, error) {
 
                         db.all('SELECT * FROM equipos_usuario WHERE usuario_id = ? ORDER BY tipo ASC, id ASC', [usuarioId], (errEq, equipos) => {
                             db.all("SELECT * FROM guias_rapidas WHERE visibilidad = 'todos' ORDER BY destacada DESC, id DESC", [], (errGuias, guias) => {
-                                res.render('user-dashboard', {
-                                    usuarioNombre: nombreActual,
-                                    usuarioPuesto: puestoActual,
-                                    tickets: tickets,
-                                    equipos: equipos || [],
-                                    categorias: categorias || [],
-                                    guias: guias || [],
-                                    mensaje: mensaje,
-                                    error: error
+                                db.all('SELECT * FROM estatus_tickets WHERE activo = 1 ORDER BY COALESCE(es_cierre, 0) ASC, orden ASC, id ASC', [], (errEstList, estatusTicketsList) => {
+                                    res.render('user-dashboard', {
+                                        usuarioNombre: nombreActual,
+                                        usuarioPuesto: puestoActual,
+                                        tickets: tickets,
+                                        equipos: equipos || [],
+                                        categorias: categorias || [],
+                                        guias: guias || [],
+                                        estatusTicketsList: estatusTicketsList || [],
+                                        mensaje: mensaje,
+                                        error: error
+                                    });
                                 });
                             });
                         });
@@ -1501,7 +1505,7 @@ async function verDetalleTicket(req, res) {
             dbAllAsync("SELECT id, nombre, email, puesto, rol FROM usuarios WHERE deleted_at IS NULL ORDER BY CASE WHEN rol = 'admin' THEN 0 ELSE 1 END, nombre ASC", []),
             obtenerCategoriasConSubcategoriasAsync(),
             dbAllAsync('SELECT * FROM categorias_resolucion WHERE activo = 1 ORDER BY id ASC', []),
-            dbAllAsync('SELECT * FROM estatus_tickets WHERE activo = 1 ORDER BY orden ASC, id ASC', []),
+            dbAllAsync('SELECT * FROM estatus_tickets WHERE activo = 1 ORDER BY COALESCE(es_cierre, 0) ASC, orden ASC, id ASC', []),
             dbGetAsync("SELECT valor FROM configuraciones WHERE clave = 'intervalos_alertas'", [])
         ]);
 
@@ -1553,7 +1557,7 @@ async function obtenerDatosAdmin(req, res, mensaje = null, error = null) {
     let params = [];
 
     if (filtroEstatus === 'Todos') {
-        queryTickets += " AND tickets.estatus != 'Resuelto'";
+        queryTickets += " AND tickets.estatus != 'Resuelto' AND tickets.estatus NOT IN (SELECT nombre FROM estatus_tickets WHERE activo = 1 AND es_cierre = 1)";
     } else {
         queryTickets += ' AND tickets.estatus = ?';
         params.push(filtroEstatus);
@@ -1622,7 +1626,7 @@ async function obtenerDatosAdmin(req, res, mensaje = null, error = null) {
                 ORDER BY fecha_programada ASC
             `, []),
             dbAllAsync('SELECT * FROM categorias_resolucion WHERE activo = 1 ORDER BY id ASC', []),
-            dbAllAsync('SELECT * FROM estatus_tickets WHERE activo = 1 ORDER BY orden ASC, id ASC', []),
+            dbAllAsync('SELECT * FROM estatus_tickets WHERE activo = 1 ORDER BY COALESCE(es_cierre, 0) ASC, orden ASC, id ASC', []),
             dbGetAsync("SELECT valor FROM configuraciones WHERE clave = 'intervalos_alertas'", [])
         ]);
 
@@ -1956,6 +1960,7 @@ app.post('/admin/tickets/crear', esAdmin, upload.single('imagen'), (req, res) =>
                AND LOWER(TRIM(titulo)) = LOWER(TRIM(?)) 
                AND LOWER(TRIM(tipo_falla)) = LOWER(TRIM(?)) 
                AND estatus != 'Resuelto'
+               AND estatus NOT IN (SELECT nombre FROM estatus_tickets WHERE activo = 1 AND es_cierre = 1)
                AND deleted_at IS NULL`,
             [usuarioDestino.id, tituloFinal, tipoFallaFinal],
             (errCheck, ticketAbierto) => {
@@ -2519,8 +2524,7 @@ app.post('/admin/tickets/actualizar-estatus-masivo', esAdmin, (req, res) => {
         return res.redirect('/admin');
     }
 
-    const estatusValidos = ['Nuevo ticket', 'Pendiente', 'En proceso', 'Resuelto'];
-    const cambiosValidos = cambios.filter(c => c && c.id && estatusValidos.includes(c.estatus));
+    const cambiosValidos = cambios.filter(c => c && c.id && c.estatus && String(c.estatus).trim());
 
     if (cambiosValidos.length === 0) {
         req.session.errorFlash = 'No se proporcionaron estatus válidos.';
@@ -3436,7 +3440,7 @@ const PALETA_ESTATUS_PRESETS = {
 
 // Crear Estatus Personalizado
 app.post('/admin/estatus-tickets/crear', esAdmin, (req, res) => {
-    const { nombre, color, pausa_tiempo, pide_evidencia, pide_descripcion, notificar_discord, notificar_correo, modo_correo } = req.body;
+    const { nombre, color, pausa_tiempo, pide_evidencia, pide_descripcion, notificar_discord, notificar_correo, modo_correo, es_cierre } = req.body;
     const nombreLimpio = nombre ? nombre.trim() : '';
 
     if (!nombreLimpio) {
@@ -3451,11 +3455,13 @@ app.post('/admin/estatus-tickets/crear', esAdmin, (req, res) => {
     const notifDiscord = (notificar_discord === '1' || notificar_discord === 1 || notificar_discord === 'on') ? 1 : 0;
     const notifCorreo = (notificar_correo === '1' || notificar_correo === 1 || notificar_correo === 'on') ? 1 : 0;
     const modoCorreoVal = ['plantilla_propia', 'en_proceso', 'solo_admins'].includes(modo_correo) ? modo_correo : 'plantilla_propia';
+    const cierre = (es_cierre === '1' || es_cierre === 1 || es_cierre === 'on') ? 1 : 0;
+    const ordenDefault = cierre === 1 ? 15 : 4;
 
     db.run(
-        `INSERT INTO estatus_tickets (nombre, color, color_bg, color_texto, color_borde, pausa_tiempo, pide_evidencia, pide_descripcion, notificar_discord, notificar_correo, modo_correo, es_sistema, orden)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 10)`,
-        [nombreLimpio, hex, preset.bg, preset.texto, preset.borde, pausa, evidencia, desc, notifDiscord, notifCorreo, modoCorreoVal],
+        `INSERT INTO estatus_tickets (nombre, color, color_bg, color_texto, color_borde, pausa_tiempo, pide_evidencia, pide_descripcion, notificar_discord, notificar_correo, modo_correo, es_cierre, es_sistema, orden)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
+        [nombreLimpio, hex, preset.bg, preset.texto, preset.borde, pausa, evidencia, desc, notifDiscord, notifCorreo, modoCorreoVal, cierre, ordenDefault],
         function(err) {
             if (err) {
                 const msg = err.message && err.message.includes('UNIQUE')
@@ -3479,7 +3485,7 @@ app.post('/admin/estatus-tickets/crear', esAdmin, (req, res) => {
 
 // Editar Estatus Personalizado
 app.post('/admin/estatus-tickets/editar', esAdmin, (req, res) => {
-    const { id, nombre, color, pausa_tiempo, pide_evidencia, pide_descripcion, notificar_discord, notificar_correo, modo_correo } = req.body;
+    const { id, nombre, color, pausa_tiempo, pide_evidencia, pide_descripcion, notificar_discord, notificar_correo, modo_correo, es_cierre } = req.body;
     const nombreLimpio = nombre ? nombre.trim() : '';
 
     if (!id || !nombreLimpio) {
@@ -3494,12 +3500,13 @@ app.post('/admin/estatus-tickets/editar', esAdmin, (req, res) => {
     const notifDiscord = (notificar_discord === '1' || notificar_discord === 1 || notificar_discord === 'on') ? 1 : 0;
     const notifCorreo = (notificar_correo === '1' || notificar_correo === 1 || notificar_correo === 'on') ? 1 : 0;
     const modoCorreoVal = ['plantilla_propia', 'en_proceso', 'solo_admins'].includes(modo_correo) ? modo_correo : 'plantilla_propia';
+    const cierre = (nombreLimpio === 'Resuelto' || es_cierre === '1' || es_cierre === 1 || es_cierre === 'on') ? 1 : 0;
 
     db.run(
         `UPDATE estatus_tickets 
-         SET nombre = ?, color = ?, color_bg = ?, color_texto = ?, color_borde = ?, pausa_tiempo = ?, pide_evidencia = ?, pide_descripcion = ?, notificar_discord = ?, notificar_correo = ?, modo_correo = ?
+         SET nombre = ?, color = ?, color_bg = ?, color_texto = ?, color_borde = ?, pausa_tiempo = ?, pide_evidencia = ?, pide_descripcion = ?, notificar_discord = ?, notificar_correo = ?, modo_correo = ?, es_cierre = ?
          WHERE id = ?`,
-        [nombreLimpio, hex, preset.bg, preset.texto, preset.borde, pausa, evidencia, desc, notifDiscord, notifCorreo, modoCorreoVal, id],
+        [nombreLimpio, hex, preset.bg, preset.texto, preset.borde, pausa, evidencia, desc, notifDiscord, notifCorreo, modoCorreoVal, cierre, id],
         function(err) {
             if (err) {
                 const msg = err.message && err.message.includes('UNIQUE')
@@ -3544,7 +3551,7 @@ app.post('/admin/estatus-tickets/eliminar', esAdmin, (req, res) => {
 
 // API para consultar estatus en JSON
 app.get('/api/estatus-tickets', esAdmin, (req, res) => {
-    db.all('SELECT * FROM estatus_tickets WHERE activo = 1 ORDER BY orden ASC, id ASC', [], (err, rows) => {
+    db.all('SELECT * FROM estatus_tickets WHERE activo = 1 ORDER BY COALESCE(es_cierre, 0) ASC, orden ASC, id ASC', [], (err, rows) => {
         if (err) return res.status(500).json({ ok: false, error: err.message });
         res.json({ ok: true, estatus: rows || [] });
     });
