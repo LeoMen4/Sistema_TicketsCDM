@@ -2163,6 +2163,13 @@ app.post('/admin/tickets/cambiar-estatus', esAdmin, upload.single('imagen'), (re
 
         db.run(updateQuery, [estatus, cat, tecResumen, nuevoAtendidoPor, nuevoEntregadoPor, nuevosParticipantes, com, tip, mod, ser, motivoCli, fechaCli, ticket_id], function(err) {
             if (err) {
+                const esPeticionJson = req.xhr ||
+                    (req.headers.accept && req.headers.accept.includes('json')) ||
+                    req.body.formato === 'json' ||
+                    req.headers['sec-fetch-dest'] === 'empty';
+                if (esPeticionJson) {
+                    return res.status(400).json({ ok: false, error: 'Error al actualizar el estatus: ' + err.message });
+                }
                 if (req.body.origen === 'detalle') {
                     req.session.errorFlash = 'Error al actualizar el estatus: ' + err.message;
                     return res.redirect(`/admin/tickets/${ticket_id}`);

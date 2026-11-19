@@ -205,6 +205,23 @@ db.serialize(() => {
     db.run(`UPDATE tickets SET tipo_falla = ('Periféricos (' || periferico || ')') WHERE (tipo_falla IS NULL OR tipo_falla = '') AND periferico IS NOT NULL`, (err) => {});
     db.run(`ALTER TABLE tickets DROP COLUMN periferico`, (err) => {});
 
+    // Migración automática para liberar el candado antiguo CHECK(estatus IN (...)) de la tabla tickets y permitir cualquier estatus personalizado
+    db.get("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'tickets'", (errSql, rowSql) => {
+        if (!errSql && rowSql && rowSql.sql && rowSql.sql.includes('CHECK(estatus IN') && !rowSql.sql.includes('estatus_legacy')) {
+            db.run(`ALTER TABLE tickets RENAME COLUMN estatus TO estatus_legacy`, (errRen) => {
+                if (!errRen) {
+                    db.run(`ALTER TABLE tickets ADD COLUMN estatus TEXT DEFAULT 'Nuevo ticket'`, (errAdd) => {
+                        if (!errAdd) {
+                            db.run(`UPDATE tickets SET estatus = estatus_legacy, estatus_legacy = 'Nuevo ticket'`, () => {
+                                console.log('[Base de Datos] Migración completada: candado CHECK antiguo eliminado de tickets.estatus para soportar estatus personalizados.');
+                            });
+                        }
+                    });
+                }
+            });
+        }
+    });
+
     db.run(`
         CREATE TABLE IF NOT EXISTS historial_tickets (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
