@@ -104,7 +104,7 @@ async function sincronizarHilosTicketsEnDiscord() {
 
         const estatusArchivables = await new Promise(resolve => {
             dbInstance.all(
-                "SELECT LOWER(TRIM(nombre)) AS nom FROM estatus_tickets WHERE activo = 1 AND (archivar_discord = 1 OR es_cierre = 1)",
+                "SELECT LOWER(TRIM(nombre)) AS nom FROM estatus_tickets WHERE archivar_discord = 1 OR es_cierre = 1",
                 [],
                 (err, rows) => {
                     const set = new Set(['resuelto']);
@@ -983,6 +983,25 @@ async function obtenerOCrearHiloTicket(ticketId, ticketData = null, usuarioData 
     return promesa;
 }
 
+/**
+ * Verifica si un nombre de estatus corresponde a un estatus que debe mantener el hilo bloqueado y archivado en Discord
+ * (incluyendo estatus personalizados históricos que hayan sido desactivados con activo = 0)
+ */
+async function esEstatusArchivableEnDiscord(nombreEstatus) {
+    if (!nombreEstatus) return false;
+    const norm = String(nombreEstatus).trim().toLowerCase();
+    if (norm === 'resuelto') return true;
+    if (!dbInstance) return false;
+    const row = await new Promise(resolve => {
+        dbInstance.get(
+            'SELECT archivar_discord, es_cierre FROM estatus_tickets WHERE LOWER(TRIM(nombre)) = ?',
+            [norm],
+            (err, r) => resolve(r || null)
+        );
+    });
+    return Boolean(row && (Number(row.archivar_discord) === 1 || Number(row.es_cierre) === 1));
+}
+
 async function _obtenerOCrearHiloTicketInterno(ticketId, ticketData = null, usuarioData = null) {
     try {
         let ticket = ticketData;
@@ -1018,12 +1037,14 @@ async function _obtenerOCrearHiloTicketInterno(ticketId, ticketData = null, usua
 
         if (!ticket) return null;
 
+        const estatusDebeEstarArchivado = await esEstatusArchivableEnDiscord(ticket.estatus);
+
         // 1. Verificar si el hilo ya existe en Discord por su ID guardado
         if (ticket.discord_thread_id) {
             try {
                 const hiloExistente = await client.channels.fetch(ticket.discord_thread_id);
                 if (hiloExistente && !hiloExistente.deleted) {
-                    if (ticket && ticket.estatus !== 'Resuelto') {
+                    if (!estatusDebeEstarArchivado) {
                         if (hiloExistente.locked) {
                             await hiloExistente.setLocked(false, 'Ticket activo').catch(() => {});
                         }
@@ -1042,16 +1063,40 @@ async function _obtenerOCrearHiloTicketInterno(ticketId, ticketData = null, usua
             } catch (errFetch) {}
         }
 
-        // 1.5. Buscar en los hilos activos del canal si ya existe uno con prefijo ticket-{id}- para NUNCA duplicar
+        // 1.5. Buscar en los hilos activos Y archivados del canal si ya existe uno con prefijo ticket-{id}- para NUNCA duplicar
         try {
-            const activeThreads = await canalTicketsBase.threads.fetchActive();
             const regexPrefijo = new RegExp(`^ticket-${ticket.id}(?:$|-)`, 'i');
             const coincidencias = [];
+
+            const activeThreads = await canalTicketsBase.threads.fetchActive();
             for (const [id, th] of activeThreads.threads) {
                 if (regexPrefijo.test(th.name || '') && !th.deleted) {
                     coincidencias.push(th);
                 }
             }
+
+            // Si no está en hilos activos (ej. Discord lo archivó automáticamente tras 7 días de inactividad), buscar también en archivados
+            if (coincidencias.length === 0) {
+                const archivedPriv = await canalTicketsBase.threads.fetchArchived({ type: 'private', fetchAll: true }).catch(() => null);
+                if (archivedPriv && archivedPriv.threads) {
+                    for (const [id, th] of archivedPriv.threads) {
+                        if (regexPrefijo.test(th.name || '') && !th.deleted) {
+                            coincidencias.push(th);
+                        }
+                    }
+                }
+                if (coincidencias.length === 0) {
+                    const archivedPub = await canalTicketsBase.threads.fetchArchived({ type: 'public' }).catch(() => null);
+                    if (archivedPub && archivedPub.threads) {
+                        for (const [id, th] of archivedPub.threads) {
+                            if (regexPrefijo.test(th.name || '') && !th.deleted) {
+                                coincidencias.push(th);
+                            }
+                        }
+                    }
+                }
+            }
+
             if (coincidencias.length > 0) {
                 const hiloEncontrado = coincidencias[0];
                 // Si había duplicados adicionales, eliminarlos
@@ -1064,6 +1109,10 @@ async function _obtenerOCrearHiloTicketInterno(ticketId, ticketData = null, usua
                     await new Promise(resolve => {
                         dbInstance.run('UPDATE tickets SET discord_thread_id = ? WHERE id = ?', [hiloEncontrado.id, ticket.id], () => resolve());
                     });
+                }
+                if (!estatusDebeEstarArchivado) {
+                    if (hiloEncontrado.locked) await hiloEncontrado.setLocked(false, 'Ticket activo').catch(() => {});
+                    if (hiloEncontrado.archived) await hiloEncontrado.setArchived(false, 'Ticket activo').catch(() => {});
                 }
                 return hiloEncontrado;
             }
@@ -1225,6 +1274,17 @@ async function enviarMensajeDesdeWeb({ ticketId, autorNombre, autorRol, autorPue
         });
 
         mensajesEnviadosPorBot.add(msgEnviado.id);
+
+        // Si el ticket actualmente sigue en un estatus finalizado/archivado (ej. Resuelto o Cancelado),
+        // volver a bloquear y archivar el hilo tras publicar la nota para que no se quede abierto en la barra lateral
+        if (dbInstance && ticketId) {
+            const rowEst = await new Promise(resolve => {
+                dbInstance.get('SELECT estatus FROM tickets WHERE id = ?', [ticketId], (err, r) => resolve(r || null));
+            });
+            if (rowEst && await esEstatusArchivableEnDiscord(rowEst.estatus)) {
+                await archivarYBloquearHilosDeTicket(ticketId, hilo, `Ticket finalizado (${rowEst.estatus})`);
+            }
+        }
 
     } catch (e) {
         console.error('[Discord Bot] Error enviando mensaje a Discord:', e.message);

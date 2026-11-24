@@ -550,7 +550,7 @@ app.post('/tickets/crear', esUsuario, upload.single('imagen'), (req, res) => {
            AND LOWER(TRIM(titulo)) = LOWER(TRIM(?)) 
            AND LOWER(TRIM(tipo_falla)) = LOWER(TRIM(?)) 
            AND estatus != 'Resuelto'
-           AND estatus NOT IN (SELECT nombre FROM estatus_tickets WHERE activo = 1 AND es_cierre = 1)
+           AND estatus NOT IN (SELECT nombre FROM estatus_tickets WHERE es_cierre = 1)
            AND deleted_at IS NULL`,
         [usuarioId, tituloFinal, tipoFallaFinal],
         (errCheck, ticketAbierto) => {
@@ -920,7 +920,7 @@ function calcularMetricasDashboards(callback) {
                     if (errH) return callback(errH);
                     historial = historial || [];
 
-                    db.all('SELECT * FROM estatus_tickets WHERE activo = 1 ORDER BY COALESCE(es_cierre, 0) ASC, orden ASC, id ASC', [], (errEstCfg, estatusRows) => {
+                    db.all('SELECT * FROM estatus_tickets ORDER BY COALESCE(es_cierre, 0) ASC, orden ASC, id ASC', [], (errEstCfg, estatusRows) => {
                         const estatusPausadosSet = new Set(['Pendiente por cliente']);
                         const estatusAnuladosSet = new Set();
                         const estatusCierreSet = new Set(['Resuelto']);
@@ -932,19 +932,22 @@ function calcularMetricasDashboards(callback) {
                         });
 
                         const listaEstatusDinamicos = (estatusRows && estatusRows.length > 0)
-                            ? estatusRows.map(er => ({
-                                id: er.id,
-                                nombre: er.nombre,
-                                count: tickets.filter(t => String(t.estatus || '').trim().toLowerCase() === String(er.nombre || '').trim().toLowerCase()).length,
-                                color: er.color || '#64748b',
-                                color_bg: er.color_bg || '#f8fafc',
-                                color_texto: er.color_texto || '#334155',
-                                color_borde: er.color_borde || '#cbd5e1',
-                                es_sistema: Number(er.es_sistema || 0),
-                                es_cierre: Number(er.es_cierre || 0),
-                                pausa_tiempo: Number(er.pausa_tiempo || 0),
-                                anula_tiempo: Number(er.anula_tiempo || 0)
-                            }))
+                            ? estatusRows
+                                .map(er => ({
+                                    id: er.id,
+                                    nombre: er.nombre,
+                                    activo: Number(er.activo !== undefined ? er.activo : 1),
+                                    count: tickets.filter(t => String(t.estatus || '').trim().toLowerCase() === String(er.nombre || '').trim().toLowerCase()).length,
+                                    color: er.color || '#64748b',
+                                    color_bg: er.color_bg || '#f8fafc',
+                                    color_texto: er.color_texto || '#334155',
+                                    color_borde: er.color_borde || '#cbd5e1',
+                                    es_sistema: Number(er.es_sistema || 0),
+                                    es_cierre: Number(er.es_cierre || 0),
+                                    pausa_tiempo: Number(er.pausa_tiempo || 0),
+                                    anula_tiempo: Number(er.anula_tiempo || 0)
+                                }))
+                                .filter(item => item.activo === 1 || item.count > 0)
                             : [];
 
                         db.get("SELECT valor FROM configuraciones WHERE clave = 'tolerancia_alerta_pct'", [], (errConf, rowConf) => {
@@ -1599,9 +1602,9 @@ async function obtenerDatosAdmin(req, res, mensaje = null, error = null) {
     let params = [];
 
     if (filtroEstatus === 'Todos') {
-        queryTickets += " AND tickets.estatus != 'Resuelto' AND tickets.estatus NOT IN (SELECT nombre FROM estatus_tickets WHERE activo = 1 AND es_cierre = 1)";
+        queryTickets += " AND tickets.estatus != 'Resuelto' AND tickets.estatus NOT IN (SELECT nombre FROM estatus_tickets WHERE es_cierre = 1)";
     } else if (filtroEstatus === 'Finalizados') {
-        queryTickets += " AND (tickets.estatus = 'Resuelto' OR tickets.estatus IN (SELECT nombre FROM estatus_tickets WHERE activo = 1 AND es_cierre = 1))";
+        queryTickets += " AND (tickets.estatus = 'Resuelto' OR tickets.estatus IN (SELECT nombre FROM estatus_tickets WHERE es_cierre = 1))";
     } else {
         queryTickets += ' AND tickets.estatus = ?';
         params.push(filtroEstatus);
@@ -2004,7 +2007,7 @@ app.post('/admin/tickets/crear', esAdmin, upload.single('imagen'), (req, res) =>
                AND LOWER(TRIM(titulo)) = LOWER(TRIM(?)) 
                AND LOWER(TRIM(tipo_falla)) = LOWER(TRIM(?)) 
                AND estatus != 'Resuelto'
-               AND estatus NOT IN (SELECT nombre FROM estatus_tickets WHERE activo = 1 AND es_cierre = 1)
+               AND estatus NOT IN (SELECT nombre FROM estatus_tickets WHERE es_cierre = 1)
                AND deleted_at IS NULL`,
             [usuarioDestino.id, tituloFinal, tipoFallaFinal],
             (errCheck, ticketAbierto) => {
@@ -3517,11 +3520,9 @@ app.post('/admin/estatus-tickets/crear', esAdmin, (req, res) => {
     const cierre = (es_cierre === '1' || es_cierre === 1 || es_cierre === 'on') ? 1 : 0;
     const ordenDefault = cierre === 1 ? 15 : 4;
 
-    db.run(
-        `INSERT INTO estatus_tickets (nombre, color, color_bg, color_texto, color_borde, pausa_tiempo, anula_tiempo, pide_evidencia, pide_descripcion, notificar_discord, archivar_discord, notificar_correo, modo_correo, es_cierre, es_sistema, orden)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
-        [nombreLimpio, hex, preset.bg, preset.texto, preset.borde, pausa, anula, evidencia, desc, notifDiscord, archDiscord, notifCorreo, modoCorreoVal, cierre, ordenDefault],
-        function(err) {
+    // Verificar si ya existía un estatus con el mismo nombre previamente desactivado (activo = 0) para reactivarlo sin perder historial
+    db.get('SELECT id, activo FROM estatus_tickets WHERE LOWER(TRIM(nombre)) = LOWER(TRIM(?))', [nombreLimpio], (errEx, rowEx) => {
+        const finalizarCreacion = (err) => {
             if (err) {
                 const msg = err.message && err.message.includes('UNIQUE')
                     ? 'Ya existe un estatus con ese nombre.'
@@ -3538,8 +3539,25 @@ app.post('/admin/estatus-tickets/crear', esAdmin, (req, res) => {
                 req.session.mensajeFlash = `Estatus "${nombreLimpio}" creado exitosamente.`;
                 res.redirect('/admin#categorias');
             }
+        };
+
+        if (rowEx && Number(rowEx.activo) === 0) {
+            db.run(
+                `UPDATE estatus_tickets
+                 SET nombre = ?, color = ?, color_bg = ?, color_texto = ?, color_borde = ?, pausa_tiempo = ?, anula_tiempo = ?, pide_evidencia = ?, pide_descripcion = ?, notificar_discord = ?, archivar_discord = ?, notificar_correo = ?, modo_correo = ?, es_cierre = ?, activo = 1, orden = ?
+                 WHERE id = ?`,
+                [nombreLimpio, hex, preset.bg, preset.texto, preset.borde, pausa, anula, evidencia, desc, notifDiscord, archDiscord, notifCorreo, modoCorreoVal, cierre, ordenDefault, rowEx.id],
+                finalizarCreacion
+            );
+        } else {
+            db.run(
+                `INSERT INTO estatus_tickets (nombre, color, color_bg, color_texto, color_borde, pausa_tiempo, anula_tiempo, pide_evidencia, pide_descripcion, notificar_discord, archivar_discord, notificar_correo, modo_correo, es_cierre, es_sistema, orden, activo)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 1)`,
+                [nombreLimpio, hex, preset.bg, preset.texto, preset.borde, pausa, anula, evidencia, desc, notifDiscord, archDiscord, notifCorreo, modoCorreoVal, cierre, ordenDefault],
+                finalizarCreacion
+            );
         }
-    );
+    });
 });
 
 // Editar Estatus Personalizado
@@ -3600,10 +3618,11 @@ app.post('/admin/estatus-tickets/eliminar', esAdmin, (req, res) => {
             return obtenerDatosAdmin(req, res, null, 'Los estatus base del sistema no pueden eliminarse.');
         }
 
-        db.run('DELETE FROM estatus_tickets WHERE id = ?', [id], function(err) {
+        // Desactivar con activo = 0 en lugar de borrar físicamente para que los tickets históricos conserven sus reglas de finalización/métricas
+        db.run('UPDATE estatus_tickets SET activo = 0 WHERE id = ?', [id], function(err) {
             if (err) return obtenerDatosAdmin(req, res, null, 'Error al eliminar estatus: ' + err.message);
             mailer.eliminarPlantillaEstatusPersonalizado(est.nombre, () => {
-                req.session.mensajeFlash = `Estatus "${est.nombre}" eliminado exitosamente.`;
+                req.session.mensajeFlash = `Estatus "${est.nombre}" eliminado exitosamente (los tickets históricos conservan sus reglas de finalización y métricas).`;
                 res.redirect('/admin#categorias');
             });
         });
