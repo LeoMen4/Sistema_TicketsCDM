@@ -3314,6 +3314,9 @@ app.post('/admin/tickets/eliminar', esAdmin, (req, res) => {
 
                 emitirCambioGlobalTickets('eliminar', { ticket_id: Number(ticket.id) });
                 io.emit('ticket:eliminado', { ticket_id: Number(ticket.id) });
+                if (typeof discordBot.sincronizarHilosTicketsEnDiscord === 'function') {
+                    discordBot.sincronizarHilosTicketsEnDiscord().catch(() => {});
+                }
                 req.session.mensajeFlash = `Ticket #${ticket.id} ("${ticket.titulo}") movido a la papelera de reciclaje exitosamente. Podrás recuperarlo en cualquier momento.`;
                 return res.redirect('/admin');
             });
@@ -3461,6 +3464,9 @@ app.post('/admin/tickets/eliminar-definitivo', esAdmin, (req, res) => {
 
                         emitirCambioGlobalTickets('eliminar_definitivo', { ticket_id: Number(ticket.id) });
                         io.emit('ticket:eliminado', { ticket_id: Number(ticket.id) });
+                        if (typeof discordBot.sincronizarHilosTicketsEnDiscord === 'function') {
+                            discordBot.sincronizarHilosTicketsEnDiscord().catch(() => {});
+                        }
                         req.session.mensajeFlash = `Ticket #${ticket.id} ("${ticket.titulo}") eliminado definitivamente del sistema.`;
                         return res.redirect('/admin');
                     });
